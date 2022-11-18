@@ -1,11 +1,7 @@
 package tools
 
-import "fmt"
-
-type PacketType byte
-
 const (
-	RESERVED PacketType = iota
+	RESERVED byte = iota
 	CONNECT
 	CONNACK
 	PUBLISH
@@ -20,14 +16,14 @@ const (
 	PINGREQ
 	PINGRESP
 	DISCONNECT
-	AUTH
+	AUTH = 15
 )
 
-func (packet PacketType) toByte() byte {
-	return byte(packet)
+func isValidControlType(controlType byte) bool {
+	return ((RESERVED < controlType) && (controlType <= AUTH))
 }
 
-var ConnectStruct struct {
+type Packet struct {
 	ControlHeader        *ControlHeader
 	VariableLengthHeader *VariableLengthHeader
 	Payload              *[]byte
@@ -36,7 +32,7 @@ var ConnectStruct struct {
 type VariableLengthHeader interface{}
 
 type ControlHeader struct {
-	Type        PacketType
+	Type        byte
 	FixedLength int
 	// Flags
 	Qos    byte
@@ -45,10 +41,8 @@ type ControlHeader struct {
 }
 
 type ConnectVariableLengthHeader struct {
-	a int
-}
-
-func test() {
-	var x VariableLengthHeader = ConnectVariableLengthHeader{a: 5}
-	fmt.Printf(x)
+	ProtocolName  string
+	ProtocolLevel byte
+	ConnectFlags  byte
+	KeepAlive     int
 }
