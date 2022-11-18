@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 
-	tools "github.com/malachyoconnor/MQTT-GO/tools"
+	packets "github.com/malachyoconnor/MQTT-GO/packets"
 )
 
 var connectPacket = []byte{
 	// Fixed header
-	(tools.CONNECT << 4), // Define the control packet type, shift as the first nibble is type and the second is reserved
-	15,                   // Define the fixed length of the rest of the packet
+	(packets.CONNECT << 4), // Define the control packet type, shift as the first nibble is type and the second is reserved
+	15,                     // Define the fixed length of the rest of the packet
 	// Variable length header
 	// - Protocol Name
 	0, 4, // Length of the protocol name
@@ -17,7 +17,7 @@ var connectPacket = []byte{
 	// - Protocol Version
 	5,
 	// - Connect Flags
-	tools.CreateByteInline([]byte{0, 0, 0, 0, 0, 0, 0, 0}), // Only the will flag is set to 1
+	packets.CreateByteInline([]byte{0, 0, 0, 0, 0, 0, 0, 0}), // Only the will flag is set to 1
 	// - KeepAlive
 	0, 10,
 	// - Properties
@@ -28,9 +28,9 @@ var connectPacket = []byte{
 }
 
 func main() {
-	fmt.Println(tools.CreateByte([]byte{1, 0, 0, 0, 0, 0, 0, 0}))
+	fmt.Println(packets.CreateByte([]byte{1, 0, 0, 0, 0, 0, 0, 0}))
 
 	// fmt.Println(tools.CreateByte([]byte{1, 0, 0, 0, 0, 0, 1, 1}))
 
-	tools.DecodeConnect(connectPacket[:])
+	packets.DecodeConnect(connectPacket[:])
 }

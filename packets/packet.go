@@ -1,4 +1,4 @@
-package tools
+package packets
 
 const (
 	RESERVED byte = iota

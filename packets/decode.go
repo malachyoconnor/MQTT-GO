@@ -1,4 +1,4 @@
-package tools
+package packets
 
 func CreateByteInline(input_binary []byte) byte {
 	res, _ := CreateByte(input_binary)
