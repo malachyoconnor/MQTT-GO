@@ -28,9 +28,13 @@ var connectPacket = []byte{
 }
 
 func main() {
-	fmt.Println(packets.CreateByte([]byte{1, 0, 0, 0, 0, 0, 0, 0}))
 
-	// fmt.Println(tools.CreateByte([]byte{1, 0, 0, 0, 0, 0, 1, 1}))
+	test := make([]int, 5, 8)
+	fmt.Println(test)
+	x := test[1:]
+	fmt.Println(x)
+	fmt.Println(test)
 
+	// fmt.Println(packets.FetchUTFString(connectPacket[2:]))
 	packets.DecodeConnect(connectPacket[:])
 }

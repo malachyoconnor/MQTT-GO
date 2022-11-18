@@ -45,4 +45,11 @@ type ConnectVariableLengthHeader struct {
 	ProtocolLevel byte
 	ConnectFlags  byte
 	KeepAlive     int
+
+	UsernameFlag   bool
+	PasswordFlag   bool
+	WillRetainFlag bool
+	WillQoS        byte
+	WillFlag       bool
+	CleanSession   bool
 }

@@ -5,7 +5,8 @@ func CreateByteInline(input_binary []byte) byte {
 	return res
 }
 
-// Take an array of 0s and 1s and return the byte representation
+// CreateByte takes an array of 0s and 1s and returns the byte representation
+// along with a boolean "ok".
 func CreateByte(input_binary []byte) (byte, bool) {
 	if len(input_binary) > 8 {
 		return 0, false
