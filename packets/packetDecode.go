@@ -124,7 +124,8 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 
 	// Now we've to decode the payload
 	resultPayload := PacketPayload{}
-	payloadDecode := packet[offset:]
+	payloadDecode := varHeaderDecode[offset:]
+
 	clientID, offset, err := FetchUTFString(payloadDecode)
 	if err != nil {
 		return &Packet{}, err
