@@ -1,10 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	packets "github.com/malachyoconnor/MQTT-GO/packets"
 )
+
+func print(i interface{}) {
+	s, _ := json.MarshalIndent(i, "", "\t")
+	fmt.Println(string(s))
+}
 
 var connectPacket = []byte{
 	// Fixed header
@@ -20,20 +26,18 @@ var connectPacket = []byte{
 	packets.CreateByteInline([]byte{0, 0, 0, 0, 0, 0, 0, 0}), // Only the will flag is set to 1
 	// - KeepAlive
 	0, 10,
-	// - Properties
-	0, // Length 0, no properties set
-	// Payload
-	3, // Length of the client identifier
+	0, 3, // Length of the client identifier
 	'm', 'a', 'l',
 }
 
 func main() {
+
 	// fmt.Println(packets.FetchUTFString(connectPacket[2:]))
 	packet, err := packets.DecodeConnect(connectPacket[:])
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println(packet)
+		print(packet)
 	}
 
 }
