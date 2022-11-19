@@ -24,9 +24,9 @@ func isValidControlType(controlType byte) bool {
 }
 
 type Packet struct {
-	ControlHeader        *ControlHeader
-	VariableLengthHeader *VariableLengthHeader
-	Payload              *[]byte
+	ControlHeader        ControlHeader
+	VariableLengthHeader VariableLengthHeader
+	Payload              PacketPayload
 }
 
 type VariableLengthHeader interface{}
@@ -52,4 +52,12 @@ type ConnectVariableLengthHeader struct {
 	WillQoS        byte
 	WillFlag       bool
 	CleanSession   bool
+}
+
+type PacketPayload struct {
+	clientId    string
+	willTopic   string
+	willMessage []byte
+	username    string
+	password    string
 }
