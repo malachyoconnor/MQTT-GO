@@ -6,21 +6,22 @@ import (
 )
 
 var (
-	errPacketLength error = errors.New("error: cannot decode packet: packet too short to be a connect packet")
-	errInvalidType  error = errors.New("error: cannot decode packet: invalid control type")
+	errPacketTooShort error = errors.New("error: cannot decode packet: packet too short to be a connect packet")
+	errInvalidType    error = errors.New("error: cannot decode packet: invalid control type")
+	errInvalidLength  error = errors.New("error: packet length differs from the advertised fixed length")
 )
 
-// DecodeFixedHeader takes a list of bytes and decodes them to a fixed
-// control header. It returns a pointer to a ControlHeader, the length
+// DecodeFixedHeader takes a packet and decodes the fixed header.
+// It returns a pointer to a ControlHeader, the length
 // of the fixed header in btyes and a potential error.
-func DecodeFixedHeader(toDecode []byte) (*ControlHeader, int, error) {
+func DecodeFixedHeader(packet []byte) (*ControlHeader, int, error) {
 	resultHeader := &ControlHeader{}
 
-	if len(toDecode) < 2 {
-		return &ControlHeader{}, 0, errPacketLength
+	if len(packet) < 2 {
+		return &ControlHeader{}, 0, errPacketTooShort
 	}
 
-	resultHeader.Type = (toDecode[0] >> 4)
+	resultHeader.Type = (packet[0] >> 4)
 
 	if !(isValidControlType(resultHeader.Type)) {
 		return &ControlHeader{}, 0, errInvalidType
@@ -28,15 +29,18 @@ func DecodeFixedHeader(toDecode []byte) (*ControlHeader, int, error) {
 
 	// Mask out parts of the flag field and get the contents
 	// We need to shift QoS to be the first 2 bits
-	resultHeader.Retain = (toDecode[0] & 1) == 1
-	resultHeader.Dup = (toDecode[0] & 8) == 1
-	resultHeader.Qos = (toDecode[0] & 6) >> 1
+	resultHeader.Retain = (packet[0] & 1) == 1
+	resultHeader.Dup = (packet[0] & 8) == 1
+	resultHeader.Qos = (packet[0] & 6) >> 1
 
-	fixedLength, varLengthLen, err := DecodeVarLengthInt(toDecode[1:])
+	fixedLength, varLengthLen, err := DecodeVarLengthInt(packet[1:])
 	resultHeader.FixedLength = fixedLength
-
 	if err != nil {
 		return &ControlHeader{}, 0, err
+	}
+
+	if fixedLength != len(packet)-(1+varLengthLen) {
+		return &ControlHeader{}, 0, errInvalidLength
 	}
 
 	return resultHeader, 1 + varLengthLen, nil
