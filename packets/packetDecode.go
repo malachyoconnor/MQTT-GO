@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	errPacketLength error = errors.New("cannot decode packet: packet too short to be a connect packet")
-	errInvalidType  error = errors.New("cannot decode packet: invalid control type")
+	errPacketLength error = errors.New("error: cannot decode packet: packet too short to be a connect packet")
+	errInvalidType  error = errors.New("error: cannot decode packet: invalid control type")
 )
 
 // DecodeFixedHeader takes a list of bytes and decodes them to a fixed
@@ -42,20 +42,18 @@ func DecodeFixedHeader(toDecode []byte) (*ControlHeader, int, error) {
 	return resultHeader, 1 + varLengthLen, nil
 }
 
-var (
-	errMalformedUTFString = errors.New("malformed UTF string")
-)
+var errMalformedUTFString = errors.New("error: malformed UTF string")
 
 // FetchUTFString fetches a UTF string as encoded by the MQTT
 // standard. First we get the string length from the first 2 bytes
 // then we fetch the string itself.
 // Returns the decoded string, the total length of this section
-// including the two bytes encoding the length and a potential error.
+// including the two bytes encoding the length, and a potential error.
 func FetchUTFString(toFetch []byte) (string, int, error) {
 	var stringBuilder strings.Builder
 
-	var stringLen int = int(toFetch[1]) + int(toFetch[0])<<8
-	if !(0 <= stringLen && stringLen <= 65535) {
+	var stringLen int = CombineMsbLsb(toFetch[0], toFetch[1])
+	if !(0 <= stringLen && stringLen <= 65535) || (stringLen > len(toFetch)-2) {
 		return "", 0, errMalformedUTFString
 	}
 
@@ -67,29 +65,39 @@ func FetchUTFString(toFetch []byte) (string, int, error) {
 	return stringBuilder.String(), 2 + stringLen, nil
 }
 
-// type ConnectVariableLengthHeader struct {
-// 	ProtocolName  string
-// 	ProtocolLevel byte
-// 	ConnectFlags  byte
-// 	KeepAlive     int
-// }
+var (
+	errShrunkenByteArr error = errors.New("error: input byte string to FetchBytes was too short")
+)
+
+// FetchBytes fetches as many bytes as given by the first two bytes
+// in an input byte array (excluding the first 2 bits (the length itself)).
+// Returns the fetched bytes, the total length of this section
+// including the two bytes encoding the length, and a potential error.
+func FetchBytes(toFetch []byte) ([]byte, int, error) {
+	var numBytes int = CombineMsbLsb(toFetch[0], toFetch[1])
+	if len(toFetch) < numBytes+2 {
+		return []byte{}, 0, errShrunkenByteArr
+	}
+	resultArr := make([]byte, numBytes)
+	copy(resultArr, toFetch[2:2+numBytes])
+
+	return resultArr, 2 + numBytes, nil
+}
 
 // Should give us back a packet or throw an error
 // We'll pass a slice of the packet
 func DecodeConnect(packet []byte) (*Packet, error) {
-
 	resultPacket := &Packet{}
-
 	// Handle the fixed length header
 	fixedHeader, fixedHeaderLen, err := DecodeFixedHeader(packet)
 	if err != nil {
 		return &Packet{}, err
 	}
-	resultPacket.ControlHeader = fixedHeader
+	resultPacket.ControlHeader = *fixedHeader
 
 	// Handle the variable length header
 	varHeaderDecode := packet[fixedHeaderLen:]
-	varHeader := &ConnectVariableLengthHeader{}
+	varHeader := ConnectVariableLengthHeader{}
 
 	protocolName, offset, err := FetchUTFString(varHeaderDecode)
 	if err != nil {
@@ -108,15 +116,69 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	varHeader.WillFlag = (flags>>2)&1 == 1
 	varHeader.CleanSession = (flags>>1)&1 == 1
 
-	keepAlive := int(varHeaderDecode[offset])<<8 + int(varHeaderDecode[offset+1])
+	keepAlive := CombineMsbLsb(varHeaderDecode[offset], varHeaderDecode[offset+1])
 	varHeader.KeepAlive = keepAlive
 	offset += 2
 
+	resultPacket.VariableLengthHeader = varHeader
+
+	// Now we've to decode the payload
+	resultPayload := PacketPayload{}
+	payloadDecode := packet[offset:]
+	clientID, offset, err := FetchUTFString(payloadDecode)
+	if err != nil {
+		return &Packet{}, err
+	}
+	resultPayload.clientId = clientID
+
+	if varHeader.WillFlag {
+		willTopic, addedOffset, err := FetchUTFString(payloadDecode[offset:])
+		if err != nil {
+			return &Packet{}, err
+		}
+		offset += addedOffset
+
+		willMessage, addedOffset, err := FetchBytes(payloadDecode[offset:])
+		if err != nil {
+			return &Packet{}, err
+		}
+		offset += addedOffset
+
+		resultPayload.willTopic = willTopic
+		resultPayload.willMessage = willMessage
+	}
+
+	if varHeader.UsernameFlag {
+		username, addedOffset, err := FetchUTFString(payloadDecode[offset:])
+		if err != nil {
+			return &Packet{}, err
+		}
+		offset += addedOffset
+		resultPayload.username = username
+	}
+
+	if varHeader.PasswordFlag {
+		password, addedOffset, err := FetchUTFString(payloadDecode[offset:])
+		if err != nil {
+			return &Packet{}, err
+		}
+		offset += addedOffset
+		resultPayload.password = password
+	}
+
+	resultPacket.Payload = resultPayload
 	// If all goes well, we can return
 	return resultPacket, nil
 }
 
-var errMalformedInt error = errors.New("malformed variable length integer")
+// CombineMsbLsb takes two bytes (a most significat big and a least) and
+// combines them into an int - the combine values are contained in the
+// first 16 bits of the result
+func CombineMsbLsb(msb byte, lsb byte) int {
+	return int(msb)<<8 + int(lsb)
+}
+
+var errMalformedInt error = errors.New("error: malformed variable length integer")
 
 // DecodeVarLengthInt takes a list of bytes and decodes a variable length
 // header contained in the first 4 bytes. This works according to the

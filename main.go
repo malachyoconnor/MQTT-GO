@@ -28,13 +28,12 @@ var connectPacket = []byte{
 }
 
 func main() {
-
-	test := make([]int, 5, 8)
-	fmt.Println(test)
-	x := test[1:]
-	fmt.Println(x)
-	fmt.Println(test)
-
 	// fmt.Println(packets.FetchUTFString(connectPacket[2:]))
-	packets.DecodeConnect(connectPacket[:])
+	packet, err := packets.DecodeConnect(connectPacket[:])
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(packet)
+	}
+
 }
