@@ -1,0 +1,41 @@
+package gobro
+
+import (
+	"fmt"
+	"net"
+	"os"
+)
+
+const (
+	CONN_HOST = "127.0.0.1"
+	CONN_PORT = "1883"
+	CONN_TYPE = "tcp"
+)
+
+func ListenOnLoopback() {
+	listener, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
+	if err != nil {
+		fmt.Println("Error During Listen: ", err.Error())
+	}
+	defer listener.Close()
+	fmt.Println("Listening on " + CONN_HOST + ":" + CONN_PORT)
+	for {
+		connection, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Error during Listen: ", err.Error())
+		}
+		go handleRequest(connection)
+	}
+}
+
+func handleRequest(conn net.Conn) {
+	buffer := make([]byte, 1024)
+	reqLen, err := conn.Read(buffer)
+	if err != nil {
+		fmt.Println("Error reading:", err.Error())
+	}
+
+	fmt.Println(buffer)
+	// conn.Write([]byte("Message received."))
+	// conn.Close()
+}

@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	gobro "github.com/malachyoconnor/MQTT-GO/gobro"
 	packets "github.com/malachyoconnor/MQTT-GO/packets"
+
+	gobro "github.com/malachyoconnor/MQTT-GO/gobro"
 	tests "github.com/malachyoconnor/MQTT-GO/tests"
 )
 
@@ -41,7 +42,7 @@ func main() {
 	// } else {
 	// 	print(packet)
 	// }
-	gobro.Main()
+	gobro.ListenOnLoopback()
 	tests.TestConnect()
 
 }
