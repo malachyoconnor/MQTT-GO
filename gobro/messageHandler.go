@@ -3,7 +3,6 @@ package gobro
 import (
 	"fmt"
 	"net"
-	"os"
 )
 
 const (
@@ -30,7 +29,7 @@ func ListenOnLoopback() {
 
 func handleRequest(conn net.Conn) {
 	buffer := make([]byte, 1024)
-	reqLen, err := conn.Read(buffer)
+	_, err := conn.Read(buffer)
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())
 	}

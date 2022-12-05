@@ -1,3 +1,3 @@
-module github.com/malachyoconnor/MQTT-GO
+module MQTT-GO
 
 go 1.19

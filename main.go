@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	packets "github.com/malachyoconnor/MQTT-GO/packets"
+	packets "MQTT-GO/packets"
 
-	gobro "github.com/malachyoconnor/MQTT-GO/gobro"
-	tests "github.com/malachyoconnor/MQTT-GO/tests"
+	gobro "MQTT-GO/gobro"
+	tests "MQTT-GO/tests"
 )
 
 func print(i interface{}) {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/malachyoconnor/MQTT-GO/packets"
+	"MQTT-GO/packets"
 )
 
 func TestConnect() {
