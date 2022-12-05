@@ -2,6 +2,7 @@ package packets
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -34,6 +35,8 @@ func DecodeFixedHeader(packet []byte) (*ControlHeader, int, error) {
 	resultHeader.Qos = (packet[0] & 6) >> 1
 
 	fixedLength, varLengthLen, err := DecodeVarLengthInt(packet[1:])
+	fmt.Println(fixedLength)
+	fmt.Println(len(packet) - (1 + varLengthLen))
 	resultHeader.FixedLength = fixedLength
 	if err != nil {
 		return &ControlHeader{}, 0, err
@@ -94,6 +97,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, fixedHeaderLen, err := DecodeFixedHeader(packet)
+
 	if err != nil {
 		return &Packet{}, err
 	}
@@ -211,4 +215,30 @@ func DecodeVarLengthInt(packet []byte) (int, int, error) {
 		}
 	}
 	return result, length, nil
+}
+
+func decodePublish(packet []byte) (*Packet, error) {
+	resultPacket := &Packet{}
+	// Handle the fixed length header
+	fixedHeader, offset, err := DecodeFixedHeader(packet)
+	if err != nil {
+		return &Packet{}, err
+	}
+	resultPacket.ControlHeader = *fixedHeader
+
+	// Handle the variable length header
+	varHeader := PublishVariableLengthHeader{}
+	topicName, topicLen, err := FetchUTFString(packet[offset:])
+	packetIdentifier := CombineMsbLsb(packet[offset+topicLen], packet[offset+topicLen+1])
+
+	if err != nil {
+		return &Packet{}, err
+	}
+
+	varHeader.TopicName = topicName
+	varHeader.PacketIdentifier = packetIdentifier
+	offset = offset + topicLen + 2
+
+	return resultPacket, nil
+
 }

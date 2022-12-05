@@ -1,0 +1,16 @@
+Payload:
+
+CONNECT
+ - Client Identifier, Will Topic, Will Message, User Name, Password
+CONNACK
+
+PUBLISH
+ - Payload just has data
+PUBACK
+
+SUBSCRIBE
+ - list of filters and QoS levels. E.g. UTF followed by 1 byte QOS repeated as many times as filters to apply
+SUBACK
+
+DISCONNECT
+ - No Payload

@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	gobro "github.com/malachyoconnor/MQTT-GO/gobro"
 	packets "github.com/malachyoconnor/MQTT-GO/packets"
+	tests "github.com/malachyoconnor/MQTT-GO/tests"
 )
 
 func print(i interface{}) {
@@ -33,11 +35,13 @@ var connectPacket = []byte{
 func main() {
 
 	// fmt.Println(packets.FetchUTFString(connectPacket[2:]))
-	packet, err := packets.DecodeConnect(connectPacket[:])
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		print(packet)
-	}
+	// packet, err := packets.DecodeConnect(connectPacket[:])
+	// if err != nil {
+	// 	fmt.Println(err)
+	// } else {
+	// 	print(packet)
+	// }
+	gobro.Main()
+	tests.TestConnect()
 
 }

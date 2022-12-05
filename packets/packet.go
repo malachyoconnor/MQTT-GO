@@ -40,6 +40,11 @@ type ControlHeader struct {
 	Retain bool
 }
 
+type PublishVariableLengthHeader struct {
+	TopicName        string
+	PacketIdentifier int
+}
+
 type ConnectVariableLengthHeader struct {
 	ProtocolName  string
 	ProtocolLevel byte
