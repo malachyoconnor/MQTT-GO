@@ -1,6 +1,7 @@
 package packets
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -11,6 +12,11 @@ var (
 	errInvalidType    error = errors.New("error: cannot decode packet: invalid control type")
 	errInvalidLength  error = errors.New("error: packet length differs from the advertised fixed length")
 )
+
+func PrintPacket(i interface{}) {
+	s, _ := json.MarshalIndent(i, "", "\t")
+	fmt.Println(string(s))
+}
 
 // DecodeFixedHeader takes a packet and decodes the fixed header.
 // It returns a pointer to a ControlHeader, the length
@@ -35,8 +41,6 @@ func DecodeFixedHeader(packet []byte) (*ControlHeader, int, error) {
 	resultHeader.Qos = (packet[0] & 6) >> 1
 
 	fixedLength, varLengthLen, err := DecodeVarLengthInt(packet[1:])
-	fmt.Println(fixedLength)
-	fmt.Println(len(packet) - (1 + varLengthLen))
 	resultHeader.FixedLength = fixedLength
 	if err != nil {
 		return &ControlHeader{}, 0, err
@@ -91,9 +95,54 @@ func FetchBytes(toFetch []byte) ([]byte, int, error) {
 	return resultArr, 2 + numBytes, nil
 }
 
+var (
+	errPacketNotDefined error = errors.New("error: Packet type not defined")
+)
+
+func DecodePacket(packet []byte) (*Packet, error) {
+
+	packetType := (packet[0] >> 4)
+
+	var result *Packet
+	var err error
+
+	switch packetType {
+
+	case CONNECT:
+		result, err = DecodeConnect(packet[:])
+
+	case PUBLISH:
+		result, err = DecodePublish(packet[:])
+
+		var stringBuilder strings.Builder
+		stringBuilder.Write(result.Payload.ApplicationMessage)
+		fmt.Println("Decoded:", stringBuilder.String())
+
+	case PINGREQ:
+		result, err = DecodePing(packet[:])
+		fmt.Println("Ping")
+
+	default:
+
+		fmt.Println("Packet type not defined: ", packetType, " (", packetTypeName(packetType), ")")
+		return &Packet{}, errPacketNotDefined
+	}
+
+	if err != nil {
+		return &Packet{}, err
+	}
+	return result, nil
+}
+
 // Should give us back a packet or throw an error
 // We'll pass a slice of the packet
 func DecodeConnect(packet []byte) (*Packet, error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			fmt.Println("Recovered from", r)
+		}
+	}()
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, fixedHeaderLen, err := DecodeFixedHeader(packet)
@@ -101,6 +150,12 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	if err != nil {
 		return &Packet{}, err
 	}
+
+	if fixedHeader.Type != 1 {
+		err := fmt.Errorf("error: Incorrect packet type. Given type %v to connect ", fixedHeader.Type)
+		return &Packet{}, err
+	}
+
 	resultPacket.ControlHeader = *fixedHeader
 
 	// Handle the variable length header
@@ -217,7 +272,7 @@ func DecodeVarLengthInt(packet []byte) (int, int, error) {
 	return result, length, nil
 }
 
-func decodePublish(packet []byte) (*Packet, error) {
+func DecodePublish(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
@@ -229,15 +284,44 @@ func decodePublish(packet []byte) (*Packet, error) {
 	// Handle the variable length header
 	varHeader := PublishVariableLengthHeader{}
 	topicName, topicLen, err := FetchUTFString(packet[offset:])
-	packetIdentifier := CombineMsbLsb(packet[offset+topicLen], packet[offset+topicLen+1])
+	varHeaderLen := topicLen
+
+	if fixedHeader.Qos == 1 || fixedHeader.Qos == 2 {
+		packetIdentifier := CombineMsbLsb(packet[offset+topicLen], packet[offset+topicLen+1])
+		varHeader.PacketIdentifier = packetIdentifier
+		varHeaderLen += 2
+	}
 
 	if err != nil {
 		return &Packet{}, err
 	}
 
 	varHeader.TopicName = topicName
-	varHeader.PacketIdentifier = packetIdentifier
-	offset = offset + topicLen + 2
+	payloadLength := fixedHeader.FixedLength - varHeaderLen
+	offset = offset + varHeaderLen
+
+	resultPacket.VariableLengthHeader = varHeader
+
+	var payload PacketPayload
+	payload.ApplicationMessage = make([]byte, payloadLength)
+	copy(payload.ApplicationMessage, packet[offset:offset+payloadLength])
+	resultPacket.Payload = payload
+
+	return resultPacket, nil
+
+}
+
+func DecodePing(packet []byte) (*Packet, error) {
+	resultPacket := &Packet{}
+	// Handle the fixed length header
+	fixedHeader, offset, err := DecodeFixedHeader(packet)
+	if err != nil {
+		return &Packet{}, err
+	}
+	resultPacket.ControlHeader = *fixedHeader
+	if offset != len(packet) {
+		return &Packet{}, errInvalidLength
+	}
 
 	return resultPacket, nil
 
