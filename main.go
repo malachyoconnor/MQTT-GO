@@ -1,19 +1,9 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-
+	"MQTT-GO/gobro"
 	packets "MQTT-GO/packets"
-
-	gobro "MQTT-GO/gobro"
-	tests "MQTT-GO/tests"
 )
-
-func print(i interface{}) {
-	s, _ := json.MarshalIndent(i, "", "\t")
-	fmt.Println(string(s))
-}
 
 var connectPacket = []byte{
 	// Fixed header
@@ -34,15 +24,16 @@ var connectPacket = []byte{
 }
 
 func main() {
+	packetPool := gobro.CreateBytePool()
+	msgListener := gobro.CreateMessageHandler(packetPool)
+	msgListener2 := gobro.CreateMessageHandler(packetPool)
 
-	// fmt.Println(packets.FetchUTFString(connectPacket[2:]))
-	// packet, err := packets.DecodeConnect(connectPacket[:])
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	print(packet)
-	// }
-	gobro.ListenOnLoopback()
-	tests.TestConnect()
+	go gobro.Sniff(packetPool)
+	go msgListener.Listen()
+	go msgListener2.Listen()
+
+	for {
+		continue
+	}
 
 }
