@@ -19,6 +19,16 @@ const (
 	AUTH = 15
 )
 
+func packetTypeName(packetType byte) string {
+	if packetType > 15 || packetType < 0 {
+		return "UNDEFINED"
+	}
+	return []string{"RESERVED", "CONNECT", "CONNACK", "PUBLISH", "PUBACK",
+		"PUBREC", "PUBREL", "PUBCOMP", "SUBSCRIBE", "SUBACK", "UNSUBSCRIBE",
+		"UNSUBACK", "PINGREQ", "PINGRESP", "DISCONNECT", "AUTH"}[packetType]
+
+}
+
 func isValidControlType(controlType byte) bool {
 	return ((RESERVED < controlType) && (controlType <= AUTH))
 }
@@ -65,4 +75,7 @@ type PacketPayload struct {
 	willMessage []byte
 	username    string
 	password    string
+	topicName   string
+
+	ApplicationMessage []byte
 }
