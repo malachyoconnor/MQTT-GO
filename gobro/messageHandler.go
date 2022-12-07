@@ -1,40 +1,32 @@
 package gobro
 
 import (
+	"MQTT-GO/packets"
 	"fmt"
-	"net"
 )
 
-const (
-	CONN_HOST = "127.0.0.1"
-	CONN_PORT = "1883"
-	CONN_TYPE = "tcp"
-)
+type MessageHandler struct {
+	AttachedBytePool *BytePool
+}
 
-func ListenOnLoopback() {
-	listener, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
-	if err != nil {
-		fmt.Println("Error During Listen: ", err.Error())
-	}
-	defer listener.Close()
-	fmt.Println("Listening on " + CONN_HOST + ":" + CONN_PORT)
-	for {
-		connection, err := listener.Accept()
-		if err != nil {
-			fmt.Println("Error during Listen: ", err.Error())
-		}
-		go handleRequest(connection)
+func CreateMessageHandler(bytePoolAddress *BytePool) *MessageHandler {
+	return &MessageHandler{
+		AttachedBytePool: bytePoolAddress,
 	}
 }
 
-func handleRequest(conn net.Conn) {
-	buffer := make([]byte, 1024)
-	_, err := conn.Read(buffer)
-	if err != nil {
-		fmt.Println("Error reading:", err.Error())
+func (msgH *MessageHandler) Listen() {
+
+	for {
+		newPacket := msgH.AttachedBytePool.Get()
+
+		result, err := packets.DecodePacket(newPacket)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		packets.PrintPacket(result)
 	}
 
-	fmt.Println(buffer)
-	// conn.Write([]byte("Message received."))
-	// conn.Close()
 }
