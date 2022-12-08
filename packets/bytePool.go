@@ -1,4 +1,4 @@
-package gobro
+package packets
 
 import (
 	"sync"
@@ -6,7 +6,7 @@ import (
 
 type BytePool struct {
 	pool *sync.Pool
-	// Simple semaphore representing the number of items waiting to be collected
+	// Simple "semaphore" representing the number of items waiting to be collected
 	itemsWaiting chan struct{}
 }
 
