@@ -2,7 +2,7 @@ package main
 
 import (
 	"MQTT-GO/gobro"
-	packets "MQTT-GO/packets"
+	"MQTT-GO/packets"
 )
 
 var connectPacket = []byte{
@@ -24,13 +24,11 @@ var connectPacket = []byte{
 }
 
 func main() {
-	packetPool := gobro.CreateBytePool()
-	msgListener := gobro.CreateMessageHandler(packetPool)
-	msgListener2 := gobro.CreateMessageHandler(packetPool)
 
-	go gobro.Sniff(packetPool)
-	go msgListener.Listen()
-	go msgListener2.Listen()
+	server := gobro.CreateServer()
+	server.StartServer()
+
+	// gobro.
 
 	for {
 		continue
