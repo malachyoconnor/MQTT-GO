@@ -41,7 +41,7 @@ func DecodeFixedHeader(packet []byte) (*ControlHeader, int, error) {
 	resultHeader.Qos = (packet[0] & 6) >> 1
 
 	fixedLength, varLengthLen, err := DecodeVarLengthInt(packet[1:])
-	resultHeader.FixedLength = fixedLength
+	resultHeader.RemainingLength = fixedLength
 	if err != nil {
 		return &ControlHeader{}, 0, err
 	}
@@ -99,9 +99,21 @@ var (
 	errPacketNotDefined error = errors.New("error: Packet type not defined")
 )
 
-func DecodePacket(packet []byte) (*Packet, error) {
+func GetPacketType(packet *[]byte) byte {
+	return (*packet)[0] >> 4
+}
 
-	packetType := (packet[0] >> 4)
+var zeroLengthPacketError = errors.New("error: Zero length packet read from byte pool.")
+
+// DecodePacket takes a byte array encoding a packet and returns
+// (*Packet, PacketType, error)
+func DecodePacket(packet []byte) (*Packet, byte, error) {
+
+	if len(packet) == 0 {
+		return &Packet{}, 0, zeroLengthPacketError
+	}
+
+	packetType := GetPacketType(&packet)
 
 	var result *Packet
 	var err error
@@ -125,13 +137,13 @@ func DecodePacket(packet []byte) (*Packet, error) {
 	default:
 
 		fmt.Println("Packet type not defined: ", packetType, " (", packetTypeName(packetType), ")")
-		return &Packet{}, errPacketNotDefined
+		return &Packet{}, 0, errPacketNotDefined
 	}
 
 	if err != nil {
-		return &Packet{}, err
+		return &Packet{}, 0, err
 	}
-	return result, nil
+	return result, packetType, nil
 }
 
 // Should give us back a packet or throw an error
@@ -297,7 +309,7 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	}
 
 	varHeader.TopicName = topicName
-	payloadLength := fixedHeader.FixedLength - varHeaderLen
+	payloadLength := fixedHeader.RemainingLength - varHeaderLen
 	offset = offset + varHeaderLen
 
 	resultPacket.VariableLengthHeader = varHeader
@@ -325,4 +337,25 @@ func DecodePing(packet []byte) (*Packet, error) {
 
 	return resultPacket, nil
 
+}
+
+func CreateByteInline(input_binary []byte) byte {
+	res, _ := CreateByte(input_binary)
+	return res
+}
+
+// CreateByte takes an array of 0s and 1s and returns the byte representation
+// along with a boolean "ok".
+func CreateByte(input_binary []byte) (byte, bool) {
+	if len(input_binary) > 8 {
+		return 0, false
+	}
+	var result byte = 0
+	for i, v := range input_binary {
+		if !(v == 0 || v == 1) {
+			return 0, false
+		}
+		result += (v << (7 - i))
+	}
+	return result, true
 }
