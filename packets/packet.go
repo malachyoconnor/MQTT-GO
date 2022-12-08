@@ -42,8 +42,8 @@ type Packet struct {
 type VariableLengthHeader interface{}
 
 type ControlHeader struct {
-	Type        byte
-	FixedLength int
+	Type            byte
+	RemainingLength int
 	// Flags
 	Qos    byte
 	Dup    bool
@@ -78,4 +78,9 @@ type PacketPayload struct {
 	topicName   string
 
 	ApplicationMessage []byte
+}
+
+type ConAckVariableLengthHeader struct {
+	connectAcknowledgeFlags byte
+	connectReturnCode       byte
 }
