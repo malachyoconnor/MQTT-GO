@@ -156,7 +156,7 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 
 		var stringBuilder strings.Builder
 		stringBuilder.Write(result.Payload.ApplicationMessage)
-		fmt.Println("Decoded:", stringBuilder.String())
+		fmt.Println("Received request to publish:", stringBuilder.String())
 
 	case PINGREQ:
 		result, err = DecodePing(packet[:])
@@ -164,7 +164,7 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 
 	case DISCONNECT:
 		result, err = DecodeDisconnect(packet[:])
-		fmt.Println("Disconnect")
+		fmt.Println("Disconnect packet decoded")
 
 	default:
 

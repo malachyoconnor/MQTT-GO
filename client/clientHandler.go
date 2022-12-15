@@ -9,8 +9,9 @@ import (
 )
 
 type ClientMessage struct {
-	ClientID *string
-	Packet   *[]byte
+	ClientID         *ClientID
+	ClientConnection *net.Conn
+	Packet           *[]byte
 }
 
 func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *ClientTable) {
@@ -21,7 +22,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 		fmt.Println("Error handling connect ", err)
 		return
 	}
-	clientID := string(newClient.ClientIdentifier)
+	clientID := newClient.ClientIdentifier
 
 	if err != nil {
 		fmt.Println("Error decoding clientID")
@@ -33,6 +34,13 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 
 		buffer, err := reader.Peek(4)
 
+		if err != nil {
+			if err != io.EOF {
+				fmt.Println("Error in ClientHandler:", err)
+			}
+			break
+		}
+
 		if len(buffer) == 0 {
 			continue
 		}
@@ -42,22 +50,13 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 		bytesRead, err := io.ReadFull(reader, packet)
 		packet = packet[:bytesRead]
 
-		if bytesRead == 0 {
-			fmt.Println(err)
-			continue
-		}
-
-		toSend := ClientMessage{ClientID: &clientID, Packet: &packet}
-
 		if err != nil {
 			fmt.Println(packet)
 			fmt.Println("Error: ", err)
 			break
 		}
 
-		if packets.GetPacketType(&packet) == 14 {
-			break
-		}
+		toSend := ClientMessage{ClientID: &clientID, Packet: &packet, ClientConnection: connection}
 
 		(*packetPool) <- toSend
 	}
