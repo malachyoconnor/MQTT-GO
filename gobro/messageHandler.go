@@ -7,23 +7,26 @@ import (
 )
 
 type MessageHandler struct {
-	AttachedInputPool  *packets.BytePool
-	AttachedOutputPool *packets.BytePool
+	AttachedInputChan  *chan client.ClientMessage
+	AttachedOutputChan *chan []byte
 }
 
-func CreateMessageHandler(inputPoolAddress *packets.BytePool, outputPoolAddress *packets.BytePool) MessageHandler {
+func CreateMessageHandler(inputChanAddress *chan client.ClientMessage, outputChanAddress *chan []byte) MessageHandler {
 	return MessageHandler{
-		AttachedInputPool:  inputPoolAddress,
-		AttachedOutputPool: outputPoolAddress,
+		AttachedInputChan:  inputChanAddress,
+		AttachedOutputChan: outputChanAddress,
 	}
 }
 
 func (msgH *MessageHandler) Listen(server *Server) {
 
 	for {
-		newPacket := msgH.AttachedInputPool.Get()
+		clientMessage := <-(*msgH.AttachedInputChan)
+		// clientID := *clientMessage.ClientID
+		packet := clientMessage.Packet
 
-		decodedPacket, packetType, err := packets.DecodePacket(newPacket)
+		_, packetType, err := packets.DecodePacket(*packet)
+
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -39,11 +42,6 @@ func (msgH *MessageHandler) Listen(server *Server) {
 			// Check if the reserved flag is zero, if not disconnect them
 			// Finally send out a CONACK [X]
 
-			conACK := packets.CreateConACK(true, 0)
-			resultToSend := packets.EncodeConACK(&conACK)
-
-			msgH.AttachedOutputPool.Put(resultToSend[:])
-
 		case packets.PUBLISH:
 			// Check if the client exists by checking the client table
 			// Then get the clients connected to that topic and send them
@@ -52,7 +50,6 @@ func (msgH *MessageHandler) Listen(server *Server) {
 			// Check if the client exists
 			// Then add them to the topic in the subscription table
 		}
-		packets.PrintPacket(decodedPacket)
 	}
 
 }

@@ -46,8 +46,13 @@ func DecodeFixedHeader(packet []byte) (*ControlHeader, int, error) {
 		return &ControlHeader{}, 0, err
 	}
 
-	if fixedLength != len(packet)-(1+varLengthLen) {
-		return &ControlHeader{}, 0, errInvalidLength
+	if fixedLength != (len(packet)-1)-(varLengthLen) {
+
+		fmt.Println(len(packet) - 1)
+		fmt.Println(varLengthLen)
+		fmt.Println(packet)
+
+		return &ControlHeader{}, 0, errors.New("error: packet length differs from the advertised fixed length in DecodeFixedHeader")
 	}
 
 	return resultHeader, 1 + varLengthLen, nil
@@ -55,12 +60,12 @@ func DecodeFixedHeader(packet []byte) (*ControlHeader, int, error) {
 
 var errMalformedUTFString = errors.New("error: malformed UTF string")
 
-// FetchUTFString fetches a UTF string as encoded by the MQTT
+// DecodeUTFString fetches a UTF string as encoded by the MQTT
 // standard. First we get the string length from the first 2 bytes
 // then we fetch the string itself.
 // Returns the decoded string, the total length of this section
 // including the two bytes encoding the length, and a potential error.
-func FetchUTFString(toFetch []byte) (string, int, error) {
+func DecodeUTFString(toFetch []byte) (string, int, error) {
 	var stringBuilder strings.Builder
 
 	var stringLen int = CombineMsbLsb(toFetch[0], toFetch[1])
@@ -74,6 +79,29 @@ func FetchUTFString(toFetch []byte) (string, int, error) {
 	}
 
 	return stringBuilder.String(), 2 + stringLen, nil
+}
+
+func getMSBandLSB(toEncode int) (byte, byte) {
+	msb := byte(toEncode >> 8)
+	lsb := byte(toEncode)
+	return msb, lsb
+}
+
+func EncodeUTFString(toEncode string) ([]byte, int, error) {
+
+	// If more than 16 bytes, 65535 = 2^16-1
+	if len(toEncode) > 65535 {
+		return []byte{}, 0, errors.New("error: String is too long to encode")
+	}
+
+	resultEncoding := make([]byte, len(toEncode)+2)
+	resultEncoding[0], resultEncoding[1] = getMSBandLSB(len(toEncode))
+
+	for pos, char := range toEncode {
+		resultEncoding[2+pos] = byte(char)
+	}
+
+	return resultEncoding, len(toEncode) + 2, nil
 }
 
 var (
@@ -134,9 +162,13 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 		result, err = DecodePing(packet[:])
 		fmt.Println("Ping")
 
+	case DISCONNECT:
+		result, err = DecodeDisconnect(packet[:])
+		fmt.Println("Disconnect")
+
 	default:
 
-		fmt.Println("Packet type not defined: ", packetType, " (", packetTypeName(packetType), ")")
+		fmt.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
 		return &Packet{}, 0, errPacketNotDefined
 	}
 
@@ -172,9 +204,9 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 
 	// Handle the variable length header
 	varHeaderDecode := packet[fixedHeaderLen:]
-	varHeader := ConnectVariableLengthHeader{}
+	varHeader := ConnectVariableHeader{}
 
-	protocolName, offset, err := FetchUTFString(varHeaderDecode)
+	protocolName, offset, err := DecodeUTFString(varHeaderDecode)
 	if err != nil {
 		return &Packet{}, err
 	}
@@ -201,14 +233,14 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	resultPayload := PacketPayload{}
 	payloadDecode := varHeaderDecode[offset:]
 
-	clientID, offset, err := FetchUTFString(payloadDecode)
+	clientID, offset, err := DecodeUTFString(payloadDecode)
 	if err != nil {
 		return &Packet{}, err
 	}
-	resultPayload.clientId = clientID
+	resultPayload.ClientId = clientID
 
 	if varHeader.WillFlag {
-		willTopic, addedOffset, err := FetchUTFString(payloadDecode[offset:])
+		willTopic, addedOffset, err := DecodeUTFString(payloadDecode[offset:])
 		if err != nil {
 			return &Packet{}, err
 		}
@@ -220,30 +252,50 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 		}
 		offset += addedOffset
 
-		resultPayload.willTopic = willTopic
-		resultPayload.willMessage = willMessage
+		resultPayload.WillTopic = willTopic
+		resultPayload.WillMessage = willMessage
 	}
 
 	if varHeader.UsernameFlag {
-		username, addedOffset, err := FetchUTFString(payloadDecode[offset:])
+		username, addedOffset, err := DecodeUTFString(payloadDecode[offset:])
 		if err != nil {
 			return &Packet{}, err
 		}
 		offset += addedOffset
-		resultPayload.username = username
+		resultPayload.Username = username
 	}
 
 	if varHeader.PasswordFlag {
-		password, addedOffset, err := FetchUTFString(payloadDecode[offset:])
+		password, addedOffset, err := DecodeUTFString(payloadDecode[offset:])
 		if err != nil {
 			return &Packet{}, err
 		}
 		offset += addedOffset
-		resultPayload.password = password
+		resultPayload.Password = password
 	}
 
 	resultPacket.Payload = resultPayload
 	// If all goes well, we can return
+	return resultPacket, nil
+}
+
+func DecodeDisconnect(packet []byte) (*Packet, error) {
+
+	resultPacket := &Packet{}
+	resultPacket.ControlHeader = ControlHeader{
+		Type:            14,
+		RemainingLength: 0,
+		Qos:             0,
+		Dup:             false,
+		Retain:          false,
+	}
+
+	if packet[0]>>4 != 14 || packet[0]-14<<4 != 0 || packet[1] != 0 {
+
+		return nil, errors.New("Incorrectly formed DISCONNECT packet")
+
+	}
+
 	return resultPacket, nil
 }
 
@@ -264,7 +316,7 @@ var errMalformedInt error = errors.New("error: malformed variable length integer
 func DecodeVarLengthInt(packet []byte) (int, int, error) {
 	var result int = 0
 	multiplier := 1
-	length := 0
+	var length int
 
 	for i, val := range packet {
 		if i > 3 {
@@ -288,14 +340,15 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
+
 	if err != nil {
 		return &Packet{}, err
 	}
 	resultPacket.ControlHeader = *fixedHeader
 
 	// Handle the variable length header
-	varHeader := PublishVariableLengthHeader{}
-	topicName, topicLen, err := FetchUTFString(packet[offset:])
+	varHeader := PublishVariableHeader{}
+	topicName, topicLen, err := DecodeUTFString(packet[offset:])
 	varHeaderLen := topicLen
 
 	if fixedHeader.Qos == 1 || fixedHeader.Qos == 2 {

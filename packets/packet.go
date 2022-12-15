@@ -19,7 +19,7 @@ const (
 	AUTH = 15
 )
 
-func packetTypeName(packetType byte) string {
+func PacketTypeName(packetType byte) string {
 	if packetType > 15 || packetType < 0 {
 		return "UNDEFINED"
 	}
@@ -50,12 +50,12 @@ type ControlHeader struct {
 	Retain bool
 }
 
-type PublishVariableLengthHeader struct {
+type PublishVariableHeader struct {
 	TopicName        string
 	PacketIdentifier int
 }
 
-type ConnectVariableLengthHeader struct {
+type ConnectVariableHeader struct {
 	ProtocolName  string
 	ProtocolLevel byte
 	ConnectFlags  byte
@@ -70,17 +70,32 @@ type ConnectVariableLengthHeader struct {
 }
 
 type PacketPayload struct {
-	clientId    string
-	willTopic   string
-	willMessage []byte
-	username    string
-	password    string
-	topicName   string
+	ClientId    string
+	WillTopic   string
+	WillMessage []byte
+	Username    string
+	Password    string
+	TopicName   string
 
 	ApplicationMessage []byte
 }
 
-type ConAckVariableLengthHeader struct {
+type ConAckVariableHeader struct {
 	connectAcknowledgeFlags byte
 	connectReturnCode       byte
+}
+
+func (packet *Packet) GetVarHeader() VariableLengthHeader {
+	// TODO: Finish these
+
+	varLengthHeader := packet.VariableLengthHeader
+
+	switch packet.ControlHeader.Type {
+
+	case CONNECT:
+		return varLengthHeader.(ConnectVariableHeader)
+	case CONNACK:
+		return varLengthHeader.(ConAckVariableHeader)
+	}
+	return nil
 }

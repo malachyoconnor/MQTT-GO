@@ -1,6 +1,7 @@
 package gobro
 
 import (
+	"MQTT-GO/packets"
 	"fmt"
 	"time"
 
@@ -15,7 +16,7 @@ var snaplen = 1024
 var promisc = false
 var timeoutT = 1
 
-func Sniff(packetPool *BytePool) {
+func Sniff(packetPool *packets.BytePool) {
 
 	fmt.Println("Sniffing")
 

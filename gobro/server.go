@@ -2,9 +2,9 @@ package gobro
 
 import (
 	"MQTT-GO/client"
-	"MQTT-GO/packets"
 	"fmt"
 	"net"
+	"time"
 )
 
 var (
@@ -15,43 +15,44 @@ var (
 type Server struct {
 	clientTable       *client.ClientTable
 	SubscriptionTable *SubscriptionTable
-	inputPool         *packets.BytePool
-	outputPool        *packets.BytePool
+	inputChan         *chan client.ClientMessage
+	outputChan        *chan []byte
 }
 
 func CreateServer() Server {
 
 	clientTable := make(client.ClientTable)
 	SubscriptionTable := make(SubscriptionTable)
-	inputPool := packets.CreateBytePool()
-	outputPool := packets.CreateBytePool()
+	inputChan := make(chan client.ClientMessage)
+	outputChan := make(chan []byte)
 
 	return Server{
 		clientTable:       &clientTable,
 		SubscriptionTable: &SubscriptionTable,
-		inputPool:         inputPool,
-		outputPool:        outputPool,
+		inputChan:         &inputChan,
+		outputChan:        &outputChan,
 	}
 
 }
 
 func (server *Server) StartServer() {
 	// Listen for TCP connections
+	fmt.Println("Listening for TCP connections")
 	listener, err := net.Listen("tcp", ADDRESS+":"+PORT)
 	defer listener.Close()
 
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error while trying to listen for TCP connections", err)
 		return
 	}
 
-	go AcceptConnections(&listener, server)
+	msgSender := CreateMessageSender(server.outputChan)
+	go msgSender.ListenAndSend(server)
 
-	msgSender := CreateMessageSender(server.outputPool)
-	go msgSender.SendMessages(server)
-
-	msgListener := CreateMessageHandler(server.inputPool, server.outputPool)
+	msgListener := CreateMessageHandler(server.inputChan, server.outputChan)
 	go msgListener.Listen(server)
+
+	go AcceptConnections(&listener, server)
 
 	for {
 	}
@@ -61,7 +62,6 @@ func (server *Server) StartServer() {
 func AcceptConnections(listener *net.Listener, server *Server) {
 	for {
 		connection, err := (*listener).Accept()
-		defer connection.Close()
 		fmt.Println("Accepted a connection")
 
 		if err != nil {
@@ -69,7 +69,16 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 			return
 		}
 
-		go client.ClientHandler(&connection, server.inputPool)
+		// Set a keep alive period because there isn't a foolproof way of checking if the connection
+		// suddenly closes - we want to wait for DISCONNECT messages or timeout.
+		err = connection.(*net.TCPConn).SetKeepAlivePeriod(5 * time.Second)
+
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		go client.ClientHandler(&connection, server.inputChan, server.clientTable)
 	}
 }
 

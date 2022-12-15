@@ -18,6 +18,10 @@ func CreateBytePool() *BytePool {
 }
 
 func (b *BytePool) Put(item []byte) {
+	if item == nil {
+		panic("Error: Tried to put nil into the BytePool")
+	}
+
 	b.pool.Put(item)
 	b.itemsWaiting <- struct{}{}
 }
@@ -25,6 +29,11 @@ func (b *BytePool) Put(item []byte) {
 func (b *BytePool) Get() []byte {
 	<-b.itemsWaiting
 	// Get a value and assert it's type as a byte array
-	result := b.pool.Get().([]byte)
-	return result
+	result := b.pool.Get()
+
+	for result == nil {
+		result = b.pool.Get()
+	}
+
+	return result.([]byte)
 }

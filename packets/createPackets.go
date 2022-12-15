@@ -1,9 +1,9 @@
 package packets
 
-func CreateConACK(cleanSession bool, returnCode byte) Packet {
+func CreateConnACK(cleanSession bool, returnCode byte) Packet {
 	resultPacket := Packet{}
 	resultPacket.ControlHeader = ControlHeader{
-		Type:            CONNECT,
+		Type:            CONNACK,
 		RemainingLength: 2,
 	}
 
@@ -12,7 +12,7 @@ func CreateConACK(cleanSession bool, returnCode byte) Packet {
 		connectAcknowledgeFlags = 1
 	}
 
-	variableHeader := ConAckVariableLengthHeader{
+	variableHeader := ConAckVariableHeader{
 		connectAcknowledgeFlags: connectAcknowledgeFlags,
 		connectReturnCode:       returnCode,
 	}
