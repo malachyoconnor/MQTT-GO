@@ -66,14 +66,17 @@ type ConnectVariableHeader struct {
 	CleanSession   bool
 }
 
-type PacketPayload struct {
-	ClientId    string
-	WillTopic   string
-	WillMessage []byte
-	Username    string
-	Password    string
-	TopicName   string
+type SubscribeVariableHeader struct {
+	PacketIdentifier int
+}
 
+type PacketPayload struct {
+	ClientId           string
+	WillTopic          string
+	WillMessage        []byte
+	Username           string
+	Password           string
+	TopicName          string
 	ApplicationMessage []byte
 }
 

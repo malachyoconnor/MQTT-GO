@@ -72,6 +72,8 @@ func (msgH *MessageHandler) Listen(server *Server) {
 			// Check if the client exists
 			// Then add them to the topic in the subscription table
 
+			fmt.Println("Handling subscribe")
+
 		case packets.DISCONNECT:
 			// Close the client TCP connection.
 			// Remove the packet from the client list

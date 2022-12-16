@@ -148,6 +148,9 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 	case CONNECT:
 		result, err = DecodeConnect(packet[:])
 
+	case SUBSCRIBE:
+		result, err = DecodeSubscribe(packet[:])
+
 	case PUBLISH:
 		result, err = DecodePublish(packet[:])
 
@@ -275,13 +278,28 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 func DecodeSubscribe(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
-	_, _, err := DecodeFixedHeader(packet)
-
+	fixedHeader, offset, err := DecodeFixedHeader(packet)
 	if err != nil {
 		return &Packet{}, err
 	}
 
+	if fixedHeader.Flags != 2 {
+		return &Packet{}, errors.New("error: Malformed Subscribe packet sent by client")
+	}
+
 	// Handle var header
+	packetIdentifier := CombineMsbLsb(packet[offset], packet[offset+1])
+	offset += 2
+	varHeader := SubscribeVariableHeader{
+		PacketIdentifier: packetIdentifier,
+	}
+	resultPacket.VariableLengthHeader = varHeader
+
+	// Get payload
+	payload := PacketPayload{
+		ApplicationMessage: packet[offset:],
+	}
+	resultPacket.Payload = payload
 
 	return resultPacket, nil
 }

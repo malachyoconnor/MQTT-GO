@@ -2,4 +2,5 @@ package gobro
 
 import "MQTT-GO/client"
 
-type SubscriptionTable map[client.ClientID][]string
+type Topic string
+type SubscriptionTable map[client.ClientID][]Topic
