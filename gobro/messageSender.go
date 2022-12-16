@@ -2,6 +2,7 @@ package gobro
 
 import (
 	"MQTT-GO/client"
+	"MQTT-GO/packets"
 	"fmt"
 )
 
@@ -22,6 +23,8 @@ func (MessageSender) ListenAndSend(server *Server) {
 		clientID := *clientMsg.ClientID
 		packet := *clientMsg.Packet
 
+		packetType := packets.PacketTypeName(packets.GetPacketType(&packet))
+		fmt.Println("Sending", packetType)
 		// We look up the client rather than using the connection directly
 		// This is to ensure we get an error if the client doesn't exist
 

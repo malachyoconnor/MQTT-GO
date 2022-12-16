@@ -42,13 +42,8 @@ func (msgH *MessageHandler) Listen(server *Server) {
 
 			// This should disconnect them if they're already connected !!
 			createClient(&clientTable, &clientMessage)
-
-			// If it IS in there, then we disconnect them
-			// If the connect packet is empty we give our own
-
 			// Check if the reserved flag is zero, if not disconnect them
 			// Finally send out a CONACK [X]
-
 			connackPacket := packets.CreateConnACK(false, 0)
 			connackArray := packets.EncodeConACK(&connackPacket)
 			clientMsg := client.CreateClientMessage(&clientID, &clientConnection, &connackArray)
@@ -87,10 +82,4 @@ func createClient(clientTable *client.ClientTable, clientMsg *client.ClientMessa
 	(*clientTable)[*clientMsg.ClientID] = client
 
 	return client
-}
-
-func HandleConnect(connectPacket *packets.Packet, clientTable *map[string]*client.Client) {
-
-	// if
-
 }

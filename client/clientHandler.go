@@ -26,7 +26,7 @@ func CreateClientMessage(clientID *ClientID, clientConnection *net.Conn, packet 
 func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *ClientTable) {
 
 	defer (*connection).Close()
-	newClient, err := handleInitialConnect(connection, clientTable)
+	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
 		fmt.Println("Error handling connect ", err)
 		return
@@ -73,7 +73,9 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 	fmt.Println("Client connection closed")
 }
 
-func handleInitialConnect(connection *net.Conn, clientTable *ClientTable) (*Client, error) {
+// handleInitialConnect decodes the packet to find a ClientID - if none exists
+// we create one and then push the connect to be handled by message Handler
+func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packetPool *chan ClientMessage) (*Client, error) {
 	buffer := make([]byte, 300)
 	packetLen, err := (*connection).Read(buffer)
 
@@ -100,22 +102,12 @@ func handleInitialConnect(connection *net.Conn, clientTable *ClientTable) (*Clie
 	newClient := &Client{
 		// TODO: Make a function which takes a remoteAddr and makes a byte[4]
 		// IPAddress:        (*connection).RemoteAddr().String(),
-		ClientIdentifier: ClientID(clientID),
+		ClientIdentifier: clientID,
 		TCPConnection:    *connection,
 	}
 
-	(*clientTable)[clientID] = newClient
-
-	// Now we send a CONNACK
-
-	conACK := packets.CreateConnACK(true, 0)
-	resultToSend := packets.EncodeConACK(&conACK)
-	fmt.Println("Sending CONNACK")
-	_, err = (*connection).Write(resultToSend)
-
-	if err != nil {
-		return &Client{}, err
-	}
+	clientMsg := CreateClientMessage(&clientID, *&connection, &packet)
+	(*packetPool) <- clientMsg
 
 	return newClient, nil
 
