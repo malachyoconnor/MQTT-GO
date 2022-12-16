@@ -14,6 +14,15 @@ type ClientMessage struct {
 	Packet           *[]byte
 }
 
+func CreateClientMessage(clientID *ClientID, clientConnection *net.Conn, packet *[]byte) ClientMessage {
+	clientMessage := ClientMessage{
+		ClientID:         clientID,
+		ClientConnection: clientConnection,
+		Packet:           packet,
+	}
+	return clientMessage
+}
+
 func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *ClientTable) {
 
 	defer (*connection).Close()

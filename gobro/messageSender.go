@@ -2,15 +2,14 @@ package gobro
 
 import (
 	"MQTT-GO/client"
-	"MQTT-GO/packets"
 	"fmt"
 )
 
 type MessageSender struct {
-	outputChan *chan []byte
+	outputChan *chan client.ClientMessage
 }
 
-func CreateMessageSender(outputPool *chan []byte) MessageSender {
+func CreateMessageSender(outputPool *chan client.ClientMessage) MessageSender {
 	return MessageSender{
 		outputChan: outputPool,
 	}
@@ -18,23 +17,21 @@ func CreateMessageSender(outputPool *chan []byte) MessageSender {
 
 func (MessageSender) ListenAndSend(server *Server) {
 	for {
-		packetToSend := <-(*server.outputChan)
+		clientMsg := <-(*server.outputChan)
 
-		fmt.Println("Sending some shit")
+		clientID := *clientMsg.ClientID
+		packet := *clientMsg.Packet
 
-		stringID, idLen, err := packets.DecodeUTFString(packetToSend)
-		clientID := client.ClientID(stringID)
-		if err != nil {
-			fmt.Println("Failed to decode username. ", err)
-			continue
-		}
+		// We look up the client rather than using the connection directly
+		// This is to ensure we get an error if the client doesn't exist
 
 		client := (*server.clientTable)[clientID]
-		_, err = client.TCPConnection.Write(packetToSend[idLen:])
+		_, err := client.TCPConnection.Write(packet)
 
 		if err != nil {
 			fmt.Println("Failed to send packet. ", err)
 		}
+
 		continue
 
 	}

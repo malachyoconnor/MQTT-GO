@@ -16,7 +16,7 @@ type Server struct {
 	clientTable       *client.ClientTable
 	SubscriptionTable *SubscriptionTable
 	inputChan         *chan client.ClientMessage
-	outputChan        *chan []byte
+	outputChan        *chan client.ClientMessage
 }
 
 func CreateServer() Server {
@@ -24,7 +24,7 @@ func CreateServer() Server {
 	clientTable := make(client.ClientTable)
 	SubscriptionTable := make(SubscriptionTable)
 	inputChan := make(chan client.ClientMessage)
-	outputChan := make(chan []byte)
+	outputChan := make(chan client.ClientMessage)
 
 	return Server{
 		clientTable:       &clientTable,

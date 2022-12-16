@@ -8,10 +8,10 @@ import (
 
 type MessageHandler struct {
 	AttachedInputChan  *chan client.ClientMessage
-	AttachedOutputChan *chan []byte
+	AttachedOutputChan *chan client.ClientMessage
 }
 
-func CreateMessageHandler(inputChanAddress *chan client.ClientMessage, outputChanAddress *chan []byte) MessageHandler {
+func CreateMessageHandler(inputChanAddress *chan client.ClientMessage, outputChanAddress *chan client.ClientMessage) MessageHandler {
 	return MessageHandler{
 		AttachedInputChan:  inputChanAddress,
 		AttachedOutputChan: outputChanAddress,
@@ -40,6 +40,7 @@ func (msgH *MessageHandler) Listen(server *Server) {
 			// Query the client table to check if the client exists
 			// if not slap it in there - then send connack
 
+			// This should disconnect them if they're already connected !!
 			createClient(&clientTable, &clientMessage)
 
 			// If it IS in there, then we disconnect them
@@ -47,6 +48,11 @@ func (msgH *MessageHandler) Listen(server *Server) {
 
 			// Check if the reserved flag is zero, if not disconnect them
 			// Finally send out a CONACK [X]
+
+			connackPacket := packets.CreateConnACK(false, 0)
+			connackArray := packets.EncodeConACK(&connackPacket)
+			clientMsg := client.CreateClientMessage(&clientID, &clientConnection, &connackArray)
+			(*server.outputChan) <- clientMsg
 
 		case packets.PUBLISH:
 			// Check if the client exists by checking the client table
