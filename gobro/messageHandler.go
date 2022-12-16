@@ -4,6 +4,7 @@ import (
 	"MQTT-GO/client"
 	"MQTT-GO/packets"
 	"fmt"
+	"strings"
 )
 
 type MessageHandler struct {
@@ -25,14 +26,25 @@ func (msgH *MessageHandler) Listen(server *Server) {
 	for {
 		clientMessage := <-(*msgH.AttachedInputChan)
 		clientID := client.ClientID(*clientMessage.ClientID)
-		packet := clientMessage.Packet
+		packetArray := clientMessage.Packet
 		clientConnection := *(clientMessage.ClientConnection)
 
-		_, packetType, err := packets.DecodePacket(*packet)
+		packet, packetType, err := packets.DecodePacket(*packetArray)
 
 		if err != nil {
 			fmt.Println(err)
 			continue
+		}
+
+		// General case for if the client doesn't exist IF NOT A CONNECT packet
+		if packetType != packets.CONNECT {
+
+			if _, found := clientTable[clientID]; !found {
+				fmt.Println("Client not in the client table sending messages, disconnecting.")
+				clientConnection.Close()
+				continue
+			}
+
 		}
 
 		switch packetType {
@@ -50,8 +62,11 @@ func (msgH *MessageHandler) Listen(server *Server) {
 			(*server.outputChan) <- clientMsg
 
 		case packets.PUBLISH:
-			// Check if the client exists by checking the client table
-			// Then get the clients connected to that topic and send them
+			var stringBuilder strings.Builder
+			stringBuilder.Write(packet.Payload.ApplicationMessage)
+			fmt.Println("Received request to publish:", stringBuilder.String())
+
+			// Get the clients connected to that topic and send them
 			// all a lovely packet
 		case packets.SUBSCRIBE:
 			// Check if the client exists

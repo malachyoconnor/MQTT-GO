@@ -34,11 +34,8 @@ func DecodeFixedHeader(packet []byte) (*ControlHeader, int, error) {
 		return &ControlHeader{}, 0, errInvalidType
 	}
 
-	// Mask out parts of the flag field and get the contents
-	// We need to shift QoS to be the first 2 bits
-	resultHeader.Retain = (packet[0] & 1) == 1
-	resultHeader.Dup = (packet[0] & 8) == 1
-	resultHeader.Qos = (packet[0] & 6) >> 1
+	// Mask out the LSF of the header to get the flags
+	resultHeader.Flags = packet[0] & 15
 
 	fixedLength, varLengthLen, err := DecodeVarLengthInt(packet[1:])
 	resultHeader.RemainingLength = fixedLength
@@ -153,10 +150,6 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 
 	case PUBLISH:
 		result, err = DecodePublish(packet[:])
-
-		var stringBuilder strings.Builder
-		stringBuilder.Write(result.Payload.ApplicationMessage)
-		fmt.Println("Received request to publish:", stringBuilder.String())
 
 	case PINGREQ:
 		result, err = DecodePing(packet[:])
@@ -279,15 +272,27 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
+func DecodeSubscribe(packet []byte) (*Packet, error) {
+	resultPacket := &Packet{}
+	// Handle the fixed length header
+	_, _, err := DecodeFixedHeader(packet)
+
+	if err != nil {
+		return &Packet{}, err
+	}
+
+	// Handle var header
+
+	return resultPacket, nil
+}
+
 func DecodeDisconnect(packet []byte) (*Packet, error) {
 
 	resultPacket := &Packet{}
 	resultPacket.ControlHeader = ControlHeader{
 		Type:            14,
 		RemainingLength: 0,
-		Qos:             0,
-		Dup:             false,
-		Retain:          false,
+		Flags:           0,
 	}
 
 	if packet[0]>>4 != 14 || packet[0]-14<<4 != 0 || packet[1] != 0 {
@@ -351,7 +356,10 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	topicName, topicLen, err := DecodeUTFString(packet[offset:])
 	varHeaderLen := topicLen
 
-	if fixedHeader.Qos == 1 || fixedHeader.Qos == 2 {
+	// The qos is the second 2 bits of the flags
+	qos := (fixedHeader.Flags&2 + fixedHeader.Flags&4) >> 1
+
+	if qos == 1 || qos == 2 {
 		packetIdentifier := CombineMsbLsb(packet[offset+topicLen], packet[offset+topicLen+1])
 		varHeader.PacketIdentifier = packetIdentifier
 		varHeaderLen += 2
@@ -373,7 +381,6 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	resultPacket.Payload = payload
 
 	return resultPacket, nil
-
 }
 
 func DecodePing(packet []byte) (*Packet, error) {

@@ -44,10 +44,7 @@ type VariableLengthHeader interface{}
 type ControlHeader struct {
 	Type            byte
 	RemainingLength int
-	// Flags
-	Qos    byte
-	Dup    bool
-	Retain bool
+	Flags           byte
 }
 
 type PublishVariableHeader struct {
