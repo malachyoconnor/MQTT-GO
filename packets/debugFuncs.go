@@ -6,7 +6,7 @@ import (
 
 func PrintBinary(toPrint []byte) {
 
-	for b := range toPrint {
+	for _, b := range toPrint {
 		fmt.Printf("%08b\n", b)
 	}
 

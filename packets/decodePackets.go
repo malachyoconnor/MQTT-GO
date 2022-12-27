@@ -78,6 +78,7 @@ func DecodeUTFString(toFetch []byte) (string, int, error) {
 	return stringBuilder.String(), 2 + stringLen, nil
 }
 
+// Returns (MSB, LSB)
 func getMSBandLSB(toEncode int) (byte, byte) {
 	msb := byte(toEncode >> 8)
 	lsb := byte(toEncode)
@@ -163,7 +164,6 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 		fmt.Println("Disconnect packet decoded")
 
 	default:
-
 		fmt.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
 		return &Packet{}, 0, errPacketNotDefined
 	}

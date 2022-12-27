@@ -13,24 +13,27 @@ var (
 )
 
 type Server struct {
-	clientTable       *client.ClientTable
-	SubscriptionTable *SubscriptionTable
-	inputChan         *chan client.ClientMessage
-	outputChan        *chan client.ClientMessage
+	clientTable    *client.ClientTable
+	clientTopicmap *ClientTopicMap
+	topicClientMap *TopicClientMap
+	inputChan      *chan client.ClientMessage
+	outputChan     *chan client.ClientMessage
 }
 
 func CreateServer() Server {
 
 	clientTable := make(client.ClientTable)
-	SubscriptionTable := make(SubscriptionTable)
+	clientTopicMap := make(ClientTopicMap)
+	topicClientMap := make(TopicClientMap)
 	inputChan := make(chan client.ClientMessage)
 	outputChan := make(chan client.ClientMessage)
 
 	return Server{
-		clientTable:       &clientTable,
-		SubscriptionTable: &SubscriptionTable,
-		inputChan:         &inputChan,
-		outputChan:        &outputChan,
+		clientTable:    &clientTable,
+		clientTopicmap: &clientTopicMap,
+		topicClientMap: &topicClientMap,
+		inputChan:      &inputChan,
+		outputChan:     &outputChan,
 	}
 
 }
