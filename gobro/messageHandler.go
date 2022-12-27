@@ -65,13 +65,12 @@ func (msgH *MessageHandler) Listen(server *Server) {
 			stringBuilder.Write(packet.Payload.ApplicationMessage)
 			fmt.Println("Received request to publish:", stringBuilder.String())
 
-			
 			varHeader := packet.VariableLengthHeader.(packets.PublishVariableHeader)
 			topic := Topic{
-				TopicFilter : varHeader.TopicName,
-				Qos: varHeader.,
+				TopicFilter: varHeader.TopicName,
+				// Qos: varHeader.,
+			}
 			handlePublish(server.topicClientMap, topic, clientMessage, server.outputChan)
-
 
 			// err := handlePublish(server.topicClientMap,)
 			// Get the clients connected to that topic and send them
