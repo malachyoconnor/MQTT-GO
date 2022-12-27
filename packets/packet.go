@@ -48,7 +48,7 @@ type ControlHeader struct {
 }
 
 type PublishVariableHeader struct {
-	TopicName        string
+	TopicFilter      string
 	PacketIdentifier int
 }
 

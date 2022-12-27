@@ -387,7 +387,7 @@ func DecodePublish(packet []byte) (*Packet, error) {
 		return &Packet{}, err
 	}
 
-	varHeader.TopicName = topicName
+	varHeader.TopicFilter = topicName
 	payloadLength := fixedHeader.RemainingLength - varHeaderLen
 	offset = offset + varHeaderLen
 

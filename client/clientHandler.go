@@ -40,9 +40,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 
 	reader := bufio.NewReader(*connection)
 	for {
-
 		buffer, err := reader.Peek(4)
-
 		if err != nil {
 			if err != io.EOF {
 				fmt.Println("Error in ClientHandler:", err)
@@ -66,9 +64,10 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 		}
 
 		toSend := ClientMessage{ClientID: &clientID, Packet: &packet, ClientConnection: connection}
-
 		(*packetPool) <- toSend
 	}
+
+	handleDisconnect(clientTable, clientID)
 
 	fmt.Println("Client connection closed")
 }
@@ -110,5 +109,11 @@ func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packet
 	(*packetPool) <- clientMsg
 
 	return newClient, nil
+
+}
+
+func handleDisconnect(clientTable *ClientTable, clientID ClientID) {
+
+	delete(*clientTable, clientID)
 
 }

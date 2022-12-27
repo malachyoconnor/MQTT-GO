@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"net"
 	"sync"
 )
@@ -24,14 +25,8 @@ func generateClientID() ClientID {
 
 	numClientsMutex.Lock()
 	numClients += 1
-	stringLen := numClients
+	username := fmt.Sprint(numClients)
 	numClientsMutex.Unlock()
-
-	var username string = ""
-
-	for i := 0; i < int(stringLen); i++ {
-		username += "a"
-	}
 
 	return ClientID(username)
 

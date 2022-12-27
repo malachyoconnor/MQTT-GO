@@ -4,7 +4,6 @@ import (
 	"MQTT-GO/client"
 	"MQTT-GO/packets"
 	"fmt"
-	"strings"
 )
 
 type MessageHandler struct {
@@ -61,38 +60,37 @@ func (msgH *MessageHandler) Listen(server *Server) {
 			(*server.outputChan) <- clientMsg
 
 		case packets.PUBLISH:
-			var stringBuilder strings.Builder
-			stringBuilder.Write(packet.Payload.ApplicationMessage)
-			fmt.Println("Received request to publish:", stringBuilder.String())
+			fmt.Println("Received request to publish:", string(packet.Payload.ApplicationMessage[:]))
 
 			varHeader := packet.VariableLengthHeader.(packets.PublishVariableHeader)
 			topic := Topic{
-				TopicFilter: varHeader.TopicName,
-				// Qos: varHeader.,
+				TopicFilter: varHeader.TopicFilter,
+				Qos:         packet.ControlHeader.Flags & 6,
 			}
-			handlePublish(server.topicClientMap, topic, clientMessage, server.outputChan)
+			handlePublish(server.topicClientMap, topic, clientMessage, server.outputChan, server.clientTable)
 
 			// err := handlePublish(server.topicClientMap,)
 			// Get the clients connected to that topic and send them
 			// all a lovely packet
 
 		case packets.SUBSCRIBE:
-			// Then add them to the topic in the subscription table
 			fmt.Println("Handling subscribe")
+			// Add the client to the topic in the subscription table
 			topics, err := handleSubscribe(server.clientTopicmap, server.topicClientMap, clientID, packet.Payload)
 			if err != nil {
-				fmt.Println("Received invalid subscribe packet - discarding")
+				fmt.Println("Error during subscribe:", err)
 				continue
 			}
 
+			// Get the return code for every topic
 			returnCodes := make([]byte, len(topics))
 			for i, topic := range topics {
 				returnCodes[i] = topic.Qos
 			}
 
 			packetID := packet.VariableLengthHeader.(packets.SubscribeVariableHeader).PacketIdentifier
-			subackArray := packets.CreateSubACK(packetID, returnCodes)
-			clientMsg := client.CreateClientMessage(&clientID, &clientConnection, &subackArray)
+			subackPacket := packets.CreateSubACK(packetID, returnCodes)
+			clientMsg := client.CreateClientMessage(&clientID, &clientConnection, &subackPacket)
 			(*server.outputChan) <- clientMsg
 
 		case packets.DISCONNECT:
@@ -153,13 +151,17 @@ func handleSubscribe(clientTopicMap *ClientTopicMap, topicClientMap *TopicClient
 
 }
 
-func handlePublish(TCMap *TopicClientMap, topic Topic, msgToForward client.ClientMessage, outputChannel *chan client.ClientMessage) {
+func handlePublish(TCMap *TopicClientMap, topic Topic, msgToForward client.ClientMessage, outputChannel *chan client.ClientMessage, clientTable *client.ClientTable) {
 
 	clients := (*TCMap)[topic]
 
-	for _, client := range clients {
-		msgToForward.ClientID = &client
-		(*outputChannel) <- msgToForward
+	for _, clientID := range clients {
+
+		alteredMsg := msgToForward
+		alteredMsg.ClientID = &clientID
+		alteredMsg.ClientConnection = &(*clientTable)[clientID].TCPConnection
+
+		(*outputChannel) <- alteredMsg
 	}
 
 }
