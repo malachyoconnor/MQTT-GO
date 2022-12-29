@@ -170,10 +170,11 @@ func handleSubscribe(clientTopicMap *ClientTopicMap, topicClientMap *TopicClient
 
 func handlePublish(TCMap *TopicClientMap, topic Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *clients.ClientTable) {
 
-	clients := (*TCMap)[topic]
+	clientList := (*TCMap)[topic]
 
-	for _, clientID := range clients {
+	for i := range clientList {
 
+		clientID := clientList[i]
 		alteredMsg := msgToForward
 		alteredMsg.ClientID = &clientID
 		alteredMsg.ClientConnection = &(*clientTable)[clientID].TCPConnection

@@ -19,7 +19,6 @@ func CreateMessageSender(outputPool *chan clients.ClientMessage) MessageSender {
 func (MessageSender) ListenAndSend(server *Server) {
 	for {
 		clientMsg := <-(*server.outputChan)
-
 		clientID := *clientMsg.ClientID
 		packet := *clientMsg.Packet
 
@@ -36,7 +35,7 @@ func (MessageSender) ListenAndSend(server *Server) {
 		go func() {
 			client.Queue.JoinWaitList()
 			defer client.Queue.FinishedWork()
-			_, err := client.TCPConnection.Write(packet)
+			_, err := (*clientMsg.ClientConnection).Write(packet)
 
 			if err != nil {
 				fmt.Println("Failed to send packet to", client, "- Error:", err)
