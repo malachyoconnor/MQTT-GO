@@ -1,4 +1,4 @@
-package client
+package clients
 
 import (
 	"MQTT-GO/packets"
@@ -14,9 +14,9 @@ type ClientMessage struct {
 	Packet           *[]byte
 }
 
-func CreateClientMessage(clientID *ClientID, clientConnection *net.Conn, packet *[]byte) ClientMessage {
+func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet *[]byte) ClientMessage {
 	clientMessage := ClientMessage{
-		ClientID:         clientID,
+		ClientID:         &clientID,
 		ClientConnection: clientConnection,
 		Packet:           packet,
 	}
@@ -45,7 +45,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 			if err != io.EOF {
 				fmt.Println("Error in ClientHandler:", err)
 			}
-			break
+			continue
 		}
 
 		if len(buffer) == 0 {
@@ -68,7 +68,6 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 	}
 
 	handleDisconnect(clientTable, clientID)
-
 	fmt.Println("Client connection closed")
 }
 
@@ -98,17 +97,12 @@ func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packet
 		clientID = generateClientID()
 	}
 
-	newClient := &Client{
-		// TODO: Make a function which takes a remoteAddr and makes a byte[4]
-		// IPAddress:        (*connection).RemoteAddr().String(),
-		ClientIdentifier: clientID,
-		TCPConnection:    *connection,
-	}
+	newClient := createClient(clientID, connection)
 
-	clientMsg := CreateClientMessage(&clientID, *&connection, &packet)
+	clientMsg := CreateClientMessage(clientID, connection, &packet)
 	(*packetPool) <- clientMsg
 
-	return newClient, nil
+	return &newClient, nil
 
 }
 

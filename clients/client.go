@@ -1,9 +1,10 @@
-package client
+package clients
 
 import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 )
 
 type ClientID string
@@ -15,6 +16,22 @@ type Client struct {
 	ClientIdentifier ClientID
 	Topics           []string
 	TCPConnection    net.Conn
+	Queue            ClientQueue
+}
+
+func createClient(clientID ClientID, conn *net.Conn) Client {
+
+	client := Client{}
+	client.ClientIdentifier = clientID
+	client.TCPConnection = *conn
+
+	waitingList := make(chan struct{}, 1)
+	client.Queue = ClientQueue{
+		WorkBeingDone: atomic.Bool{},
+		WaitingList:   &waitingList,
+	}
+
+	return client
 }
 
 var numClientsMutex sync.Mutex
