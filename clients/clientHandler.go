@@ -97,7 +97,7 @@ func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packet
 		clientID = generateClientID()
 	}
 
-	newClient := createClient(clientID, connection)
+	newClient := CreateClient(clientID, connection)
 
 	clientMsg := CreateClientMessage(clientID, connection, &packet)
 	(*packetPool) <- clientMsg

@@ -19,7 +19,7 @@ type Client struct {
 	Queue            ClientQueue
 }
 
-func createClient(clientID ClientID, conn *net.Conn) Client {
+func CreateClient(clientID ClientID, conn *net.Conn) Client {
 
 	client := Client{}
 	client.ClientIdentifier = clientID

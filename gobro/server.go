@@ -1,7 +1,7 @@
 package gobro
 
 import (
-	"MQTT-GO/client"
+	"MQTT-GO/clients"
 	"fmt"
 	"net"
 	"time"
@@ -13,20 +13,20 @@ var (
 )
 
 type Server struct {
-	clientTable    *client.ClientTable
+	clientTable    *clients.ClientTable
 	clientTopicmap *ClientTopicMap
 	topicClientMap *TopicClientMap
-	inputChan      *chan client.ClientMessage
-	outputChan     *chan client.ClientMessage
+	inputChan      *chan clients.ClientMessage
+	outputChan     *chan clients.ClientMessage
 }
 
 func CreateServer() Server {
 
-	clientTable := make(client.ClientTable)
+	clientTable := make(clients.ClientTable)
 	clientTopicMap := make(ClientTopicMap)
 	topicClientMap := make(TopicClientMap)
-	inputChan := make(chan client.ClientMessage)
-	outputChan := make(chan client.ClientMessage)
+	inputChan := make(chan clients.ClientMessage)
+	outputChan := make(chan clients.ClientMessage)
 
 	return Server{
 		clientTable:    &clientTable,
@@ -81,7 +81,7 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 			return
 		}
 
-		go client.ClientHandler(&connection, server.inputChan, server.clientTable)
+		go clients.ClientHandler(&connection, server.inputChan, server.clientTable)
 	}
 }
 

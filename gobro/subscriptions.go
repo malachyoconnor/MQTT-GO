@@ -1,15 +1,15 @@
 package gobro
 
-import "MQTT-GO/client"
+import "MQTT-GO/clients"
 
 type Topic struct {
 	TopicFilter string
 	Qos         byte
 }
-type ClientTopicMap map[client.ClientID][]Topic
-type TopicClientMap map[Topic][]client.ClientID
+type ClientTopicMap map[clients.ClientID][]Topic
+type TopicClientMap map[Topic][]clients.ClientID
 
-func (CTMap *ClientTopicMap) addClientTopicPair(clientId client.ClientID, newTopic Topic) {
+func (CTMap *ClientTopicMap) addClientTopicPair(clientId clients.ClientID, newTopic Topic) {
 
 	for _, topic := range (*CTMap)[clientId] {
 		if topic == newTopic {
@@ -20,7 +20,7 @@ func (CTMap *ClientTopicMap) addClientTopicPair(clientId client.ClientID, newTop
 	(*CTMap)[clientId] = append((*CTMap)[clientId], newTopic)
 }
 
-func (TCMap *TopicClientMap) addTopicClientPair(topic Topic, newClientId client.ClientID) {
+func (TCMap *TopicClientMap) addTopicClientPair(topic Topic, newClientId clients.ClientID) {
 
 	// TODO: HANDLE WILDCARD TOPICS
 	// We should just maintain a list of topics and find a way of querying the closest

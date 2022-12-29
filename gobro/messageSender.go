@@ -1,16 +1,16 @@
 package gobro
 
 import (
-	"MQTT-GO/client"
+	"MQTT-GO/clients"
 	"MQTT-GO/packets"
 	"fmt"
 )
 
 type MessageSender struct {
-	outputChan *chan client.ClientMessage
+	outputChan *chan clients.ClientMessage
 }
 
-func CreateMessageSender(outputPool *chan client.ClientMessage) MessageSender {
+func CreateMessageSender(outputPool *chan clients.ClientMessage) MessageSender {
 	return MessageSender{
 		outputChan: outputPool,
 	}
@@ -32,13 +32,16 @@ func (MessageSender) ListenAndSend(server *Server) {
 		if !found {
 			continue
 		}
-		_, err := client.TCPConnection.Write(packet)
 
-		if err != nil {
-			fmt.Println("Failed to send packet. ", err)
-			fmt.Println(err.Error())
+		go func() {
+			client.Queue.JoinWaitList()
+			defer client.Queue.FinishedWork()
+			_, err := client.TCPConnection.Write(packet)
 
-		}
+			if err != nil {
+				fmt.Println("Failed to send packet to", client, "- Error:", err)
+			}
+		}()
 
 		continue
 
