@@ -24,7 +24,7 @@ func (msgH *MessageHandler) Listen(server *Server) {
 
 	for {
 		clientMessage := <-(*msgH.AttachedInputChan)
-		clientID := clients.ClientID(*clientMessage.ClientID)
+		clientID := *clientMessage.ClientID
 		// Could be nil if the client doesn't exist yet
 		client := (*clientTable)[clientID]
 
@@ -39,8 +39,11 @@ func (msgH *MessageHandler) Listen(server *Server) {
 		if packetType != packets.CONNECT {
 
 			if _, found := (*clientTable)[clientID]; !found {
-				fmt.Println("Client not in the client table sending messages, disconnecting.")
-				client.TCPConnection.Close()
+				fmt.Println("Client not in the client table sent", packets.PacketTypeName(packetType), "message, disconnecting.")
+				// If the client hasn't already been disconnected by the client handler
+				if client != nil {
+					client.TCPConnection.Close()
+				}
 				continue
 			}
 
@@ -77,7 +80,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		fmt.Println("Received request to publish:", string(packet.Payload.ApplicationMessage[:]))
 
 		varHeader := packet.VariableLengthHeader.(packets.PublishVariableHeader)
-		topic := Topic{
+		topic := clients.Topic{
 			TopicFilter: varHeader.TopicFilter,
 			Qos:         packet.ControlHeader.Flags & 6,
 		}
@@ -90,7 +93,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 	case packets.SUBSCRIBE:
 		fmt.Println("Handling subscribe")
 		// Add the client to the topic in the subscription table
-		topics, err := handleSubscribe(server.clientTopicmap, server.topicClientMap, clientID, packet.Payload)
+		topics, err := handleSubscribe(server.topicClientMap, client, packet.Payload)
 		if err != nil {
 			fmt.Println("Error during subscribe:", err)
 			return
@@ -112,6 +115,9 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		// Remove the packet from the client list
 		fmt.Println("Disconnecting", clientID)
 		clientConnection.Close()
+
+		// TODO - do this centrally.
+
 		delete(*clientTable, clientID)
 	}
 
@@ -121,9 +127,8 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 }
 
 // Decode topics and store them in subscription table
-func handleSubscribe(clientTopicMap *ClientTopicMap, topicClientMap *TopicClientMap, clientID clients.ClientID, packetPayload packets.PacketPayload) ([]Topic, error) {
-	topics := make([]Topic, 0, 0)
-
+func handleSubscribe(topicClientMap *clients.TopicClientMap, client *clients.Client, packetPayload packets.PacketPayload) ([]clients.Topic, error) {
+	newTopics := make([]clients.Topic, 0, 0)
 	payload := packetPayload.ApplicationMessage
 	topicNumber, offset := 0, 0
 
@@ -139,48 +144,51 @@ func handleSubscribe(clientTopicMap *ClientTopicMap, topicClientMap *TopicClient
 
 		requestedQOS := payload[offset+utfStringLen]
 
-		topic := Topic{
+		topic := clients.Topic{
 			TopicFilter: topicFilter,
 			Qos:         requestedQOS,
 		}
-		topics = append(topics, topic)
+		newTopics = append(newTopics, topic)
 		topicNumber++
 		offset += utfStringLen + 1
 
 		if _, found := (*topicClientMap)[topic]; !found {
-			(*topicClientMap)[topic] = make([]clients.ClientID, 0, 0)
+			continue // remove
+			// (*topicClientMap)[topic] = make([]clients.ClientID, 0, 0)
 		}
 	}
 
-	if _, found := ((*clientTopicMap)[clientID]); !found {
-		(*clientTopicMap)[clientID] = make([]Topic, 0, 0)
+	clientTopics := client.Topics
+
+	if clientTopics == nil {
+		clientTopics = make([]clients.Topic, 0, 0)
 	}
 
-	for _, newTopic := range topics {
+	for _, newTopic := range newTopics {
 
-		clientTopicMap.addClientTopicPair(clientID, newTopic)
-		topicClientMap.addTopicClientPair(newTopic, clientID)
+		client.AddTopic(newTopic)
+		topicClientMap.AddTopicClientPair(newTopic, client.ClientIdentifier)
 	}
 
-	fmt.Println(*clientTopicMap, *topicClientMap)
+	fmt.Println(client.Topics, *topicClientMap)
 
-	return topics, nil
+	return newTopics, nil
 
 }
 
-func handlePublish(TCMap *TopicClientMap, topic Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *clients.ClientTable) {
+func handlePublish(TCMap *clients.TopicClientMap, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *clients.ClientTable) {
+	return
+	// clientList := (*TCMap)[topic]
 
-	clientList := (*TCMap)[topic]
+	// for i := range clientList {
 
-	for i := range clientList {
+	// 	clientID := clientList[i]
+	// 	alteredMsg := msgToForward
+	// 	alteredMsg.ClientID = &clientID
+	// 	alteredMsg.ClientConnection = &(*clientTable)[clientID].TCPConnection
 
-		clientID := clientList[i]
-		alteredMsg := msgToForward
-		alteredMsg.ClientID = &clientID
-		alteredMsg.ClientConnection = &(*clientTable)[clientID].TCPConnection
-
-		(*outputChannel) <- alteredMsg
-	}
+	// 	(*outputChannel) <- alteredMsg
+	// }
 
 }
 

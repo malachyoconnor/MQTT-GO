@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 )
 
 type ClientMessage struct {
@@ -23,15 +24,29 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet *
 	return clientMessage
 }
 
-func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *ClientTable) {
+func handleDisconnect(clientTable *ClientTable, clientID ClientID) {
 
-	defer (*connection).Close()
+	fmt.Println("Disconnecting client", clientID)
+	delete(*clientTable, clientID)
+
+}
+
+func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *ClientTable, connectedClient *string) {
+	defer func() {
+		if *connection != nil {
+			(*connection).Close()
+		}
+		*connectedClient = ""
+	}()
+
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
 		fmt.Println("Error handling connect ", err)
 		return
 	}
 	clientID := newClient.ClientIdentifier
+	fmt.Println(*connectedClient)
+	*connectedClient = string(clientID)
 
 	if err != nil {
 		fmt.Println("Error decoding clientID")
@@ -41,15 +56,18 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 	reader := bufio.NewReader(*connection)
 	for {
 		buffer, err := reader.Peek(4)
-		if err != nil {
-			if err != io.EOF {
-				fmt.Println("Error in ClientHandler:", err)
-			}
-			continue
-		}
 
-		if len(buffer) == 0 {
-			continue
+		if (err != nil) && len(buffer) == 0 {
+			client := (*clientTable)[clientID]
+			if client == nil {
+				return
+			}
+
+			time.Sleep(time.Second)
+			client.Queue.JoinWaitList()
+			// We wait 1 seconds to wait for everything else to catch up
+			handleDisconnect(clientTable, clientID)
+			break
 		}
 
 		dataLen, varLengthIntLen, err := packets.DecodeVarLengthInt(buffer[1:])
@@ -58,7 +76,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 		packet = packet[:bytesRead]
 
 		if err != nil {
-			fmt.Println(packet)
+			fmt.Println("packet:", packet)
 			fmt.Println("Error: ", err)
 			break
 		}
@@ -103,11 +121,5 @@ func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packet
 	(*packetPool) <- clientMsg
 
 	return &newClient, nil
-
-}
-
-func handleDisconnect(clientTable *ClientTable, clientID ClientID) {
-
-	delete(*clientTable, clientID)
 
 }

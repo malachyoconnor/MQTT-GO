@@ -8,13 +8,12 @@ import (
 )
 
 type ClientID string
-
 type ClientTable map[ClientID]*Client
 
 type Client struct {
 	// Should be a max of 23 characters!
 	ClientIdentifier ClientID
-	Topics           []string
+	Topics           []Topic
 	TCPConnection    net.Conn
 	Queue            ClientQueue
 }
@@ -34,12 +33,26 @@ func CreateClient(clientID ClientID, conn *net.Conn) Client {
 	return client
 }
 
+func (client *Client) AddTopic(newTopic Topic) {
+
+	for _, topic := range client.Topics {
+		if topic == newTopic {
+			return
+		}
+	}
+
+	client.Topics = append(client.Topics, newTopic)
+}
+
+func (client *Client) disconnectClient(topicClientMap TopicClientMap) {
+
+}
+
 var numClientsMutex sync.Mutex
 var numClients int64 = 0
 
 func generateClientID() ClientID {
-	// TODO: Make sure this returns a better unique string per new client
-
+	// TODO: Make this return a better unique string per new client
 	numClientsMutex.Lock()
 	numClients += 1
 	username := fmt.Sprint(numClients)

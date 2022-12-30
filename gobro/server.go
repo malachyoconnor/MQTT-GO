@@ -14,8 +14,7 @@ var (
 
 type Server struct {
 	clientTable    *clients.ClientTable
-	clientTopicmap *ClientTopicMap
-	topicClientMap *TopicClientMap
+	topicClientMap *clients.TopicClientMap
 	inputChan      *chan clients.ClientMessage
 	outputChan     *chan clients.ClientMessage
 }
@@ -23,14 +22,12 @@ type Server struct {
 func CreateServer() Server {
 
 	clientTable := make(clients.ClientTable)
-	clientTopicMap := make(ClientTopicMap)
-	topicClientMap := make(TopicClientMap)
+	topicClientMap := make(clients.TopicClientMap)
 	inputChan := make(chan clients.ClientMessage)
 	outputChan := make(chan clients.ClientMessage)
 
 	return Server{
 		clientTable:    &clientTable,
-		clientTopicmap: &clientTopicMap,
 		topicClientMap: &topicClientMap,
 		inputChan:      &inputChan,
 		outputChan:     &outputChan,
@@ -63,6 +60,8 @@ func (server *Server) StartServer() {
 }
 
 func AcceptConnections(listener *net.Listener, server *Server) {
+	connectedClients := [50]string{""}
+	fmt.Println("??", connectedClients)
 	for {
 		connection, err := (*listener).Accept()
 		fmt.Println("Accepted a connection")
@@ -81,7 +80,18 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 			return
 		}
 
-		go clients.ClientHandler(&connection, server.inputChan, server.clientTable)
+		var newArrayPos *string
+		for i, val := range connectedClients {
+			if val == "" {
+				newArrayPos = &(connectedClients[i])
+				break
+			}
+		}
+
+		fmt.Println("Connected clients before new client: ", connectedClients)
+
+		go clients.ClientHandler(&connection, server.inputChan, server.clientTable, newArrayPos)
+
 	}
 }
 
