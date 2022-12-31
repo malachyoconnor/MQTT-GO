@@ -19,6 +19,17 @@ func CreateLinkedList[T comparable]() LinkedList[T] {
 	}
 }
 
+func (ll *LinkedList[T]) Contains(val T) bool {
+	node := ll.head
+	for i := 0; i < ll.Size; i++ {
+		if node.val == val {
+			return true
+		}
+		node = node.next
+	}
+	return false
+}
+
 func (ll *LinkedList[T]) PrintItems() {
 	node := ll.head
 	for i := 0; i < ll.Size; i++ {

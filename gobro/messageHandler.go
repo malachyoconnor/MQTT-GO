@@ -3,6 +3,7 @@ package gobro
 import (
 	"MQTT-GO/clients"
 	"MQTT-GO/packets"
+	"MQTT-GO/structures"
 	"fmt"
 )
 
@@ -127,7 +128,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 }
 
 // Decode topics and store them in subscription table
-func handleSubscribe(topicClientMap *clients.TopicClientMap, client *clients.Client, packetPayload packets.PacketPayload) ([]clients.Topic, error) {
+func handleSubscribe(topicClientMap *clients.TopicToClient, client *clients.Client, packetPayload packets.PacketPayload) ([]clients.Topic, error) {
 	newTopics := make([]clients.Topic, 0, 0)
 	payload := packetPayload.ApplicationMessage
 	topicNumber, offset := 0, 0
@@ -153,15 +154,15 @@ func handleSubscribe(topicClientMap *clients.TopicClientMap, client *clients.Cli
 		offset += utfStringLen + 1
 
 		if _, found := (*topicClientMap)[topic]; !found {
-			continue // remove
-			// (*topicClientMap)[topic] = make([]clients.ClientID, 0, 0)
+			(*topicClientMap)[topic] = structures.CreateLinkedList[clients.ClientID]()
 		}
 	}
 
 	clientTopics := client.Topics
 
 	if clientTopics == nil {
-		clientTopics = make([]clients.Topic, 0, 0)
+		newTopicList := structures.CreateLinkedList[clients.Topic]()
+		clientTopics = &newTopicList
 	}
 
 	for _, newTopic := range newTopics {
@@ -176,7 +177,7 @@ func handleSubscribe(topicClientMap *clients.TopicClientMap, client *clients.Cli
 
 }
 
-func handlePublish(TCMap *clients.TopicClientMap, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *clients.ClientTable) {
+func handlePublish(TCMap *clients.TopicToClient, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *clients.ClientTable) {
 	return
 	// clientList := (*TCMap)[topic]
 

@@ -1,5 +1,9 @@
 package clients
 
+import (
+	"MQTT-GO/structures"
+)
+
 type Topic struct {
 	TopicFilter string
 	Qos         byte
@@ -11,23 +15,19 @@ type ClientIDNode struct {
 	prevNode *ClientIDNode
 }
 
-type TopicClientMap map[Topic]ClientIDNode
+type TopicToClient map[Topic]structures.LinkedList[ClientID]
 
-func (TCMap *TopicClientMap) AddTopicClientPair(topic Topic, newClientId ClientID) {
+func (topicToClient *TopicToClient) AddTopicClientPair(topic Topic, newClientId ClientID) {
 
 	// TODO: HANDLE WILDCARD TOPICS
 	// We should just maintain a list of topics and find a way of querying the closest
 	// one to the wildcard
 
-	// for
-
-	// for _, clientID := range (*TCMap)[topic] {
-	// 	if newClientId == clientID {
-	// 		return
-	// 	}
-	// }
-
-	// (*TCMap)[topic] = append((*TCMap)[topic], newClientId)
+	clientLL := (*topicToClient)[topic]
+	if clientLL.Contains(newClientId) {
+		return
+	}
+	clientLL.Append(newClientId)
 }
 
 func getSubscriptionsFromWildcard(topic Topic) []Topic {

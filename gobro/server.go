@@ -14,7 +14,7 @@ var (
 
 type Server struct {
 	clientTable    *clients.ClientTable
-	topicClientMap *clients.TopicClientMap
+	topicClientMap *clients.TopicToClient
 	inputChan      *chan clients.ClientMessage
 	outputChan     *chan clients.ClientMessage
 }
@@ -22,7 +22,7 @@ type Server struct {
 func CreateServer() Server {
 
 	clientTable := make(clients.ClientTable)
-	topicClientMap := make(clients.TopicClientMap)
+	topicClientMap := make(clients.TopicToClient)
 	inputChan := make(chan clients.ClientMessage)
 	outputChan := make(chan clients.ClientMessage)
 

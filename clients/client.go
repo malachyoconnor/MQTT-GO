@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"MQTT-GO/structures"
 	"fmt"
 	"net"
 	"sync"
@@ -13,7 +14,7 @@ type ClientTable map[ClientID]*Client
 type Client struct {
 	// Should be a max of 23 characters!
 	ClientIdentifier ClientID
-	Topics           []Topic
+	Topics           *structures.LinkedList[Topic]
 	TCPConnection    net.Conn
 	Queue            ClientQueue
 }
@@ -35,16 +36,18 @@ func CreateClient(clientID ClientID, conn *net.Conn) Client {
 
 func (client *Client) AddTopic(newTopic Topic) {
 
-	for _, topic := range client.Topics {
-		if topic == newTopic {
-			return
-		}
+	if client.Topics == nil {
+		newLL := structures.CreateLinkedList[Topic]()
+		client.Topics = &newLL
 	}
 
-	client.Topics = append(client.Topics, newTopic)
+	if !client.Topics.Contains(newTopic) {
+		client.Topics.Append(newTopic)
+	}
+
 }
 
-func (client *Client) disconnectClient(topicClientMap TopicClientMap) {
+func (client *Client) disconnectClient(topicClientMap TopicToClient) {
 
 }
 
