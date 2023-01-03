@@ -21,13 +21,13 @@ type Server struct {
 
 func CreateServer() Server {
 
-	clientTable := make(clients.ClientTable)
+	clientTable := clients.CreateClientTable()
 	topicClientMap := make(clients.TopicToClient)
 	inputChan := make(chan clients.ClientMessage)
 	outputChan := make(chan clients.ClientMessage)
 
 	return Server{
-		clientTable:    &clientTable,
+		clientTable:    clientTable,
 		topicClientMap: &topicClientMap,
 		inputChan:      &inputChan,
 		outputChan:     &outputChan,
@@ -36,15 +36,16 @@ func CreateServer() Server {
 }
 
 func (server *Server) StartServer() {
+
 	// Listen for TCP connections
 	fmt.Println("Listening for TCP connections")
 	listener, err := net.Listen("tcp", ADDRESS+":"+PORT)
-	defer listener.Close()
 
 	if err != nil {
 		fmt.Println("Error while trying to listen for TCP connections", err)
 		return
 	}
+	defer listener.Close()
 
 	msgSender := CreateMessageSender(server.outputChan)
 	go msgSender.ListenAndSend(server)
@@ -64,12 +65,13 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 	fmt.Println("??", connectedClients)
 	for {
 		connection, err := (*listener).Accept()
-		fmt.Println("Accepted a connection")
 
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
+
+		fmt.Println("Accepted a connection")
 
 		// Set a keep alive period because there isn't a foolproof way of checking if the connection
 		// suddenly closes - we want to wait for DISCONNECT messages or timeout.
@@ -90,14 +92,7 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 
 		fmt.Println("Connected clients before new client: ", connectedClients)
 
-		go clients.ClientHandler(&connection, server.inputChan, server.clientTable, newArrayPos)
+		go clients.ClientHandler(&connection, server.inputChan, server.clientTable, server.topicClientMap, newArrayPos)
 
 	}
 }
-
-// msgListener := gobro.CreateMessageHandler(packetPool)
-// msgListener2 := gobro.CreateMessageHandler(packetPool)
-
-// go gobro.Sniff(packetPool)
-// go msgListener.Listen()
-// go msgListener2.Listen()

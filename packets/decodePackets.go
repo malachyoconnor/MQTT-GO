@@ -161,7 +161,6 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 
 	case DISCONNECT:
 		result, err = DecodeDisconnect(packet[:])
-		fmt.Println("Disconnect packet decoded")
 
 	default:
 		fmt.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
