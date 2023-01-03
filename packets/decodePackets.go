@@ -1,7 +1,6 @@
 package packets
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,11 +11,6 @@ var (
 	errInvalidType    error = errors.New("error: cannot decode packet: invalid control type")
 	errInvalidLength  error = errors.New("error: packet length differs from the advertised fixed length")
 )
-
-func PrintPacket(i interface{}) {
-	s, _ := json.MarshalIndent(i, "", "\t")
-	fmt.Println(string(s))
-}
 
 // DecodeFixedHeader takes a packet and decodes the fixed header.
 // It returns a pointer to a ControlHeader, the length
