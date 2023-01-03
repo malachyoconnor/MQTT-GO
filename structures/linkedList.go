@@ -19,6 +19,10 @@ func CreateLinkedList[T comparable]() LinkedList[T] {
 	}
 }
 
+func (ll *LinkedList[T]) Head() *Node[T] {
+	return (*ll).head
+}
+
 func (ll *LinkedList[T]) Contains(val T) bool {
 	node := ll.head
 	for i := 0; i < ll.Size; i++ {
@@ -74,6 +78,18 @@ type Node[T comparable] struct {
 	prev *(Node[T])
 	next *(Node[T])
 	val  T
+}
+
+func (node *Node[T]) Value() T {
+	return node.val
+}
+
+func (node *Node[T]) Next() *Node[T] {
+	return (*node).next
+}
+
+func (node *Node[T]) Prev() *Node[T] {
+	return (*node).prev
 }
 
 func (node *Node[T]) Delete() {
