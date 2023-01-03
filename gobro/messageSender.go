@@ -20,6 +20,13 @@ func (MessageSender) ListenAndSend(server *Server) {
 	for {
 		clientMsg := <-(*server.outputChan)
 		clientID := *clientMsg.ClientID
+
+		client := server.clientTable.Get(clientID)
+		if client == nil {
+			continue
+		}
+
+		ticket := client.Tickets.GetTicket()
 		packet := *clientMsg.Packet
 
 		packetType := packets.PacketTypeName(packets.GetPacketType(&packet))
@@ -27,16 +34,10 @@ func (MessageSender) ListenAndSend(server *Server) {
 		// We look up the client rather than using the connection directly
 		// This is to ensure we get an error if the client doesn't exist
 
-		client, found := (*server.clientTable)[clientID]
-		if !found {
-			continue
-		}
-
 		go func() {
-			client.Queue.JoinWaitList()
-			defer client.Queue.FinishedWork()
+			ticket.WaitOnTicket()
 			_, err := (*clientMsg.ClientConnection).Write(packet)
-
+			ticket.TicketCompleted()
 			if err != nil {
 				fmt.Println("Failed to send packet to", client, "- Error:", err)
 			}
