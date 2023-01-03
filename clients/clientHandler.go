@@ -3,6 +3,7 @@ package clients
 import (
 	"MQTT-GO/packets"
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -24,29 +25,25 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet *
 	return clientMessage
 }
 
-func handleDisconnect(clientTable *ClientTable, clientID ClientID) {
-
-	fmt.Println("Disconnecting client", clientID)
-	delete(*clientTable, clientID)
-
-}
-
-func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *ClientTable, connectedClient *string) {
-	defer func() {
-		if *connection != nil {
-			(*connection).Close()
-		}
-		*connectedClient = ""
-	}()
+func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *ClientTable, topicToClient *TopicToClient, connectedClient *string) {
 
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
 		fmt.Println("Error handling connect ", err)
+		if err.Error() == "error: Client already exists" {
+			newClient.Disconnect(topicToClient, clientTable)
+		}
 		return
 	}
+
+	// We wait 1 seconds to wait for everything else to catch up
+	defer func() {
+		time.Sleep(10 * time.Second)
+		newClient.Disconnect(topicToClient, clientTable)
+	}()
+
 	clientID := newClient.ClientIdentifier
-	fmt.Println(*connectedClient)
-	*connectedClient = string(clientID)
+	(*connectedClient) = string(clientID)
 
 	if err != nil {
 		fmt.Println("Error decoding clientID")
@@ -58,15 +55,10 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 		buffer, err := reader.Peek(4)
 
 		if (err != nil) && len(buffer) == 0 {
-			client := (*clientTable)[clientID]
+			client := clientTable.Get(clientID)
 			if client == nil {
 				return
 			}
-
-			time.Sleep(time.Second)
-			client.Queue.JoinWaitList()
-			// We wait 1 seconds to wait for everything else to catch up
-			handleDisconnect(clientTable, clientID)
 			break
 		}
 
@@ -81,12 +73,14 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 			break
 		}
 
+		fmt.Println("  RECEIVED", packets.PacketTypeName(packets.GetPacketType(&packet)))
+
 		toSend := ClientMessage{ClientID: &clientID, Packet: &packet, ClientConnection: connection}
 		(*packetPool) <- toSend
 	}
-
-	handleDisconnect(clientTable, clientID)
 	fmt.Println("Client connection closed")
+	*connectedClient = ""
+
 }
 
 // handleInitialConnect decodes the packet to find a ClientID - if none exists
@@ -117,9 +111,15 @@ func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packet
 
 	newClient := CreateClient(clientID, connection)
 
+	if clientTable.Exists(clientID) {
+		return clientTable.Get(clientID), errors.New("error: Client already exists")
+	}
+
+	clientTable.Put(clientID, newClient)
+
 	clientMsg := CreateClientMessage(clientID, connection, &packet)
 	(*packetPool) <- clientMsg
 
-	return &newClient, nil
+	return newClient, nil
 
 }
