@@ -5,33 +5,26 @@ import (
 	"fmt"
 	"net"
 	"sync"
-	"sync/atomic"
 )
 
 type ClientID string
-type ClientTable map[ClientID]*Client
 
 type Client struct {
 	// Should be a max of 23 characters!
 	ClientIdentifier ClientID
 	Topics           *structures.LinkedList[Topic]
 	TCPConnection    net.Conn
-	Queue            ClientQueue
+	Tickets          *structures.TicketStand
 }
 
-func CreateClient(clientID ClientID, conn *net.Conn) Client {
+func CreateClient(clientID ClientID, conn *net.Conn) *Client {
 
 	client := Client{}
 	client.ClientIdentifier = clientID
 	client.TCPConnection = *conn
+	client.Tickets = structures.CreateTicketStand()
 
-	waitingList := make(chan struct{}, 1)
-	client.Queue = ClientQueue{
-		WorkBeingDone: atomic.Bool{},
-		WaitingList:   &waitingList,
-	}
-
-	return client
+	return &client
 }
 
 func (client *Client) AddTopic(newTopic Topic) {
@@ -47,8 +40,23 @@ func (client *Client) AddTopic(newTopic Topic) {
 
 }
 
-func (client *Client) disconnectClient(topicClientMap TopicToClient) {
+func (client *Client) Disconnect(topicClientMap *TopicToClient, clientTable *ClientTable) {
+	if client == nil {
+		return
+	}
 
+	// If the client hasn't subscribed to anything
+	if client.Topics != nil {
+		node := client.Topics.Head()
+		for node != nil {
+			fmt.Println("DELETING", node.Value())
+			(*topicClientMap)[node.Value()].Delete(client.ClientIdentifier)
+			node = node.Next()
+		}
+	}
+
+	clientTable.Delete(client.ClientIdentifier)
+	client.TCPConnection.Close()
 }
 
 var numClientsMutex sync.Mutex
