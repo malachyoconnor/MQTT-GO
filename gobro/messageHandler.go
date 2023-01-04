@@ -127,6 +127,8 @@ func handleSubscribe(topicClientMap *clients.TopicToClient, client *clients.Clie
 	payload := packetPayload.ApplicationMessage
 	topicNumber, offset := 0, 0
 
+	// Progress through the payload and read every topic & QoS level that the client wants to subscribe to
+	// Then add them to a list to be handled
 	for offset < len(payload) {
 		topicFilter, utfStringLen, err := packets.DecodeUTFString(payload[offset:])
 
@@ -167,7 +169,7 @@ func handleSubscribe(topicClientMap *clients.TopicToClient, client *clients.Clie
 
 }
 
-func handlePublish(TCMap *clients.TopicToClient, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *clients.ClientTable, toSend *[]*clients.ClientMessage) {
+func handlePublish(TCMap *clients.TopicToClient, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
 	clientList := (*TCMap)[topic]
 	if clientList == nil {
 		return

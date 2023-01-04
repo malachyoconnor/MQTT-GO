@@ -26,7 +26,7 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet *
 	return clientMessage
 }
 
-func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *ClientTable, topicToClient *TopicToClient, connectedClient *string) {
+func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToClient, connectedClient *string) {
 
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
@@ -83,7 +83,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 
 // handleInitialConnect decodes the packet to find a ClientID - if none exists
 // we create one and then push the connect to be handled by message Handler
-func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packetPool *chan ClientMessage) (*Client, error) {
+func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[ClientID, *Client], packetPool *chan ClientMessage) (*Client, error) {
 	buffer := make([]byte, 300)
 	packetLen, err := (*connection).Read(buffer)
 
@@ -118,7 +118,7 @@ func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packet
 
 }
 
-func handleDisconnect(client Client, clientTable *ClientTable, topicToClient *TopicToClient, connectedClient *string) {
+func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToClient, connectedClient *string) {
 	*connectedClient = ""
 	time.Sleep(3 * time.Second)
 

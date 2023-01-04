@@ -14,7 +14,7 @@ var (
 )
 
 type Server struct {
-	clientTable    *clients.ClientTable
+	clientTable    *structures.SafeMap[clients.ClientID, *clients.Client]
 	topicClientMap *clients.TopicToClient
 	inputChan      *chan clients.ClientMessage
 	outputChan     *chan clients.ClientMessage

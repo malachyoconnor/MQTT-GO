@@ -40,7 +40,7 @@ func (client *Client) AddTopic(newTopic Topic) {
 
 }
 
-func (client *Client) Disconnect(topicClientMap *TopicToClient, clientTable *ClientTable) {
+func (client *Client) Disconnect(topicClientMap *TopicToClient, clientTable *structures.SafeMap[ClientID, *Client]) {
 	if client == nil {
 		return
 	}
