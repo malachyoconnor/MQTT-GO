@@ -38,7 +38,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 	}
 
 	// We wait 1 seconds to wait for everything else to catch up
-	defer handleDisconnect(*newClient, clientTable, topicToClient)
+	defer handleDisconnect(*newClient, clientTable, topicToClient, connectedClient)
 
 	clientID := newClient.ClientIdentifier
 	(*connectedClient) = string(clientID)
@@ -76,7 +76,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 		toSend := ClientMessage{ClientID: &clientID, Packet: &packet, ClientConnection: connection}
 		(*packetPool) <- toSend
 	}
-	fmt.Println("Client connection closed")
+	fmt.Println("Client", clientID, "connection closed")
 	*connectedClient = ""
 
 }
@@ -95,24 +95,20 @@ func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packet
 	}
 
 	connectPacket, err := packets.DecodeConnect(packet)
-
 	if err != nil {
 		fmt.Println("Error during initial connect", err)
 		return &Client{}, err
 	}
 
 	var clientID ClientID = ClientID(connectPacket.Payload.ClientId)
-
 	if connectPacket.Payload.ClientId == "" {
 		clientID = generateClientID()
 	}
 
 	newClient := CreateClient(clientID, connection)
-
 	if clientTable.Exists(clientID) {
 		return clientTable.Get(clientID), errors.New("error: Client already exists")
 	}
-
 	clientTable.Put(clientID, newClient)
 
 	clientMsg := CreateClientMessage(clientID, connection, &packet)
@@ -122,7 +118,8 @@ func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packet
 
 }
 
-func handleDisconnect(client Client, clientTable *ClientTable, topicToClient *TopicToClient) {
+func handleDisconnect(client Client, clientTable *ClientTable, topicToClient *TopicToClient, connectedClient *string) {
+	*connectedClient = ""
 	time.Sleep(3 * time.Second)
 
 	// If the client has already been disconnected elsewhere

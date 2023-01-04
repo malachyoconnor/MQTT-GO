@@ -85,7 +85,6 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		handlePublish(server.topicClientMap, topic, clientMessage, server.outputChan, server.clientTable, &packetsToSend)
 
 	case packets.SUBSCRIBE:
-		fmt.Println("Handling subscribe")
 		// Add the client to the topic in the subscription table
 		topics, err := handleSubscribe(server.topicClientMap, client, packet.Payload)
 		if err != nil {
@@ -108,23 +107,18 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		// Close the client TCP connection.
 		// Remove the packet from the client list
 		ticket.WaitOnTicket()
-		fmt.Println("Disconnecting", clientID)
 		client.Disconnect(server.topicClientMap, clientTable)
 		ticket.TicketCompleted()
 		return
 	}
 
-	fmt.Println("Waiting for ticket to complete for", clientID)
 	ticket.WaitOnTicket()
-	fmt.Println("ticket complete for", clientID)
 	for _, packet := range packetsToSend {
 
 		(*server.outputChan) <- *packet
 
 	}
 	ticket.TicketCompleted()
-
-	fmt.Println()
 }
 
 // Decode topics and store them in subscription table
@@ -187,7 +181,13 @@ func handlePublish(TCMap *clients.TopicToClient, topic clients.Topic, msgToForwa
 		clientID := node.Value()
 		alteredMsg := msgToForward
 		alteredMsg.ClientID = &clientID
-		alteredMsg.ClientConnection = &(clientTable.Get(clientID).TCPConnection)
+
+		if client := clientTable.Get(clientID); client != nil {
+			alteredMsg.ClientConnection = &(client.TCPConnection)
+		} else {
+			continue
+		}
+
 		(*toSend) = append(*toSend, &alteredMsg)
 		node = node.Next()
 	}
