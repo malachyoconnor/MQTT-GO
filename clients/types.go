@@ -36,10 +36,9 @@ func (topicToClient *TopicToClient) AddTopicClientPair(topic Topic, newClientId 
 	// one to the wildcard
 
 	clientLL := (*topicToClient)[topic]
-	if clientLL.Contains(newClientId) {
-		return
+	if !clientLL.Contains(newClientId) {
+		clientLL.Append(newClientId)
 	}
-	clientLL.Append(newClientId)
 }
 
 func getSubscriptionsFromWildcard(topic Topic) []Topic {

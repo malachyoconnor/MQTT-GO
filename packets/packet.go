@@ -84,18 +84,3 @@ type ConAckVariableHeader struct {
 	connectAcknowledgeFlags byte
 	connectReturnCode       byte
 }
-
-func (packet *Packet) GetVarHeader() VariableLengthHeader {
-	// TODO: Finish these
-
-	varLengthHeader := packet.VariableLengthHeader
-
-	switch packet.ControlHeader.Type {
-
-	case CONNECT:
-		return varLengthHeader.(ConnectVariableHeader)
-	case CONNACK:
-		return varLengthHeader.(ConAckVariableHeader)
-	}
-	return nil
-}

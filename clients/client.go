@@ -44,7 +44,6 @@ func (client *Client) Disconnect(topicClientMap *TopicToClient, clientTable *Cli
 	if client == nil {
 		return
 	}
-
 	// If the client has subscribed to something we need to
 	// remove that client from the topic to client lists for each
 	// topic

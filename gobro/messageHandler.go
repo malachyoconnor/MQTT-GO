@@ -127,9 +127,6 @@ func handleSubscribe(topicClientMap *clients.TopicToClient, client *clients.Clie
 	payload := packetPayload.ApplicationMessage
 	topicNumber, offset := 0, 0
 
-	// FIXME: Make sure we can't send multiple of the same topic in a subscribe message
-	// mosquitto_sub -t "test/hello" -t "test/hello" -p 8000
-
 	for offset < len(payload) {
 		topicFilter, utfStringLen, err := packets.DecodeUTFString(payload[offset:])
 
