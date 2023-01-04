@@ -34,15 +34,6 @@ func (ll *LinkedList[T]) Contains(val T) bool {
 	return false
 }
 
-func (ll *LinkedList[T]) PrintItems() {
-	node := ll.head
-	for i := 0; i < ll.Size; i++ {
-		fmt.Print(node.val, " ")
-		node = node.next
-	}
-
-}
-
 func (ll *LinkedList[T]) Append(val T) {
 	// If the list is empty
 	newNode := &Node[T]{val: val}
@@ -60,14 +51,23 @@ func (ll *LinkedList[T]) Append(val T) {
 }
 
 func (ll *LinkedList[T]) Delete(val T) error {
+	// If the value we're deleting is the head or the tail
+	// then we need to adjust the linked list's head/tail
 	if ll.head.val == val {
+		ll.head = ll.head.next
+		ll.Size -= 1
+		return nil
+	} else if ll.tail.val == val {
+		ll.tail = ll.tail.prev
 		ll.Size -= 1
 		return nil
 	}
+
 	node := ll.head
 	for node := node.next; node != nil; {
 		if node.val == val {
 			ll.Size -= 1
+			node.Delete()
 			return nil
 		}
 	}

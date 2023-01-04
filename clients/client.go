@@ -45,12 +45,18 @@ func (client *Client) Disconnect(topicClientMap *TopicToClient, clientTable *Cli
 		return
 	}
 
-	// If the client hasn't subscribed to anything
+	// If the client has subscribed to something we need to
+	// remove that client from the topic to client lists for each
+	// topic
 	if client.Topics != nil {
 		node := client.Topics.Head()
 		for node != nil {
-			fmt.Println("DELETING", node.Value())
-			(*topicClientMap)[node.Value()].Delete(client.ClientIdentifier)
+			(*topicClientMap)[node.Value()].PrintItems()
+			err := (*topicClientMap)[node.Value()].Delete(client.ClientIdentifier)
+			(*topicClientMap)[node.Value()].PrintItems()
+			if err != nil {
+				panic("Attempted to remove client from Topic list that isn't there")
+			}
 			node = node.Next()
 		}
 	}
