@@ -19,6 +19,8 @@ func PrintCentrally(toPrint string) {
 }
 
 func (ll *LinkedList[T]) PrintItems() {
+	ll.lock.RLock()
+	defer ll.lock.RUnlock()
 	fmt.Print("[ ")
 	node := ll.head
 	for i := 0; i < ll.Size; i++ {

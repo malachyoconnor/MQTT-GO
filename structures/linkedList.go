@@ -3,12 +3,14 @@ package structures
 import (
 	"errors"
 	"fmt"
+	"sync"
 )
 
 type LinkedList[T comparable] struct {
 	head *Node[T]
 	tail *Node[T]
 	Size int
+	lock sync.RWMutex
 }
 
 func CreateLinkedList[T comparable]() LinkedList[T] {
@@ -20,10 +22,15 @@ func CreateLinkedList[T comparable]() LinkedList[T] {
 }
 
 func (ll *LinkedList[T]) Head() *Node[T] {
+	ll.lock.RLock()
+	defer ll.lock.RUnlock()
 	return (*ll).head
 }
 
 func (ll *LinkedList[T]) Contains(val T) bool {
+	ll.lock.RLock()
+	defer ll.lock.RUnlock()
+
 	node := ll.head
 	for i := 0; i < ll.Size; i++ {
 		if node.val == val {
@@ -35,6 +42,8 @@ func (ll *LinkedList[T]) Contains(val T) bool {
 }
 
 func (ll *LinkedList[T]) Append(val T) {
+	ll.lock.Lock()
+	defer ll.lock.Unlock()
 	// If the list is empty
 	newNode := &Node[T]{val: val}
 	ll.Size += 1
@@ -51,6 +60,8 @@ func (ll *LinkedList[T]) Append(val T) {
 }
 
 func (ll *LinkedList[T]) Delete(val T) error {
+	ll.lock.Lock()
+	defer ll.lock.Unlock()
 	// If the value we're deleting is the head or the tail
 	// then we need to adjust the linked list's head/tail
 	if ll.head.val == val {
