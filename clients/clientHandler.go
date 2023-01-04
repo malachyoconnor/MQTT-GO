@@ -2,6 +2,7 @@ package clients
 
 import (
 	"MQTT-GO/packets"
+	"MQTT-GO/structures"
 	"bufio"
 	"errors"
 	"fmt"
@@ -37,10 +38,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 	}
 
 	// We wait 1 seconds to wait for everything else to catch up
-	defer func() {
-		time.Sleep(10 * time.Second)
-		newClient.Disconnect(topicToClient, clientTable)
-	}()
+	defer handleDisconnect(*newClient, clientTable, topicToClient)
 
 	clientID := newClient.ClientIdentifier
 	(*connectedClient) = string(clientID)
@@ -73,7 +71,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 			break
 		}
 
-		fmt.Println("  RECEIVED", packets.PacketTypeName(packets.GetPacketType(&packet)))
+		structures.PrintCentrally(fmt.Sprintln("RECEIVED", packets.PacketTypeName(packets.GetPacketType(&packet))))
 
 		toSend := ClientMessage{ClientID: &clientID, Packet: &packet, ClientConnection: connection}
 		(*packetPool) <- toSend
@@ -122,4 +120,16 @@ func handleInitialConnect(connection *net.Conn, clientTable *ClientTable, packet
 
 	return newClient, nil
 
+}
+
+func handleDisconnect(client Client, clientTable *ClientTable, topicToClient *TopicToClient) {
+	time.Sleep(3 * time.Second)
+
+	// If the client has already been disconnected elsewhere
+	// by a call to client.Disconnect
+	if !clientTable.Exists(client.ClientIdentifier) {
+		return
+	}
+
+	client.Disconnect(topicToClient, clientTable)
 }

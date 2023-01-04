@@ -2,6 +2,7 @@ package gobro
 
 import (
 	"MQTT-GO/clients"
+	"MQTT-GO/structures"
 	"fmt"
 	"net"
 	"time"
@@ -72,7 +73,6 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 		}
 
 		fmt.Println("Accepted a connection")
-
 		// Set a keep alive period because there isn't a foolproof way of checking if the connection
 		// suddenly closes - we want to wait for DISCONNECT messages or timeout.
 		err = connection.(*net.TCPConn).SetKeepAlivePeriod(5 * time.Second)
@@ -90,7 +90,11 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 			}
 		}
 
-		fmt.Println("Connected clients before new client: ", connectedClients)
+		go func() {
+			time.Sleep(time.Millisecond * 200)
+			fmt.Print("Connected clients: ")
+			structures.PrintArray(connectedClients[:], "")
+		}()
 
 		go clients.ClientHandler(&connection, server.inputChan, server.clientTable, server.topicClientMap, newArrayPos)
 
