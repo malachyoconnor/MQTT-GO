@@ -31,7 +31,7 @@ func (client *Client) AddTopic(newTopic Topic) {
 
 	if client.Topics == nil {
 		newLL := structures.CreateLinkedList[Topic]()
-		client.Topics = &newLL
+		client.Topics = newLL
 	}
 
 	if !client.Topics.Contains(newTopic) {

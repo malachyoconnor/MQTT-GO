@@ -148,7 +148,7 @@ func handleSubscribe(topicClientMap *clients.TopicToClient, client *clients.Clie
 
 		if _, found := (*topicClientMap)[topic]; !found {
 			newLL := structures.CreateLinkedList[clients.ClientID]()
-			(*topicClientMap)[topic] = &newLL
+			(*topicClientMap)[topic] = newLL
 		}
 	}
 
@@ -156,7 +156,7 @@ func handleSubscribe(topicClientMap *clients.TopicToClient, client *clients.Clie
 
 	if clientTopics == nil {
 		newTopicList := structures.CreateLinkedList[clients.Topic]()
-		clientTopics = &newTopicList
+		clientTopics = newTopicList
 	}
 
 	for _, newTopic := range newTopics {

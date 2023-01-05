@@ -13,12 +13,13 @@ type LinkedList[T comparable] struct {
 	lock sync.RWMutex
 }
 
-func CreateLinkedList[T comparable]() LinkedList[T] {
-	return LinkedList[T]{
+func CreateLinkedList[T comparable]() *LinkedList[T] {
+	result := LinkedList[T]{
 		head: nil,
 		tail: nil,
 		Size: 0,
 	}
+	return &result
 }
 
 func (ll *LinkedList[T]) GetItems() []T {
@@ -75,7 +76,7 @@ func Concatenate[T comparable](llA *LinkedList[T], llB *LinkedList[T]) *LinkedLi
 	}
 	llB.lock.RUnlock()
 
-	return &result
+	return result
 }
 
 func (ll *LinkedList[T]) DeepCopy() *LinkedList[T] {
@@ -86,7 +87,7 @@ func (ll *LinkedList[T]) DeepCopy() *LinkedList[T] {
 		result.Append(node.val)
 		node = node.next
 	}
-	return &result
+	return result
 
 }
 
@@ -103,7 +104,7 @@ func CombineLinkedLists[T comparable](lists ...*LinkedList[T]) *LinkedList[T] {
 		list.lock.RUnlock()
 	}
 
-	return &result
+	return result
 }
 
 func (ll *LinkedList[T]) Head() *Node[T] {
@@ -124,6 +125,22 @@ func (ll *LinkedList[T]) Contains(val T) bool {
 		node = node.next
 	}
 	return false
+}
+
+func (ll *LinkedList[T]) RemoveDuplicates() {
+	existingItems := make(map[T]bool, ll.Size)
+
+	node := ll.head
+	for node != nil {
+		_, found := existingItems[node.val]
+		if !found {
+			existingItems[node.val] = true
+		} else {
+			node.delete()
+			ll.Size -= 1
+		}
+		node = node.next
+	}
 }
 
 func (ll *LinkedList[T]) Append(val T) {
