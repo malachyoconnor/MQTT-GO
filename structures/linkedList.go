@@ -21,6 +21,50 @@ func CreateLinkedList[T comparable]() LinkedList[T] {
 	}
 }
 
+// This concatenation is slow as we combine the two lists we DON'T copy them
+// If this is really slow then we can change that and just make sure we fix the lists when we're done
+// The point is that holding onto either of the other lists could be bad for concurrency - instead
+// we take a snapshot.
+func Concatenate[T comparable](llA *LinkedList[T], llB *LinkedList[T]) *LinkedList[T] {
+
+	result := CreateLinkedList[T]()
+
+	llA.lock.RLock()
+
+	nodeA := llA.head
+	for nodeA != nil {
+		result.Append(nodeA.val)
+		nodeA = nodeA.next
+	}
+	llA.lock.RUnlock()
+
+	llB.lock.RLock()
+	nodeB := llB.head
+	for nodeB != nil {
+		result.Append(nodeB.val)
+		nodeB = nodeB.next
+	}
+	llB.lock.RUnlock()
+
+	return &result
+}
+
+func CombineLinkedLists[T comparable](lists ...*LinkedList[T]) *LinkedList[T] {
+	result := CreateLinkedList[T]()
+
+	for _, list := range lists {
+		list.lock.RLock()
+		node := list.Head()
+		for node != nil {
+			result.Append(node.val)
+			node = node.next
+		}
+		list.lock.RUnlock()
+	}
+
+	return &result
+}
+
 func (ll *LinkedList[T]) Head() *Node[T] {
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
