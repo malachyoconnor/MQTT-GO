@@ -10,12 +10,6 @@ type Topic struct {
 	Qos         byte
 }
 
-type ClientIDNode struct {
-	clientID ClientID
-	nextNode *ClientIDNode
-	prevNode *ClientIDNode
-}
-
 type TopicToClient map[Topic]*structures.LinkedList[ClientID]
 
 func (topicToClient *TopicToClient) Print() {
@@ -39,8 +33,4 @@ func (topicToClient *TopicToClient) AddTopicClientPair(topic Topic, newClientId 
 	if !clientLL.Contains(newClientId) {
 		clientLL.Append(newClientId)
 	}
-}
-
-func getSubscriptionsFromWildcard(topic Topic) []Topic {
-	return []Topic{topic}
 }

@@ -61,6 +61,10 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 		}
 
 		dataLen, varLengthIntLen, err := packets.DecodeVarLengthInt(buffer[1:])
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
 		packet := make([]byte, dataLen+varLengthIntLen+1)
 		bytesRead, err := io.ReadFull(reader, packet)
 		packet = packet[:bytesRead]
