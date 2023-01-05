@@ -3,6 +3,8 @@ package tests
 import (
 	"MQTT-GO/clients"
 	"testing"
+
+	"golang.org/x/exp/slices"
 )
 
 // Testing if creating a topic map works
@@ -118,8 +120,6 @@ func TestDeletingOneChild(t *testing.T) {
 }
 
 func TestAddingClientIDs(t *testing.T) {
-	t.Deadline()
-
 	topicStore := clients.CreateTopicMap()
 	topicStore.AddTopic("x/y/z")
 	topicStore.AddTopic("x/y/1")
@@ -133,4 +133,32 @@ func TestAddingClientIDs(t *testing.T) {
 	if res.Head().Value() != "abc" || err != nil {
 		t.Error("Value not being added correctly")
 	}
+}
+
+func TestHashWildcard(t *testing.T) {
+	topicStore := clients.CreateTopicMap()
+	topicStore.Put("x/y/z", "abc")
+	topicStore.Put("x/y/m", "xyz")
+
+	cLL, _ := topicStore.GetMatchingClients("x/y/#")
+	clientArr := cLL.GetItems()
+	if !slices.Contains(clientArr, "abc") || !slices.Contains(clientArr, "xyz") ||
+		len(clientArr) != 2 {
+		t.Error("Didn't find correct clients")
+	}
+
+}
+
+func TestPlusWildcard(t *testing.T) {
+	topicStore := clients.CreateTopicMap()
+	topicStore.Put("x/y/z", "abc")
+	topicStore.Put("x/y/m", "xyz")
+	topicStore.Put("x/y/c", "xyz")
+
+	cLL, _ := topicStore.GetMatchingClients("x/+/m")
+
+	if cLL.Size != 1 || cLL.Head().Value() != "xyz" {
+		t.Error("+ didn't work correctly.")
+	}
+
 }

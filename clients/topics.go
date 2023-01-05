@@ -27,11 +27,14 @@ func (topicMap *TopicsToClientStore) PrintTopics() {
 
 func (topicMap *TopicsToClientStore) Put(topicName string, clientID ClientID) error {
 
-	// We're concatenating with NON-wildcard items........
-	// So we get some random copy of the thing which we can't fuck with
 	clientLL, err := topicMap.get(topicName)
 	if err != nil {
-		return err
+		if err == ErrTopicDoesntExist {
+			topicMap.AddTopic(topicName)
+			clientLL, _ = topicMap.get(topicName)
+		} else {
+			return err
+		}
 	}
 	clientLL.Append(clientID)
 	return nil
@@ -88,11 +91,21 @@ func (topicClientStore *TopicsToClientStore) AddTopic(topicName string) error {
 	}
 }
 
-// TODO error check the topic - # needs to be at the end, + cannot be at the end
 func (topicToClient *TopicsToClientStore) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {
-	// TODO: Make sure when we pass the # that we keep that the same (should be the last item in the topic)
-	// TODO: error check just #
+
+	if topicName[len(topicName)-1] == '/' {
+		return nil, errors.New("error: Wildcard topics cannot end with /")
+	}
 	topicSections := strings.Split(topicName, "/")
+
+	if len(topicSections) > 1 {
+		for _, topic := range topicSections[:len(topicSections)-2] {
+			if topic == "#" {
+				return nil, errors.New("error: # wildcard should only be at the end of a topic subscription")
+			}
+		}
+	}
+
 	topLevelMap := topicToClient.topLevelMap
 	topLevelTopic := topLevelMap.Get(topicSections[0])
 	if topLevelTopic == nil {
@@ -220,7 +233,7 @@ func (t *topic) AddTopic(topicSections []string) error {
 func (t *topic) getAllLowerLevelClients() *structures.LinkedList[ClientID] {
 	result := t.connectedClients
 	for _, child := range t.children {
-		structures.Concatenate(result, child.getAllLowerLevelClients())
+		result = structures.Concatenate(result, child.getAllLowerLevelClients())
 	}
 	return result
 
@@ -240,14 +253,9 @@ func (t *topic) getMatchingClients(topicSections []string) *structures.LinkedLis
 	var result *structures.LinkedList[ClientID]
 
 	for _, child := range t.children {
-
-		if child.name == topicSections[0] {
-			// If we're not at the bottom level topic
-			for _, child := range t.children {
-				if child.name == topicSections[0] {
-					result = structures.Concatenate(result, child.getMatchingClients(topicSections[1:]))
-				}
-			}
+		// If we're not at the bottom level topic
+		if child.name == topicSections[0] || topicSections[0] == "+" {
+			result = structures.Concatenate(result, child.getMatchingClients(topicSections[1:]))
 		}
 	}
 	return result
