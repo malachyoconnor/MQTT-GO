@@ -15,7 +15,7 @@ func (clientTable *SafeMap[Key, Value]) Get(key Key) Value {
 
 }
 
-func (clientTable *SafeMap[Key, Value]) Exists(key Key) bool {
+func (clientTable *SafeMap[Key, Value]) Contains(key Key) bool {
 	clientTable.tableLock.RLock()
 	defer clientTable.tableLock.RUnlock()
 
@@ -38,7 +38,7 @@ func (clientTable *SafeMap[Key, Value]) Delete(key Key) {
 }
 
 func (clientTable *SafeMap[Key, Value]) PutIfAbsent(key Key, value Value) Value {
-	if clientTable.Exists(key) {
+	if clientTable.Contains(key) {
 		return clientTable.Get(key)
 	} else {
 		clientTable.Put(key, value)

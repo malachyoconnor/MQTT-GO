@@ -39,7 +39,7 @@ func (msgH *MessageHandler) Listen(server *Server) {
 		// General case for if the client doesn't exist if NOT a connect packet
 		if packetType != packets.CONNECT {
 
-			if !clientTable.Exists(clientID) {
+			if !clientTable.Contains(clientID) {
 				fmt.Println("Client not in the client table sent", packets.PacketTypeName(packetType), "message, disconnecting.")
 				// If the client hasn't already been disconnected by the client handler
 				if client != nil {

@@ -54,7 +54,7 @@ func (topicMap *TopicsToClientStore) PutClients(topicName string, clientIDs []Cl
 func (t *TopicsToClientStore) DeleteTopic(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 
-	if !t.topLevelMap.Exists(topicSections[0]) {
+	if !t.topLevelMap.Contains(topicSections[0]) {
 		return ErrTopicDoesntExist
 	}
 
@@ -74,14 +74,14 @@ func (topicClientStore *TopicsToClientStore) AddTopic(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 	// If this is just a top level topic like sensors/ as opposed to sensors/c02sensors/...
 	if len(topicSections) == 1 {
-		if topicClientStore.topLevelMap.Exists(topicSections[0]) {
+		if topicClientStore.topLevelMap.Contains(topicSections[0]) {
 			return ErrTopicAlreadyExists
 		}
 		topicClientStore.topLevelMap.Put(topicSections[0], makeBaseTopic(topicSections[0]))
 		return nil
 	}
 
-	if topicClientStore.topLevelMap.Exists(topicSections[0]) {
+	if topicClientStore.topLevelMap.Contains(topicSections[0]) {
 		topLevelTopic := topicClientStore.topLevelMap.Get(topicSections[0])
 		return topLevelTopic.AddTopic(topicSections[1:])
 	} else {

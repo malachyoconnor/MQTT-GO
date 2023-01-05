@@ -110,7 +110,7 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 	}
 
 	newClient := CreateClient(clientID, connection)
-	if clientTable.Exists(clientID) {
+	if clientTable.Contains(clientID) {
 		return clientTable.Get(clientID), errors.New("error: Client already exists")
 	}
 	clientTable.Put(clientID, newClient)
@@ -128,7 +128,7 @@ func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *
 
 	// If the client has already been disconnected elsewhere
 	// by a call to client.Disconnect
-	if !clientTable.Exists(client.ClientIdentifier) {
+	if !clientTable.Contains(client.ClientIdentifier) {
 		return
 	}
 
