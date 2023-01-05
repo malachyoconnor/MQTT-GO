@@ -21,13 +21,42 @@ func CreateLinkedList[T comparable]() LinkedList[T] {
 	}
 }
 
+func (ll *LinkedList[T]) GetItems() []T {
+	result := make([]T, 0, ll.Size)
+
+	node := ll.head
+	for node != nil {
+		result = append(result, node.val)
+		node = node.next
+	}
+	return result
+}
+
+func (ll *LinkedList[T]) DeleteLinkedList() {
+	node := ll.head
+	for node != nil {
+		nextNode := node.next
+		node.next = nil
+		node = nextNode
+	}
+}
+
 // This concatenation is slow as we combine the two lists we DON'T copy them
 // If this is really slow then we can change that and just make sure we fix the lists when we're done
 // The point is that holding onto either of the other lists could be bad for concurrency - instead
 // we take a snapshot.
 func Concatenate[T comparable](llA *LinkedList[T], llB *LinkedList[T]) *LinkedList[T] {
-
 	result := CreateLinkedList[T]()
+
+	if llA == nil && llB == nil {
+		return nil
+	}
+	if llA == nil {
+		return llB.DeepCopy()
+	}
+	if llB == nil {
+		return llA.DeepCopy()
+	}
 
 	llA.lock.RLock()
 
@@ -47,6 +76,18 @@ func Concatenate[T comparable](llA *LinkedList[T], llB *LinkedList[T]) *LinkedLi
 	llB.lock.RUnlock()
 
 	return &result
+}
+
+func (ll *LinkedList[T]) DeepCopy() *LinkedList[T] {
+
+	result := CreateLinkedList[T]()
+	node := ll.head
+	for node != nil {
+		result.Append(node.val)
+		node = node.next
+	}
+	return &result
+
 }
 
 func CombineLinkedLists[T comparable](lists ...*LinkedList[T]) *LinkedList[T] {
@@ -108,6 +149,13 @@ func (ll *LinkedList[T]) Delete(val T) error {
 	defer ll.lock.Unlock()
 	// If the value we're deleting is the head or the tail
 	// then we need to adjust the linked list's head/tail
+
+	// If we've only got one item in the list
+	if ll.tail == ll.head && ll.tail.val == val {
+		ll.head, ll.tail = nil, nil
+		return nil
+	}
+
 	if ll.head.val == val {
 		ll.head = ll.head.next
 		ll.Size -= 1
@@ -122,7 +170,7 @@ func (ll *LinkedList[T]) Delete(val T) error {
 	for node := node.next; node != nil; {
 		if node.val == val {
 			ll.Size -= 1
-			node.Delete()
+			node.delete()
 			return nil
 		}
 	}
@@ -147,17 +195,8 @@ func (node *Node[T]) Prev() *Node[T] {
 	return (*node).prev
 }
 
-func (node *Node[T]) Delete() {
-	// If we're the head
-	if node.prev == nil {
-		if node.next != nil {
-			// If we've got a next node - then set that as us
-			node = node.next
-		} else {
-			// Otherwise we've got no next or previous item - so just delete the whole list
-			node = nil
-		}
-	} else {
-		node.prev.next = node.next
-	}
+func (node *Node[T]) delete() {
+	// Note prev CANNOT be nil, as we cannot be called on the head
+	node.prev.next = node.next
+	node.next.prev = node.prev
 }
