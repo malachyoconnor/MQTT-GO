@@ -2,7 +2,7 @@ package structures
 
 import "sync"
 
-type SafeMap[Key comparable, Value comparable] struct {
+type SafeMap[Key comparable, Value any] struct {
 	clientTable map[Key]Value
 	tableLock   sync.RWMutex
 }
@@ -37,10 +37,30 @@ func (clientTable *SafeMap[Key, Value]) Delete(key Key) {
 	delete(clientTable.clientTable, key)
 }
 
-func CreateSafeMap[Key comparable, Value comparable]() *SafeMap[Key, Value] {
+func (clientTable *SafeMap[Key, Value]) PutIfAbsent(key Key, value Value) Value {
+	if clientTable.Exists(key) {
+		return clientTable.Get(key)
+	} else {
+		clientTable.Put(key, value)
+		return value
+	}
+}
+
+func CreateSafeMap[Key comparable, Value any]() *SafeMap[Key, Value] {
 	result := SafeMap[Key, Value]{
 		clientTable: make(map[Key]Value),
 		tableLock:   sync.RWMutex{},
 	}
 	return &result
+}
+
+func (table *SafeMap[Key, Value]) Values() []Value {
+
+	values := make([]Value, len(table.clientTable))
+	i := 0
+	for _, val := range table.clientTable {
+		values[i] = val
+		i++
+	}
+	return values
 }
