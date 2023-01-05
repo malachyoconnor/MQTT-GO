@@ -136,7 +136,16 @@ func (ll *LinkedList[T]) RemoveDuplicates() {
 		if !found {
 			existingItems[node.val] = true
 		} else {
-			node.delete()
+			if node == ll.head {
+				ll.head = ll.head.next
+				ll.head.prev = nil
+			} else if node == ll.tail {
+				ll.tail = ll.tail.prev
+				ll.tail.next = nil
+			} else {
+				node.delete()
+			}
+
 			ll.Size -= 1
 		}
 		node = node.next
@@ -214,6 +223,8 @@ func (node *Node[T]) Prev() *Node[T] {
 
 func (node *Node[T]) delete() {
 	// Note prev CANNOT be nil, as we cannot be called on the head
+	// We can't rely on that because we can't delete ourselves if we're
+	// the head or tail because we won't be garbage collected.
 	node.prev.next = node.next
 	node.next.prev = node.prev
 }
