@@ -18,8 +18,8 @@ func TestPuttingLowerLevel(t *testing.T) {
 	topicStore := clients.CreateTopicMap()
 	topicStore.AddTopic("x/y")
 
-	_, err1 := topicStore.GetMatchingClients("x")
-	_, err2 := topicStore.GetMatchingClients("x/y")
+	_, err1 := topicStore.Get("x")
+	_, err2 := topicStore.Get("x/y")
 
 	for _, err := range []error{err1, err2} {
 		if err != nil {
@@ -58,9 +58,9 @@ func TestAddingMultipleChildren(t *testing.T) {
 	topicStore.AddTopic("x/y/a")
 	topicStore.AddTopic("x/y/b")
 
-	_, err1 := topicStore.GetMatchingClients("x/y/z")
-	_, err2 := topicStore.GetMatchingClients("x/y/a")
-	_, err3 := topicStore.GetMatchingClients("x/y/b")
+	_, err1 := topicStore.Get("x/y/z")
+	_, err2 := topicStore.Get("x/y/a")
+	_, err3 := topicStore.Get("x/y/b")
 
 	for _, err := range []error{err1, err2, err3} {
 		if err != nil {
@@ -75,9 +75,9 @@ func TestDeletingHigherLevel(t *testing.T) {
 	topicStore := clients.CreateTopicMap()
 	topicStore.AddTopic("x/y/z")
 
-	topicStore.DeleteTopic("x")
+	topicStore.Delete("x")
 
-	if _, err := topicStore.GetMatchingClients("x/y"); err == nil {
+	if _, err := topicStore.Get("x/y"); err == nil {
 		t.Error("Able to access deleted topic")
 	}
 }
@@ -85,10 +85,10 @@ func TestDeletingHigherLevel(t *testing.T) {
 func TestDeletingLowerLevel(t *testing.T) {
 	topicStore := clients.CreateTopicMap()
 	topicStore.AddTopic("x/y/z")
-	topicStore.DeleteTopic("x/y")
+	topicStore.Delete("x/y")
 	topicStore.PrintTopics()
 
-	if _, err := topicStore.GetMatchingClients("x"); err == clients.ErrTopicDoesntExist {
+	if _, err := topicStore.Get("x"); err == clients.ErrTopicDoesntExist {
 		t.Error("Unable to access base element after child is deleted")
 	}
 
@@ -99,11 +99,11 @@ func TestDeletingOneChild(t *testing.T) {
 	topicStore.AddTopic("x/y/z")
 	topicStore.AddTopic("x/y/a")
 	topicStore.AddTopic("x/y/b")
-	topicStore.DeleteTopic("x/y/z")
+	topicStore.Delete("x/y/z")
 
-	_, err1 := topicStore.GetMatchingClients("x/y/z")
-	_, err2 := topicStore.GetMatchingClients("x/y/a")
-	_, err3 := topicStore.GetMatchingClients("x/y/b")
+	_, err1 := topicStore.Get("x/y/z")
+	_, err2 := topicStore.Get("x/y/a")
+	_, err3 := topicStore.Get("x/y/b")
 
 	if err1 != clients.ErrTopicDoesntExist {
 		t.Error("Could access deleted element")
@@ -128,7 +128,7 @@ func TestAddingClientIDs(t *testing.T) {
 	topicStore.Put("x/y/z", "def")
 	topicStore.Put("x/y/1", "def")
 	topicStore.PrintTopics()
-	res, err := topicStore.GetMatchingClients("x/y/z")
+	res, err := topicStore.Get("x/y/z")
 
 	if res.Head().Value() != "abc" || err != nil {
 		t.Error("Value not being added correctly")
@@ -140,11 +140,24 @@ func TestHashWildcard(t *testing.T) {
 	topicStore.Put("x/y/z", "abc")
 	topicStore.Put("x/y/m", "xyz")
 
-	cLL, _ := topicStore.GetMatchingClients("x/y/#")
+	cLL, _ := topicStore.Get("x/y/#")
 	clientArr := cLL.GetItems()
 	if !slices.Contains(clientArr, "abc") || !slices.Contains(clientArr, "xyz") ||
 		len(clientArr) != 2 {
 		t.Error("Didn't find correct clients")
+	}
+
+}
+
+func TestDuplicatesAreRemoved(t *testing.T) {
+	topicStore := clients.CreateTopicMap()
+	topicStore.Put("x/y/1", "abc")
+	topicStore.Put("x/y/2", "abc")
+	topicStore.Put("x/y/3", "abc")
+
+	result, _ := topicStore.Get("x/y/#")
+	if result.Size != 1 || result.Head().Value() != "abc" {
+		t.Error("Duplicates are not being removed correctly")
 	}
 
 }
@@ -155,7 +168,7 @@ func TestPlusWildcard(t *testing.T) {
 	topicStore.Put("x/y/m", "xyz")
 	topicStore.Put("x/y/c", "xyz")
 
-	cLL, _ := topicStore.GetMatchingClients("x/+/m")
+	cLL, _ := topicStore.Get("x/+/m")
 
 	if cLL.Size != 1 || cLL.Head().Value() != "xyz" {
 		t.Error("+ didn't work correctly.")

@@ -51,7 +51,12 @@ func (topicMap *TopicsToClientStore) PutClients(topicName string, clientIDs []Cl
 	return nil
 }
 
-func (t *TopicsToClientStore) DeleteTopic(topicName string) error {
+func (topicMap *TopicsToClientStore) Contains(topicName string) bool {
+	_, err := topicMap.get(topicName)
+	return err == nil
+}
+
+func (t *TopicsToClientStore) Delete(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 
 	if !t.topLevelMap.Contains(topicSections[0]) {
@@ -91,7 +96,8 @@ func (topicClientStore *TopicsToClientStore) AddTopic(topicName string) error {
 	}
 }
 
-func (topicToClient *TopicsToClientStore) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {
+// TODO: Rename to GetMatchingClients.
+func (topicToClient *TopicsToClientStore) Get(topicName string) (*structures.LinkedList[ClientID], error) {
 
 	if topicName[len(topicName)-1] == '/' {
 		return nil, errors.New("error: Wildcard topics cannot end with /")
@@ -119,10 +125,13 @@ func (topicToClient *TopicsToClientStore) GetMatchingClients(topicName string) (
 	if result == nil {
 		return nil, ErrTopicDoesntExist
 	}
-	return result, nil
+	// We don't want to send a client the same message twice
+	result.RemoveDuplicates()
 
+	return result, nil
 }
 
+// err can be ErrTopicDoesntExist or nil
 func (TopicToClient *TopicsToClientStore) get(topicName string) (*structures.LinkedList[ClientID], error) {
 	topicSections := strings.Split(topicName, "/")
 
@@ -165,7 +174,7 @@ func makeBaseTopic(topicName string) *topic {
 	newTopic := topic{
 		name:             topicName,
 		children:         make([]*topic, 0, 5),
-		connectedClients: &connectedClients,
+		connectedClients: connectedClients,
 	}
 	return &newTopic
 }
@@ -262,6 +271,7 @@ func (t *topic) getMatchingClients(topicSections []string) *structures.LinkedLis
 
 }
 
+// Can return a client list of nil (if the topic doesn't exist)
 func (t *topic) get(topicSections []string) *structures.LinkedList[ClientID] {
 	if len(topicSections) == 0 {
 		return t.connectedClients
