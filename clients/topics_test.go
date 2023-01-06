@@ -1,7 +1,6 @@
-package tests
+package clients
 
 import (
-	"MQTT-GO/clients"
 	"fmt"
 	"testing"
 
@@ -10,13 +9,13 @@ import (
 
 // Testing if creating a topic map works
 func TestInitialization(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.AddTopic("x")
 	topicStore.PrintTopics()
 }
 
 func TestPuttingLowerLevel(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.AddTopic("x/y")
 
 	_, err1 := topicStore.GetMatchingClients("x")
@@ -32,21 +31,21 @@ func TestPuttingLowerLevel(t *testing.T) {
 
 // Testing adding an already created top level topic works
 func TestDuplicating(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.AddTopic("x")
 	err := topicStore.AddTopic("x")
-	if err != clients.ErrTopicAlreadyExists {
+	if err != ErrTopicAlreadyExists {
 		t.Error("Able to add topic that already exists")
 	}
 	topicStore.PrintTopics()
 }
 
 func TestDuplicatingLowerLevel(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.AddTopic("x/y/z")
 	err := topicStore.AddTopic("x/y/z")
 
-	if err != clients.ErrTopicAlreadyExists {
+	if err != ErrTopicAlreadyExists {
 		t.Error("Able to add topic that already exists")
 	}
 
@@ -54,7 +53,7 @@ func TestDuplicatingLowerLevel(t *testing.T) {
 }
 
 func TestAddingMultipleChildren(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.AddTopic("x/y/z")
 	topicStore.AddTopic("x/y/a")
 	topicStore.AddTopic("x/y/b")
@@ -73,7 +72,7 @@ func TestAddingMultipleChildren(t *testing.T) {
 }
 
 func TestDeletingHigherLevel(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.AddTopic("x/y/z")
 
 	topicStore.Delete("x")
@@ -84,19 +83,19 @@ func TestDeletingHigherLevel(t *testing.T) {
 }
 
 func TestDeletingLowerLevel(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.AddTopic("x/y/z")
 	topicStore.Delete("x/y")
 	topicStore.PrintTopics()
 
-	if _, err := topicStore.GetMatchingClients("x"); err == clients.ErrTopicDoesntExist {
+	if _, err := topicStore.GetMatchingClients("x"); err == ErrTopicDoesntExist {
 		t.Error("Unable to access base element after child is deleted")
 	}
 
 }
 
 func TestDeletingOneChild(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.AddTopic("x/y/z")
 	topicStore.AddTopic("x/y/a")
 	topicStore.AddTopic("x/y/b")
@@ -106,7 +105,7 @@ func TestDeletingOneChild(t *testing.T) {
 	_, err2 := topicStore.GetMatchingClients("x/y/a")
 	_, err3 := topicStore.GetMatchingClients("x/y/b")
 
-	if err1 != clients.ErrTopicDoesntExist {
+	if err1 != ErrTopicDoesntExist {
 		t.Error("Could access deleted element")
 	}
 	if err2 != nil {
@@ -121,7 +120,7 @@ func TestDeletingOneChild(t *testing.T) {
 }
 
 func TestAddingClientIDs(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.AddTopic("x/y/z")
 	topicStore.AddTopic("x/y/1")
 
@@ -137,7 +136,7 @@ func TestAddingClientIDs(t *testing.T) {
 }
 
 func TestDuplicatesAreRemoved(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.Put("x/y/1", "abc")
 	topicStore.Put("x/y/2", "abc")
 	topicStore.Put("x/y/3", "abc")
@@ -150,7 +149,7 @@ func TestDuplicatesAreRemoved(t *testing.T) {
 }
 
 func TestHashWildcard(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.Put("x/y/z", "abc")
 	topicStore.Put("x/#", "xyz")
 
@@ -165,7 +164,7 @@ func TestHashWildcard(t *testing.T) {
 }
 
 func TestPlusWildcard(t *testing.T) {
-	topicStore := clients.CreateTopicMap()
+	topicStore := CreateTopicMap()
 	topicStore.Put("x/y/z", "abc")
 	topicStore.Put("x/+/m", "xyz")
 	topicStore.Put("x/y/c", "xyz")

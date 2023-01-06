@@ -1,7 +1,6 @@
-package tests
+package structures
 
 import (
-	"MQTT-GO/structures"
 	"testing"
 
 	"golang.org/x/exp/slices"
@@ -9,7 +8,7 @@ import (
 
 func TestRemovingDuplicates(t *testing.T) {
 
-	ll := structures.CreateLinkedList[int]()
+	ll := CreateLinkedList[int]()
 	ll.Append(1)
 	ll.Append(2)
 	ll.Append(2)
