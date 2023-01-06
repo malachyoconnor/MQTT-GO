@@ -169,11 +169,6 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
 	clientList, err := TCMap.GetMatchingClients(topic.TopicFilter)
 
-	TCMap.PrintTopics()
-	fmt.Print("Clients: ")
-	fmt.Println(clientList.GetItems())
-	clientList.PrintItems()
-
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -188,6 +183,8 @@ func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgTo
 		if client := clientTable.Get(clientID); client != nil {
 			alteredMsg.ClientConnection = &(client.TCPConnection)
 		} else {
+			fmt.Println("error: Can't find subscribed client in clientTable")
+			node = node.Next()
 			continue
 		}
 

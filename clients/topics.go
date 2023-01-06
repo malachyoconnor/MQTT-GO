@@ -26,6 +26,33 @@ func (topicMap *TopicToSubscribers) PrintTopics() {
 	}
 }
 
+func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
+	clientTopics := client.Topics
+	if clientTopics == nil {
+		return
+	}
+	node := clientTopics.Head()
+	for node != nil {
+		topic := node.Value().TopicFilter
+		clientLL, err := topicMap.get(topic)
+
+		if err != nil {
+			panic(err)
+		}
+
+		clientLL.Delete(client.ClientIdentifier)
+		if clientLL.Size == 0 {
+			err := topicMap.Delete(topic)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		node = node.Next()
+	}
+
+}
+
 func (topicMap *TopicToSubscribers) Put(topicName string, clientID ClientID) error {
 
 	clientLL, err := topicMap.get(topicName)
