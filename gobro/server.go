@@ -15,7 +15,7 @@ var (
 
 type Server struct {
 	clientTable    *structures.SafeMap[clients.ClientID, *clients.Client]
-	topicClientMap *clients.TopicToClient
+	topicClientMap *clients.TopicToSubscribers
 	inputChan      *chan clients.ClientMessage
 	outputChan     *chan clients.ClientMessage
 }
@@ -23,13 +23,13 @@ type Server struct {
 func CreateServer() Server {
 
 	clientTable := clients.CreateClientTable()
-	topicClientMap := make(clients.TopicToClient)
+	topicClientMap := clients.CreateTopicMap()
 	inputChan := make(chan clients.ClientMessage)
 	outputChan := make(chan clients.ClientMessage)
 
 	return Server{
 		clientTable:    clientTable,
-		topicClientMap: &topicClientMap,
+		topicClientMap: topicClientMap,
 		inputChan:      &inputChan,
 		outputChan:     &outputChan,
 	}
@@ -54,10 +54,7 @@ func (server *Server) StartServer() {
 	msgListener := CreateMessageHandler(server.inputChan, server.outputChan)
 	go msgListener.Listen(server)
 
-	go AcceptConnections(&listener, server)
-
-	for {
-	}
+	AcceptConnections(&listener, server)
 
 }
 

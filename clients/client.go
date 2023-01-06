@@ -40,7 +40,7 @@ func (client *Client) AddTopic(newTopic Topic) {
 
 }
 
-func (client *Client) Disconnect(topicClientMap *TopicToClient, clientTable *structures.SafeMap[ClientID, *Client]) {
+func (client *Client) Disconnect(topicClientMap *TopicToSubscribers, clientTable *structures.SafeMap[ClientID, *Client]) {
 	if client == nil {
 		return
 	}
@@ -48,15 +48,18 @@ func (client *Client) Disconnect(topicClientMap *TopicToClient, clientTable *str
 	// remove that client from the topic to client lists for each
 	// topic
 	if client.Topics != nil {
-		node := client.Topics.Head()
-		for node != nil {
-			(*topicClientMap)[node.Value()].PrintItems()
-			err := (*topicClientMap)[node.Value()].Delete(client.ClientIdentifier)
-			(*topicClientMap)[node.Value()].PrintItems()
+		topicNode := client.Topics.Head()
+		for topicNode != nil {
+			clientLL, _ := topicClientMap.GetMatchingClients(topicNode.Value().TopicFilter)
+
+			clientLL.PrintItems()
+			err := clientLL.Delete(client.ClientIdentifier)
+			clientLL.PrintItems()
+
 			if err != nil {
 				panic("Attempted to remove client from Topic list that isn't there")
 			}
-			node = node.Next()
+			topicNode = topicNode.Next()
 		}
 	}
 

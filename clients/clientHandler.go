@@ -26,7 +26,7 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet *
 	return clientMessage
 }
 
-func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToClient, connectedClient *string) {
+func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
@@ -122,7 +122,7 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 
 }
 
-func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToClient, connectedClient *string) {
+func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 	*connectedClient = ""
 	time.Sleep(3 * time.Second)
 

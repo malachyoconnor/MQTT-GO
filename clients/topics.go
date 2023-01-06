@@ -7,25 +7,26 @@ import (
 	"strings"
 )
 
-type TopicsToClientStore struct {
+// Rename to TopicToSubscriberStore
+type TopicToSubscribers struct {
 	topLevelMap *structures.SafeMap[string, *topic]
 }
 
-func CreateTopicMap() *TopicsToClientStore {
-	topicMap := TopicsToClientStore{
+func CreateTopicMap() *TopicToSubscribers {
+	topicMap := TopicToSubscribers{
 		topLevelMap: structures.CreateSafeMap[string, *topic](),
 	}
 	return &topicMap
 }
 
-func (topicMap *TopicsToClientStore) PrintTopics() {
+func (topicMap *TopicToSubscribers) PrintTopics() {
 	for _, topic := range topicMap.topLevelMap.Values() {
 		topic.PrintTopics()
 		fmt.Println()
 	}
 }
 
-func (topicMap *TopicsToClientStore) Put(topicName string, clientID ClientID) error {
+func (topicMap *TopicToSubscribers) Put(topicName string, clientID ClientID) error {
 
 	clientLL, err := topicMap.get(topicName)
 	if err != nil {
@@ -40,7 +41,7 @@ func (topicMap *TopicsToClientStore) Put(topicName string, clientID ClientID) er
 	return nil
 }
 
-func (topicMap *TopicsToClientStore) PutClients(topicName string, clientIDs []ClientID) error {
+func (topicMap *TopicToSubscribers) PutClients(topicName string, clientIDs []ClientID) error {
 	clientLL, err := topicMap.get(topicName)
 	if err != nil {
 		return err
@@ -51,12 +52,12 @@ func (topicMap *TopicsToClientStore) PutClients(topicName string, clientIDs []Cl
 	return nil
 }
 
-func (topicMap *TopicsToClientStore) Contains(topicName string) bool {
+func (topicMap *TopicToSubscribers) Contains(topicName string) bool {
 	_, err := topicMap.get(topicName)
 	return err == nil
 }
 
-func (t *TopicsToClientStore) Delete(topicName string) error {
+func (t *TopicToSubscribers) Delete(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 
 	if !t.topLevelMap.Contains(topicSections[0]) {
@@ -75,7 +76,7 @@ func (t *TopicsToClientStore) Delete(topicName string) error {
 
 var ErrTopicAlreadyExists = errors.New("error: Trying to add client that already exists")
 
-func (topicClientStore *TopicsToClientStore) AddTopic(topicName string) error {
+func (topicClientStore *TopicToSubscribers) AddTopic(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 	// If this is just a top level topic like sensors/ as opposed to sensors/c02sensors/...
 	if len(topicSections) == 1 {
@@ -97,7 +98,7 @@ func (topicClientStore *TopicsToClientStore) AddTopic(topicName string) error {
 }
 
 // TODO: Rename to GetMatchingClients.
-func (topicToClient *TopicsToClientStore) Get(topicName string) (*structures.LinkedList[ClientID], error) {
+func (topicToClient *TopicToSubscribers) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {
 
 	if topicName[len(topicName)-1] == '/' {
 		return nil, errors.New("error: Wildcard topics cannot end with /")
@@ -132,7 +133,7 @@ func (topicToClient *TopicsToClientStore) Get(topicName string) (*structures.Lin
 }
 
 // err can be ErrTopicDoesntExist or nil
-func (TopicToClient *TopicsToClientStore) get(topicName string) (*structures.LinkedList[ClientID], error) {
+func (TopicToClient *TopicToSubscribers) get(topicName string) (*structures.LinkedList[ClientID], error) {
 	topicSections := strings.Split(topicName, "/")
 
 	topLevelTopic := TopicToClient.topLevelMap.Get(topicSections[0])
@@ -263,8 +264,10 @@ func (t *topic) getMatchingClients(topicSections []string) *structures.LinkedLis
 
 	for _, child := range t.children {
 		// If we're not at the bottom level topic
-		if child.name == topicSections[0] || topicSections[0] == "+" {
+		if child.name == topicSections[0] || child.name == "+" {
 			result = structures.Concatenate(result, child.getMatchingClients(topicSections[1:]))
+		} else if child.name == "#" {
+			result = structures.Concatenate(result, child.getAllLowerLevelClients())
 		}
 	}
 	return result

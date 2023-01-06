@@ -122,8 +122,8 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 }
 
 // Decode topics and store them in subscription table
-func handleSubscribe(topicClientMap *clients.TopicToClient, client *clients.Client, packetPayload packets.PacketPayload) ([]clients.Topic, error) {
-	newTopics := make([]clients.Topic, 0, 0)
+func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients.Client, packetPayload packets.PacketPayload) ([]clients.Topic, error) {
+	newTopics := make([]clients.Topic, 0)
 	payload := packetPayload.ApplicationMessage
 	topicNumber, offset := 0, 0
 
@@ -146,32 +146,36 @@ func handleSubscribe(topicClientMap *clients.TopicToClient, client *clients.Clie
 		topicNumber++
 		offset += utfStringLen + 1
 
-		if _, found := (*topicClientMap)[topic]; !found {
-			newLL := structures.CreateLinkedList[clients.ClientID]()
-			(*topicClientMap)[topic] = newLL
+		if !topicClientMap.Contains(topic.TopicFilter) {
+			topicClientMap.AddTopic(topic.TopicFilter)
 		}
 	}
 
 	clientTopics := client.Topics
 
 	if clientTopics == nil {
-		newTopicList := structures.CreateLinkedList[clients.Topic]()
-		clientTopics = newTopicList
+		client.Topics = structures.CreateLinkedList[clients.Topic]()
 	}
 
 	for _, newTopic := range newTopics {
-
 		client.AddTopic(newTopic)
-		topicClientMap.AddTopicClientPair(newTopic, client.ClientIdentifier)
+		topicClientMap.Put(newTopic.TopicFilter, client.ClientIdentifier)
 	}
 
 	return newTopics, nil
 
 }
 
-func handlePublish(TCMap *clients.TopicToClient, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
-	clientList := (*TCMap)[topic]
-	if clientList == nil {
+func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
+	clientList, err := TCMap.GetMatchingClients(topic.TopicFilter)
+
+	TCMap.PrintTopics()
+	fmt.Print("Clients: ")
+	fmt.Println(clientList.GetItems())
+	clientList.PrintItems()
+
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
 	node := clientList.Head()
