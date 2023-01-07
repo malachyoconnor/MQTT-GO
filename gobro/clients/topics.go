@@ -36,8 +36,11 @@ func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
 		topic := node.Value().TopicFilter
 		clientLL, err := topicMap.get(topic)
 
+		// Race condition
 		if err != nil {
-			panic(err)
+			fmt.Println("Tried to remove topic that had already been deleted")
+			node = node.Next()
+			continue
 		}
 
 		err = clientLL.Delete(client.ClientIdentifier)

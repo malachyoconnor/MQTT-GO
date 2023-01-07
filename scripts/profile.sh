@@ -1,1 +1,1 @@
-go run . -cpuprofile=test.prof
+go run . gobro -cpuprofile=test.prof

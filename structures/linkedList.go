@@ -175,6 +175,16 @@ func (ll *LinkedList[T]) Delete(val T) error {
 
 	ll.lock.Lock()
 	defer ll.lock.Unlock()
+
+	// If we've removed an item and left one item in the list - we need to ensure that
+	// we don't get infinite loops when we go to search our list.
+	defer func() {
+		if ll.Size == 1 {
+			ll.head.next = nil
+			ll.tail.prev = nil
+		}
+	}()
+
 	// If the value we're deleting is the head or the tail
 	// then we need to adjust the linked list's head/tail
 
@@ -183,8 +193,9 @@ func (ll *LinkedList[T]) Delete(val T) error {
 	}
 
 	// If we've only got one item in the list
-	if ll.tail == ll.head && ll.tail.val == val {
+	if ll.tail == ll.head && ll.head.val == val {
 		ll.head, ll.tail = nil, nil
+		ll.Size -= 1
 		return nil
 	}
 
@@ -199,13 +210,15 @@ func (ll *LinkedList[T]) Delete(val T) error {
 	}
 
 	node := ll.head
-	for node := node.next; node != nil; {
+	for i := 0; i < ll.Size; i++ {
 		if node.val == val {
 			ll.Size -= 1
 			node.delete()
 			return nil
 		}
+		node = node.next
 	}
+
 	return ErrValDoesntExist
 }
 
