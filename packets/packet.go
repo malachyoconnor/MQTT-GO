@@ -20,7 +20,7 @@ const (
 )
 
 func PacketTypeName(packetType byte) string {
-	if packetType > 15 || packetType < 0 {
+	if packetType > 15 {
 		return "UNDEFINED"
 	}
 	return []string{"RESERVED", "CONNECT", "CONNACK", "PUBLISH", "PUBACK",
@@ -80,6 +80,7 @@ type PacketPayload struct {
 	ApplicationMessage []byte
 }
 
+//lint:ignore U1000 We might use this in the future
 type ConAckVariableHeader struct {
 	connectAcknowledgeFlags byte
 	connectReturnCode       byte

@@ -22,6 +22,7 @@ func (b *BytePool) Put(item []byte) {
 		panic("Error: Tried to put nil into the BytePool")
 	}
 
+	//lint:ignore SA6002 We want to allocate into the BytePool, that's the whole point
 	b.pool.Put(item)
 	b.itemsWaiting <- struct{}{}
 }

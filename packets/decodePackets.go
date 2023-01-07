@@ -38,12 +38,9 @@ func DecodeFixedHeader(packet []byte) (*ControlHeader, int, error) {
 	}
 
 	if fixedLength != (len(packet)-1)-(varLengthLen) {
-
-		fmt.Println(len(packet) - 1)
-		fmt.Println(varLengthLen)
-		fmt.Println(packet)
-
-		return &ControlHeader{}, 0, errors.New("error: packet length differs from the advertised fixed length in DecodeFixedHeader")
+		// We still return the values, because we may not have the whole packet yet
+		// We may JUST be passing the fixed header
+		return resultHeader, 1 + varLengthLen, errors.New("error: packet length differs from the advertised fixed length in DecodeFixedHeader")
 	}
 
 	return resultHeader, 1 + varLengthLen, nil
@@ -123,14 +120,14 @@ func GetPacketType(packet *[]byte) byte {
 	return (*packet)[0] >> 4
 }
 
-var zeroLengthPacketError = errors.New("error: Zero length packet read from byte pool.")
+var errZeroLengthPacketError = errors.New("error: Zero length packet read from byte pool")
 
 // DecodePacket takes a byte array encoding a packet and returns
 // (*Packet, PacketType, error)
 func DecodePacket(packet []byte) (*Packet, byte, error) {
 
 	if len(packet) == 0 {
-		return &Packet{}, 0, zeroLengthPacketError
+		return &Packet{}, 0, errZeroLengthPacketError
 	}
 
 	packetType := GetPacketType(&packet)
@@ -308,7 +305,7 @@ func DecodeDisconnect(packet []byte) (*Packet, error) {
 
 	if packet[0]>>4 != 14 || packet[0]-14<<4 != 0 || packet[1] != 0 {
 
-		return nil, errors.New("Incorrectly formed DISCONNECT packet")
+		return nil, errors.New("error: Incorrectly formed DISCONNECT packet")
 
 	}
 
@@ -329,27 +326,24 @@ var errMalformedInt error = errors.New("error: malformed variable length integer
 // MQTT Spec for fixed length headers.
 // Returns the encoded int, the length of the fixed length header in bytes
 // and a potential error.
-func DecodeVarLengthInt(packet []byte) (int, int, error) {
-	var result int = 0
-	multiplier := 1
-	var length int
-
-	for i, val := range packet {
-		if i > 3 {
-			return 0, 0, errMalformedInt
-		}
-		// We don't want to include the bit that just signals
-		// if we should continue decoding
-		result += (int(val) - 128*int(128&val)) * multiplier
+func DecodeVarLengthInt(toDecode []byte) (value int, length int, err error) {
+	var multiplier int = 1
+	for {
+		encodedByte := toDecode[length]
+		value += int((encodedByte & 127)) * multiplier
 		multiplier *= 128
 
-		// We continue decoding if the first bit is a 1, otherwise we stop
-		if 128&val == 0 {
-			length = i + 1
+		if multiplier > 128*128*128 {
+			return 0, 0, errMalformedInt
+		}
+		length += 1
+
+		if encodedByte&128 == 0 {
 			break
 		}
 	}
-	return result, length, nil
+	return value, length, nil
+
 }
 
 func DecodePublish(packet []byte) (*Packet, error) {
