@@ -1,1 +1,1 @@
-mosquitto_pub -t "test/hello" -m "abc" -p 8000
+mosquitto_pub -t "x/y" -m "abc" -p 8000
