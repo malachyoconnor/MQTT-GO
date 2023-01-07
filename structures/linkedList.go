@@ -171,10 +171,16 @@ func (ll *LinkedList[T]) Append(val T) {
 }
 
 func (ll *LinkedList[T]) Delete(val T) error {
+	ErrValDoesntExist := errors.New(fmt.Sprint("error: Value", val, "not found in linked list"))
+
 	ll.lock.Lock()
 	defer ll.lock.Unlock()
 	// If the value we're deleting is the head or the tail
 	// then we need to adjust the linked list's head/tail
+
+	if ll.head == nil {
+		return ErrValDoesntExist
+	}
 
 	// If we've only got one item in the list
 	if ll.tail == ll.head && ll.tail.val == val {
@@ -200,7 +206,7 @@ func (ll *LinkedList[T]) Delete(val T) error {
 			return nil
 		}
 	}
-	return errors.New(fmt.Sprint("error: Value", val, "not found in linked list"))
+	return ErrValDoesntExist
 }
 
 type Node[T comparable] struct {
