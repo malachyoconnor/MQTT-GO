@@ -23,7 +23,7 @@ func main() {
 
 		go func() {
 			fmt.Println("STARTING PROFILING")
-			time.Sleep(60 * time.Second)
+			time.Sleep(30 * time.Second)
 			pprof.StopCPUProfile()
 			fmt.Println("FINISHED PROFILING")
 		}()

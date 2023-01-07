@@ -1,7 +1,7 @@
 package gobro
 
 import (
-	"MQTT-GO/clients"
+	"MQTT-GO/gobro/clients"
 	"fmt"
 )
 

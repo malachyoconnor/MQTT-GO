@@ -1,10 +1,11 @@
 package gobro
 
 import (
-	"MQTT-GO/clients"
+	"MQTT-GO/gobro/clients"
 	"MQTT-GO/structures"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -58,8 +59,12 @@ func (server *Server) StartServer() {
 
 }
 
+var (
+	connectedClients      = make([]string, 100)
+	connectedClientsMutex = sync.Mutex{}
+)
+
 func AcceptConnections(listener *net.Listener, server *Server) {
-	connectedClients := [50]string{""}
 	fmt.Println("??", connectedClients)
 	for {
 		connection, err := (*listener).Accept()
@@ -80,12 +85,20 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 		}
 
 		var newArrayPos *string
+		connectedClientsMutex.Lock()
 		for i, val := range connectedClients {
 			if val == "" {
 				newArrayPos = &(connectedClients[i])
 				break
 			}
+			if i == len(connectedClients)-1 {
+				connectedClients = append(connectedClients, "")
+				newArrayPos = &connectedClients[len(connectedClients)-1]
+			}
 		}
+		// Done so that another thread doesn't also use this array position
+		*newArrayPos = "taken"
+		connectedClientsMutex.Unlock()
 
 		go func() {
 			time.Sleep(time.Millisecond * 200)

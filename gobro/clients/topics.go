@@ -40,7 +40,10 @@ func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
 			panic(err)
 		}
 
-		clientLL.Delete(client.ClientIdentifier)
+		err = clientLL.Delete(client.ClientIdentifier)
+		if err != nil {
+			fmt.Println("Tried to delete client and got:", err)
+		}
 		if clientLL.Size == 0 {
 			err := topicMap.Delete(topic)
 			if err != nil {
