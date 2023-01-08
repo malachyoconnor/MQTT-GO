@@ -218,7 +218,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	varHeader.KeepAlive = keepAlive
 	offset += 2
 
-	resultPacket.VariableLengthHeader = varHeader
+	resultPacket.VariableLengthHeader = &varHeader
 
 	// Now we've to decode the payload
 	resultPayload := PacketPayload{}
@@ -280,7 +280,7 @@ func DecodeCONNACK(packet []byte) (*Packet, error) {
 	varHeader.ConnectAcknowledgementFlags = packet[offset]
 	varHeader.ConnectReturnCode = packet[offset+1]
 
-	return CombinePacketSections(header, varHeader, nil), nil
+	return CombinePacketSections(header, &varHeader, nil), nil
 }
 
 func DecodeSubscribe(packet []byte) (*Packet, error) {
@@ -301,7 +301,7 @@ func DecodeSubscribe(packet []byte) (*Packet, error) {
 	varHeader := SubscribeVariableHeader{
 		PacketIdentifier: packetIdentifier,
 	}
-	resultPacket.VariableLengthHeader = varHeader
+	resultPacket.VariableLengthHeader = &varHeader
 
 	// Get payload
 	payload := PacketPayload{
@@ -396,7 +396,7 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	payloadLength := fixedHeader.RemainingLength - varHeaderLen
 	offset = offset + varHeaderLen
 
-	resultPacket.VariableLengthHeader = varHeader
+	resultPacket.VariableLengthHeader = &varHeader
 
 	var payload PacketPayload
 	payload.ApplicationMessage = make([]byte, payloadLength)

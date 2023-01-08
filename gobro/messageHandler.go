@@ -74,9 +74,9 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
-		fmt.Println("Received request to publish:", string(packet.Payload.ApplicationMessage[:]), "to topic:", string(packet.VariableLengthHeader.(packets.PublishVariableHeader).TopicFilter))
+		fmt.Println("Received request to publish:", string(packet.Payload.ApplicationMessage[:]), "to topic:", string(packet.VariableLengthHeader.(*packets.PublishVariableHeader).TopicFilter))
 
-		varHeader := packet.VariableLengthHeader.(packets.PublishVariableHeader)
+		varHeader := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
 		topic := clients.Topic{
 			TopicFilter: varHeader.TopicFilter,
 			Qos:         packet.ControlHeader.Flags & 6,
@@ -98,7 +98,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 			returnCodes[i] = topic.Qos
 		}
 
-		packetID := packet.VariableLengthHeader.(packets.SubscribeVariableHeader).PacketIdentifier
+		packetID := packet.VariableLengthHeader.(*packets.SubscribeVariableHeader).PacketIdentifier
 		subackPacket := packets.CreateSubACK(packetID, returnCodes)
 		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, &subackPacket)
 		packetsToSend = append(packetsToSend, &clientMsg)

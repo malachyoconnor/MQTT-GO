@@ -42,7 +42,16 @@ type Packet struct {
 	Payload              *PacketPayload
 }
 
-type VariableLengthHeader interface{}
+type VariableLengthHeader interface {
+	SafetyFunc()
+}
+
+// This ensures we only pass around POINTERS to our variable header structs
+// Otherwise we could be passing the structs itself and not realise it
+func (*PublishVariableHeader) SafetyFunc()   {}
+func (*ConnectVariableHeader) SafetyFunc()   {}
+func (*SubscribeVariableHeader) SafetyFunc() {}
+func (*ConnackVariableHeader) SafetyFunc()   {}
 
 type ControlHeader struct {
 	Type            byte
@@ -89,10 +98,4 @@ type PacketPayload struct {
 	Password           *[]byte
 	TopicName          string
 	ApplicationMessage []byte
-}
-
-//lint:ignore U1000 We might use this in the future
-type ConAckVariableHeader struct {
-	connectAcknowledgeFlags byte
-	connectReturnCode       byte
 }

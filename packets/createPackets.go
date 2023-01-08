@@ -74,7 +74,7 @@ func CreateConnect(packet *Packet) (*[]byte, error) {
 	}
 	// Need to do control header last because only at the end can we know the value of the remaining length field
 
-	varLengthHeader := packet.VariableLengthHeader.(ConnectVariableHeader)
+	varLengthHeader := packet.VariableLengthHeader.(*ConnectVariableHeader)
 	// TODO: Random choice of 30 here - could be improved with some looking into, same for the Payload.
 	resultVarHeader := make([]byte, 0, 30)
 	protocolNameArr, _, _ := EncodeUTFString("MQTT")

@@ -22,7 +22,7 @@ func ConnectToServer(ip string, port int) error {
 	varHeader := packets.ConnectVariableHeader{}
 	payload := packets.PacketPayload{}
 	payload.ClientID = "testing"
-	connectPacket := packets.CombinePacketSections(&controlHeader, varHeader, &payload)
+	connectPacket := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
 	connectPacketArr, err := packets.CreateConnect(connectPacket)
 
 	if err != nil {
