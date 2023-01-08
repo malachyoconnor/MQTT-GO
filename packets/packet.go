@@ -33,10 +33,13 @@ func isValidControlType(controlType byte) bool {
 	return ((RESERVED < controlType) && (controlType <= AUTH))
 }
 
+// Why is this not pointers to the items????
 type Packet struct {
-	ControlHeader        ControlHeader
+	ControlHeader *ControlHeader
+	// VariableLengthHeader is an INTERFACE so it contains a pointer to the struct anyway.
+	// Pointers to interfaces are mostly useless
 	VariableLengthHeader VariableLengthHeader
-	Payload              PacketPayload
+	Payload              *PacketPayload
 }
 
 type VariableLengthHeader interface{}
@@ -66,6 +69,11 @@ type ConnectVariableHeader struct {
 	// Will Retain (1 bit)
 	// Password Flag (1 bit)
 	// User Name Flag (1 bit)
+}
+
+type ConnackVariableHeader struct {
+	ConnectAcknowledgementFlags byte
+	ConnectReturnCode           byte
 }
 
 type SubscribeVariableHeader struct {

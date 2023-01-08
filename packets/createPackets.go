@@ -2,7 +2,8 @@ package packets
 
 import "errors"
 
-func CombinePacketSections(controlHeader ControlHeader, varLengthHeader VariableLengthHeader, payload PacketPayload) *Packet {
+// VariableLengthHeader is an interface - so we don't pass a pointer
+func CombinePacketSections(controlHeader *ControlHeader, varLengthHeader VariableLengthHeader, payload *PacketPayload) *Packet {
 	resultPacket := Packet{}
 	resultPacket.ControlHeader = controlHeader
 	resultPacket.VariableLengthHeader = varLengthHeader
@@ -126,7 +127,7 @@ func CreateConnect(packet *Packet) (*[]byte, error) {
 	}
 
 	packet.ControlHeader.RemainingLength = len(resultPayload) + len(resultVarHeader)
-	resultControlHeader := EncodeFixedHeader(packet.ControlHeader)
+	resultControlHeader := EncodeFixedHeader(*packet.ControlHeader)
 
 	resultPacket := make([]byte, 0, len(resultControlHeader)+len(resultVarHeader)+len(resultPayload))
 	resultPacket = append(resultPacket, resultControlHeader...)

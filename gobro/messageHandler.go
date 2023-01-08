@@ -86,7 +86,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 
 	case packets.SUBSCRIBE:
 		// Add the client to the topic in the subscription table
-		topics, err := handleSubscribe(server.topicClientMap, client, packet.Payload)
+		topics, err := handleSubscribe(server.topicClientMap, client, *packet.Payload)
 		if err != nil {
 			fmt.Println("Error during subscribe:", err)
 			return

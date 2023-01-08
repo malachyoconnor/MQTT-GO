@@ -139,6 +139,9 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 	case CONNECT:
 		result, err = DecodeConnect(packet[:])
 
+	case CONNACK:
+		result, err = DecodeCONNACK(packet[:])
+
 	case SUBSCRIBE:
 		result, err = DecodeSubscribe(packet[:])
 
@@ -185,7 +188,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 		return &Packet{}, err
 	}
 
-	resultPacket.ControlHeader = *fixedHeader
+	resultPacket.ControlHeader = fixedHeader
 
 	// Handle the variable length header
 	varHeaderDecode := packet[fixedHeaderLen:]
@@ -262,9 +265,22 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 		resultPayload.Password = &password
 	}
 
-	resultPacket.Payload = resultPayload
+	resultPacket.Payload = &resultPayload
 	// If all goes well, we can return
 	return resultPacket, nil
+}
+
+func DecodeCONNACK(packet []byte) (*Packet, error) {
+	header, offset, err := DecodeFixedHeader(packet)
+	if err != nil {
+		return nil, err
+	}
+
+	varHeader := ConnackVariableHeader{}
+	varHeader.ConnectAcknowledgementFlags = packet[offset]
+	varHeader.ConnectReturnCode = packet[offset+1]
+
+	return CombinePacketSections(header, varHeader, nil), nil
 }
 
 func DecodeSubscribe(packet []byte) (*Packet, error) {
@@ -291,7 +307,7 @@ func DecodeSubscribe(packet []byte) (*Packet, error) {
 	payload := PacketPayload{
 		ApplicationMessage: packet[offset:],
 	}
-	resultPacket.Payload = payload
+	resultPacket.Payload = &payload
 
 	return resultPacket, nil
 }
@@ -299,7 +315,7 @@ func DecodeSubscribe(packet []byte) (*Packet, error) {
 func DecodeDisconnect(packet []byte) (*Packet, error) {
 
 	resultPacket := &Packet{}
-	resultPacket.ControlHeader = ControlHeader{
+	resultPacket.ControlHeader = &ControlHeader{
 		Type:            14,
 		RemainingLength: 0,
 		Flags:           0,
@@ -356,7 +372,7 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	if err != nil {
 		return &Packet{}, err
 	}
-	resultPacket.ControlHeader = *fixedHeader
+	resultPacket.ControlHeader = fixedHeader
 
 	// Handle the variable length header
 	varHeader := PublishVariableHeader{}
@@ -385,7 +401,7 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	var payload PacketPayload
 	payload.ApplicationMessage = make([]byte, payloadLength)
 	copy(payload.ApplicationMessage, packet[offset:offset+payloadLength])
-	resultPacket.Payload = payload
+	resultPacket.Payload = &payload
 
 	return resultPacket, nil
 }
@@ -397,7 +413,7 @@ func DecodePing(packet []byte) (*Packet, error) {
 	if err != nil {
 		return &Packet{}, err
 	}
-	resultPacket.ControlHeader = *fixedHeader
+	resultPacket.ControlHeader = fixedHeader
 	if offset != len(packet) {
 		return &Packet{}, errInvalidLength
 	}
