@@ -1,1 +1,1 @@
-mosquitto_sub -t "test/hello" -p 8000
+mosquitto_sub -t "x/y" -p 8000

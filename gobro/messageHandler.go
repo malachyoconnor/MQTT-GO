@@ -74,7 +74,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
-		fmt.Println("Received request to publish:", string(packet.Payload.ApplicationMessage[:]))
+		fmt.Println("Received request to publish:", string(packet.Payload.ApplicationMessage[:]), "to topic:", string(packet.VariableLengthHeader.(packets.PublishVariableHeader).TopicFilter))
 
 		varHeader := packet.VariableLengthHeader.(packets.PublishVariableHeader)
 		topic := clients.Topic{

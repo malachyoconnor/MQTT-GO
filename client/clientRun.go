@@ -18,9 +18,9 @@ var (
 // Then send values to the server
 func StartClient() {
 	flag.Parse()
-	fmt.Println("Connecting to server on port", *port)
 
 	ConnectToServer(*ip, *port)
+	fmt.Println("Connected to broker on port", *port)
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
