@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	ADDRESS = "localhost"
-	PORT    = "8000"
+	ADDRESS                  = "localhost"
+	PORT                     = "8000"
+	serverStop chan struct{} = make(chan struct{}, 1)
 )
 
 type Server struct {
@@ -37,6 +38,10 @@ func CreateServer() Server {
 
 }
 
+func (server *Server) StopServer() {
+	serverStop <- struct{}{}
+}
+
 func (server *Server) StartServer() {
 
 	// Listen for TCP connections
@@ -56,7 +61,6 @@ func (server *Server) StartServer() {
 	go msgListener.Listen(server)
 
 	AcceptConnections(&listener, server)
-
 }
 
 var (
@@ -67,6 +71,12 @@ var (
 func AcceptConnections(listener *net.Listener, server *Server) {
 	fmt.Println("??", connectedClients)
 	for {
+
+		if len(serverStop) != 0 {
+			fmt.Println("Stopping server")
+			return
+		}
+
 		connection, err := (*listener).Accept()
 
 		if err != nil {
