@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"time"
 )
@@ -50,9 +49,11 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 
 	reader := bufio.NewReader(*connection)
 	for {
-		buffer, err := reader.Peek(4)
 
-		if (err != nil) && len(buffer) == 0 {
+		packet, err := packets.ReadPacketFromConnection(reader)
+
+		if err != nil {
+			fmt.Println("Error while reading", err)
 			client := clientTable.Get(clientID)
 			if client == nil {
 				return
@@ -60,24 +61,9 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 			break
 		}
 
-		dataLen, varLengthIntLen, err := packets.DecodeVarLengthInt(buffer[1:])
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
-		packet := make([]byte, dataLen+varLengthIntLen+1)
-		bytesRead, err := io.ReadFull(reader, packet)
-		packet = packet[:bytesRead]
+		structures.PrintCentrally(fmt.Sprintln("RECEIVED", packets.PacketTypeName(packets.GetPacketType(packet))))
 
-		if err != nil {
-			fmt.Println("packet:", packet)
-			fmt.Println("Error: ", err)
-			break
-		}
-
-		structures.PrintCentrally(fmt.Sprintln("RECEIVED", packets.PacketTypeName(packets.GetPacketType(&packet))))
-
-		toSend := ClientMessage{ClientID: &clientID, Packet: &packet, ClientConnection: connection}
+		toSend := ClientMessage{ClientID: &clientID, Packet: packet, ClientConnection: connection}
 		(*packetPool) <- toSend
 	}
 	fmt.Println("Client", clientID, "connection closed")
@@ -104,8 +90,8 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 		return &Client{}, err
 	}
 
-	var clientID ClientID = ClientID(connectPacket.Payload.ClientId)
-	if connectPacket.Payload.ClientId == "" {
+	var clientID ClientID = ClientID(connectPacket.Payload.ClientID)
+	if connectPacket.Payload.ClientID == "" {
 		clientID = generateClientID()
 	}
 
