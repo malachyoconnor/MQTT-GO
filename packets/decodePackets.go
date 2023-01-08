@@ -77,7 +77,6 @@ func getMSBandLSB(toEncode int) (byte, byte) {
 }
 
 func EncodeUTFString(toEncode string) ([]byte, int, error) {
-
 	// If more than 16 bytes, 65535 = 2^16-1
 	if len(toEncode) > 65535 {
 		return []byte{}, 0, errors.New("error: String is too long to encode")
@@ -202,12 +201,15 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	varHeader.ProtocolLevel = protocolLevel
 	flags, offset := varHeaderDecode[offset], offset+1
 
-	varHeader.UsernameFlag = (flags>>7)&1 == 1
-	varHeader.PasswordFlag = (flags>>6)&1 == 1
-	varHeader.WillRetainFlag = (flags>>5)&1 == 1
-	varHeader.WillQoS = (flags >> 3) & 3
-	varHeader.WillFlag = (flags>>2)&1 == 1
-	varHeader.CleanSession = (flags>>1)&1 == 1
+	varHeader.ConnectFlags = flags
+
+	UsernameFlag := (flags>>7)&1 == 1
+	PasswordFlag := (flags>>6)&1 == 1
+	WillFlag := (flags>>2)&1 == 1
+	// TODO: Think about these 3 flags
+	// WillRetainFlag := (flags>>5)&1 == 1
+	// WillQoS := (flags >> 3) & 3
+	// CleanSession := (flags>>1)&1 == 1
 
 	keepAlive := CombineMsbLsb(varHeaderDecode[offset], varHeaderDecode[offset+1])
 	varHeader.KeepAlive = keepAlive
@@ -223,9 +225,9 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	if err != nil {
 		return &Packet{}, err
 	}
-	resultPayload.ClientId = clientID
+	resultPayload.ClientID = clientID
 
-	if varHeader.WillFlag {
+	if WillFlag {
 		willTopic, addedOffset, err := DecodeUTFString(payloadDecode[offset:])
 		if err != nil {
 			return &Packet{}, err
@@ -242,7 +244,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 		resultPayload.WillMessage = willMessage
 	}
 
-	if varHeader.UsernameFlag {
+	if UsernameFlag {
 		username, addedOffset, err := DecodeUTFString(payloadDecode[offset:])
 		if err != nil {
 			return &Packet{}, err
@@ -251,13 +253,13 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 		resultPayload.Username = username
 	}
 
-	if varHeader.PasswordFlag {
-		password, addedOffset, err := DecodeUTFString(payloadDecode[offset:])
+	if PasswordFlag {
+		password, addedOffset, err := FetchBytes(payloadDecode[offset:])
 		if err != nil {
 			return &Packet{}, err
 		}
 		offset += addedOffset
-		resultPayload.Password = password
+		resultPayload.Password = &password
 	}
 
 	resultPacket.Payload = resultPayload

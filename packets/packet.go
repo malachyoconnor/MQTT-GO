@@ -55,27 +55,30 @@ type PublishVariableHeader struct {
 type ConnectVariableHeader struct {
 	ProtocolName  string
 	ProtocolLevel byte
-	ConnectFlags  byte
 	KeepAlive     int
+	ConnectFlags  byte
+	// The flags are (IN INCREASING ORDER):
 
-	UsernameFlag   bool
-	PasswordFlag   bool
-	WillRetainFlag bool
-	WillQoS        byte
-	WillFlag       bool
-	CleanSession   bool
+	// Reserved (1 bit) set to 0
+	// Clean Session (1 bit)
+	// Will Flag (1 bit)
+	// Will QoS (2 bits)
+	// Will Retain (1 bit)
+	// Password Flag (1 bit)
+	// User Name Flag (1 bit)
 }
 
 type SubscribeVariableHeader struct {
 	PacketIdentifier int
 }
 
+// TODO: change the byte lists to pointers to byte lists
 type PacketPayload struct {
-	ClientId           string
+	ClientID           string
 	WillTopic          string
 	WillMessage        []byte
 	Username           string
-	Password           string
+	Password           *[]byte
 	TopicName          string
 	ApplicationMessage []byte
 }
