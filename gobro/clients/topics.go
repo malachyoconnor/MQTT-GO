@@ -133,6 +133,10 @@ func (topicClientStore *TopicToSubscribers) AddTopic(topicName string) error {
 // TODO: Rename to GetMatchingClients.
 func (topicToClient *TopicToSubscribers) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {
 
+	if topicName == "" {
+		return nil, errors.New("error: Cannot search for empty topic")
+	}
+
 	if topicName[len(topicName)-1] == '/' {
 		return nil, errors.New("error: Wildcard topics cannot end with /")
 	}

@@ -136,3 +136,35 @@ func CreateConnect(packet *Packet) (*[]byte, error) {
 
 	return &resultPacket, nil
 }
+
+func CreatePublish(packet *Packet) (*[]byte, error) {
+	if packet.ControlHeader.Type != PUBLISH {
+		panic("Error create publish passed non-publish packet")
+	}
+
+	resultVarHeader := make([]byte, 0, 30)
+	varLenHeader := packet.VariableLengthHeader.(*PublishVariableHeader)
+	topicName, _, err := EncodeUTFString(varLenHeader.TopicFilter)
+	resultVarHeader = append(resultVarHeader, topicName...)
+	if err != nil {
+		return nil, err
+	}
+
+	qos := packet.ControlHeader.Flags & 6
+	if qos > 0 {
+		packetIdMSB, packetIdLSB := getMSBandLSB(varLenHeader.PacketIdentifier)
+		resultVarHeader = append(resultVarHeader, packetIdMSB, packetIdLSB)
+	}
+
+	resultPayload := packet.Payload.ApplicationMessage
+
+	packet.ControlHeader.RemainingLength = len(resultPayload) + len(resultVarHeader)
+	resultControlHeader := EncodeFixedHeader(*packet.ControlHeader)
+
+	resultPacket := make([]byte, 0, len(resultControlHeader)+len(resultVarHeader)+len(resultPayload))
+	resultPacket = append(resultPacket, resultControlHeader...)
+	resultPacket = append(resultPacket, resultVarHeader...)
+	resultPacket = append(resultPacket, resultPayload...)
+
+	return &resultPacket, nil
+}

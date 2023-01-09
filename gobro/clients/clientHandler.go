@@ -33,6 +33,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 		if err.Error() == "error: Client already exists" {
 			newClient.Disconnect(topicToClient, clientTable)
 		}
+		*connectedClient = ""
 		return
 	}
 
