@@ -4,6 +4,7 @@ import (
 	"MQTT-GO/packets"
 	"MQTT-GO/structures"
 	"bufio"
+	"errors"
 	"fmt"
 )
 
@@ -21,7 +22,10 @@ func (client *Client) SendConnect() error {
 	if err != nil {
 		return err
 	}
-	(*client.brokerConnection).Write(*connectPacketArr)
+	_, err = (*client.brokerConnection).Write(*connectPacketArr)
+	if err != nil {
+		return err
+	}
 	reader := bufio.NewReader(*client.brokerConnection)
 	result, _ := packets.ReadPacketFromConnection(reader)
 	packet, _, _ := packets.DecodePacket(*result)
@@ -33,13 +37,13 @@ func (client *Client) SendConnect() error {
 // TODO: Handle readPacketFromConnection error properly
 // TODO: Check if everything you would need for a publish packet is present!
 
-func (client *Client) SendPublish(applicationMessage *[]byte, topic string) error {
+func (client *Client) SendPublish(applicationMessage []byte, topic string) error {
 
 	controlHeader := packets.ControlHeader{Type: packets.PUBLISH, Flags: 0}
 	varHeader := packets.PublishVariableHeader{}
 	varHeader.TopicFilter = topic
 	payload := packets.PacketPayload{}
-	payload.ApplicationMessage = *applicationMessage
+	payload.ApplicationMessage = applicationMessage
 
 	publishPacket := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
 	publishPacketArr, err := packets.CreatePublish(publishPacket)
@@ -47,8 +51,12 @@ func (client *Client) SendPublish(applicationMessage *[]byte, topic string) erro
 	if err != nil {
 		return err
 	}
+	// TODO: Get the err from this
+	_, err = (*client.brokerConnection).Write(*publishPacketArr)
 
-	(*client.brokerConnection).Write(*publishPacketArr)
+	if err != nil {
+		return err
+	}
 
 	// Check the qos level to see if we should expect a response - if not then exit
 	if controlHeader.Flags&6 == 0 {
@@ -64,7 +72,25 @@ func (client *Client) SendPublish(applicationMessage *[]byte, topic string) erro
 	}
 
 	packet, _, _ := packets.DecodePacket(*result)
-	structures.PrintInterface(*packet)
 
+	if packet.ControlHeader.Type != packets.PUBACK {
+		return errors.New("error: Didn't receive PUBACK from server")
+	}
+
+	return nil
+}
+
+func (client *Client) SendDisconnect() error {
+	controlHeader := packets.ControlHeader{}
+	controlHeader.Flags = 0
+	controlHeader.Type = packets.DISCONNECT
+	controlHeader.RemainingLength = 0
+
+	disconnectArr := packets.EncodeFixedHeader(controlHeader)
+	_, err := (*client.brokerConnection).Write(disconnectArr)
+
+	if err != nil {
+		return err
+	}
 	return nil
 }

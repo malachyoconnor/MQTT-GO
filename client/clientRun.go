@@ -41,7 +41,13 @@ func StartClient() {
 		switch words[0] {
 		case "publish":
 			{
-				client.SendPublish(&[]byte{'u', 'm', 'm', ' ', '?'}, "x/y")
+				var stringBuilder strings.Builder
+				for _, word := range words[2:] {
+					stringBuilder.WriteString(word)
+					stringBuilder.WriteRune(' ')
+				}
+
+				client.SendPublish([]byte(stringBuilder.String())[:], words[1])
 			}
 		}
 
