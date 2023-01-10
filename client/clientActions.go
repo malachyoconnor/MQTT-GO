@@ -12,18 +12,20 @@ import (
 
 func (client *Client) SendConnect() error {
 
+	if client.brokerConnection == nil {
+		return errors.New("error: Client does not have a broker connection")
+	}
+
 	controlHeader := packets.ControlHeader{Type: packets.CONNECT, Flags: 0}
 	varHeader := packets.ConnectVariableHeader{}
 	payload := packets.PacketPayload{}
-	payload.ClientID = "testing"
+
+	payload.ClientID = generateRandomClientID()
+
 	connectPacket := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
 	connectPacketArr, err := packets.CreateConnect(connectPacket)
-
 	if err != nil {
 		return err
-	}
-	if client.brokerConnection == nil {
-		return errors.New("error: Client does not have a broker connection")
 	}
 
 	_, err = (*client.brokerConnection).Write(*connectPacketArr)
@@ -39,7 +41,7 @@ func (client *Client) SendConnect() error {
 		return errors.New("error: Received packet other than CONNACK from server")
 	} else {
 		if packet.VariableLengthHeader.(*packets.ConnackVariableHeader).ConnectReturnCode == 2 {
-			return errors.New("error: Server already contains this clientID")
+			return client.SendConnect()
 		}
 	}
 
