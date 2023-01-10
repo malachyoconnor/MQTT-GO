@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 )
 
 type ClientMessage struct {
@@ -118,11 +119,11 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 	*connectedClient = ""
 	fmt.Println("Client handler disconnecting client")
-	// time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	// If the client has already been disconnected elsewhere
 	// by a call to client.Disconnect
-	if !clientTable.Contains(client.ClientIdentifier) {
+	if !clientTable.Contains(client.ClientIdentifier) || client.TCPConnection.Close() != nil {
 		return
 	}
 
