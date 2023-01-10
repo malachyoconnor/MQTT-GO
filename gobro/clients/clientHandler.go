@@ -6,8 +6,8 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"net"
-	"time"
 )
 
 type ClientMessage struct {
@@ -25,13 +25,15 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet *
 	return clientMessage
 }
 
-func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
+func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
 		fmt.Println("Error handling connect ", err)
 		if err.Error() == "error: Client already exists" {
-			newClient.Disconnect(topicToClient, clientTable)
+			connack := packets.CreateConnACK(false, 2)
+			(*connection).Write(connack)
+			(*connection).Close()
 		}
 		*connectedClient = ""
 		return
@@ -54,6 +56,9 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 		packet, err := packets.ReadPacketFromConnection(reader)
 
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			fmt.Println("Error while reading", err)
 			client := clientTable.Get(clientID)
 			if client == nil {
@@ -63,9 +68,9 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 		}
 
 		structures.PrintCentrally(fmt.Sprintln("RECEIVED", packets.PacketTypeName(packets.GetPacketType(packet))))
-
+		fmt.Println(clientTable.Get(clientID))
 		toSend := ClientMessage{ClientID: &clientID, Packet: packet, ClientConnection: connection}
-		(*packetPool) <- toSend
+		packetPool <- toSend
 	}
 	fmt.Println("Client", clientID, "connection closed")
 	*connectedClient = ""
@@ -74,7 +79,7 @@ func ClientHandler(connection *net.Conn, packetPool *chan ClientMessage, clientT
 
 // handleInitialConnect decodes the packet to find a ClientID - if none exists
 // we create one and then push the connect to be handled by message Handler
-func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[ClientID, *Client], packetPool *chan ClientMessage) (*Client, error) {
+func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[ClientID, *Client], packetPool chan<- ClientMessage) (*Client, error) {
 	buffer := make([]byte, 300)
 	packetLen, err := (*connection).Read(buffer)
 
@@ -92,6 +97,7 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 	}
 
 	var clientID ClientID = ClientID(connectPacket.Payload.ClientID)
+
 	if connectPacket.Payload.ClientID == "" {
 		clientID = generateClientID()
 	}
@@ -103,7 +109,7 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 	clientTable.Put(clientID, newClient)
 
 	clientMsg := CreateClientMessage(clientID, connection, &packet)
-	(*packetPool) <- clientMsg
+	packetPool <- clientMsg
 
 	return newClient, nil
 
@@ -111,7 +117,8 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 
 func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 	*connectedClient = ""
-	time.Sleep(3 * time.Second)
+	fmt.Println("Client handler disconnecting client")
+	// time.Sleep(3 * time.Second)
 
 	// If the client has already been disconnected elsewhere
 	// by a call to client.Disconnect

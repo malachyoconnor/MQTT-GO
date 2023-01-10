@@ -116,7 +116,7 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 			structures.PrintArray(connectedClients[:], "")
 		}()
 
-		go clients.ClientHandler(&connection, server.inputChan, server.clientTable, server.topicClientMap, newArrayPos)
+		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable, server.topicClientMap, newArrayPos)
 
 	}
 }

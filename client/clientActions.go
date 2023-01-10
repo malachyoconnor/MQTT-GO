@@ -22,6 +22,10 @@ func (client *Client) SendConnect() error {
 	if err != nil {
 		return err
 	}
+	if client.brokerConnection == nil {
+		return errors.New("error: Client does not have a broker connection")
+	}
+
 	_, err = (*client.brokerConnection).Write(*connectPacketArr)
 	if err != nil {
 		return err
@@ -29,7 +33,15 @@ func (client *Client) SendConnect() error {
 	reader := bufio.NewReader(*client.brokerConnection)
 	result, _ := packets.ReadPacketFromConnection(reader)
 	packet, _, _ := packets.DecodePacket(*result)
-	structures.PrintInterface(*packet)
+
+	if packet.ControlHeader.Type != packets.CONNACK {
+		structures.PrintInterface(packet)
+		return errors.New("error: Received packet other than CONNACK from server")
+	} else {
+		if packet.VariableLengthHeader.(*packets.ConnackVariableHeader).ConnectReturnCode == 2 {
+			return errors.New("error: Server already contains this clientID")
+		}
+	}
 
 	return nil
 }

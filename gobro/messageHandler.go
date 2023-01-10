@@ -28,6 +28,11 @@ func (msgH *MessageHandler) Listen(server *Server) {
 		clientID := *clientMessage.ClientID
 		client := clientTable.Get(clientID)
 
+		if client == nil {
+			fmt.Printf("Client '%v', who no longer exists, sent a message", clientID)
+			continue
+		}
+
 		ticket := client.Tickets.GetTicket()
 		packetArray := clientMessage.Packet
 		packet, packetType, err := packets.DecodePacket(*packetArray)
@@ -64,9 +69,6 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 
 	switch packetType {
 	case packets.CONNECT:
-		// Query the client table to check if the client exists
-		// if not slap it in there - then send connack
-
 		// Check if the reserved flag is zero, if not disconnect them
 		// Finally send out a CONACK [X]
 		connack := packets.CreateConnACK(false, 0)
@@ -160,6 +162,7 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 	for _, newTopic := range newTopics {
 		client.AddTopic(newTopic)
 		topicClientMap.Put(newTopic.TopicFilter, client.ClientIdentifier)
+		structures.PrintCentrally("SUBSCRIBED TO ", newTopic.TopicFilter)
 	}
 
 	return newTopics, nil
@@ -173,23 +176,23 @@ func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgTo
 		fmt.Println(err)
 		return
 	}
-	node := clientList.Head()
+	clientNode := clientList.Head()
 
-	for node != nil {
-		clientID := node.Value()
+	for clientNode != nil {
+		clientID := clientNode.Value()
 		alteredMsg := msgToForward
 		alteredMsg.ClientID = &clientID
 
 		if client := clientTable.Get(clientID); client != nil {
 			alteredMsg.ClientConnection = &(client.TCPConnection)
 		} else {
-			fmt.Println("error: Can't find subscribed client in clientTable")
-			node = node.Next()
+			fmt.Printf("error: Can't find subscribed client '%v' in clientTable", clientID)
+			clientNode = clientNode.Next()
 			continue
 		}
 
 		(*toSend) = append(*toSend, &alteredMsg)
-		node = node.Next()
+		clientNode = clientNode.Next()
 	}
 
 }

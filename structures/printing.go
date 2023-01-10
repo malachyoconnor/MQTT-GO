@@ -3,6 +3,7 @@ package structures
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 func PrintInterface(i interface{}) {
@@ -14,8 +15,14 @@ func center(s string, w int) string {
 	return fmt.Sprintf("%[1]*s", -w, fmt.Sprintf("%[1]*s", (w+len(s))/2, s))
 }
 
-func PrintCentrally(toPrint string) {
-	fmt.Println(center(toPrint, 150))
+func PrintCentrally(toPrint ...string) {
+
+	stringBuilder := strings.Builder{}
+	for _, str := range toPrint {
+		stringBuilder.WriteString(str)
+	}
+
+	fmt.Println(center(stringBuilder.String(), 150))
 }
 
 func (ll *LinkedList[T]) PrintItems() {
