@@ -33,6 +33,11 @@ func main() {
 
 	args := os.Args[1:]
 
+	if len(args) == 0 {
+		fmt.Println("Please input gobro or client")
+		return
+	}
+
 	if args[numFlags] == "gobro" {
 		server := gobro.CreateServer()
 		server.StartServer()

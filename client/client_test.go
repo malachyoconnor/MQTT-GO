@@ -2,6 +2,7 @@ package client
 
 import (
 	"MQTT-GO/gobro"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -28,10 +29,15 @@ func ServerUp() {
 	time.Sleep(time.Millisecond * 10)
 }
 
-func TestConnectToServer(t *testing.T) {
+func TestMain(m *testing.M) {
 	ServerUp()
+	m.Run()
+	server.StopServer()
+}
 
-	client := Client{}
+func TestConnectToServer(t *testing.T) {
+	client := CreateClient()
+	fmt.Println("clientID", client.clientID)
 	defer client.SendDisconnect()
 	err := client.SetClientConnection("localhost", 8000)
 
@@ -50,9 +56,13 @@ func TestConnectToServer(t *testing.T) {
 func TestPublishToServer(t *testing.T) {
 	ServerUp()
 
-	client := Client{}
-	client.SetClientConnection("localhost", 8000)
-	err := client.SendConnect()
+	client := CreateClient()
+	fmt.Println("clientID", client.clientID)
+	err := client.SetClientConnection("localhost", 8000)
+	if err != nil {
+		t.Error(err)
+	}
+	err = client.SendConnect()
 	defer client.SendDisconnect()
 
 	if err != nil {
@@ -62,6 +72,21 @@ func TestPublishToServer(t *testing.T) {
 	err = client.SendPublish([]byte("test"), "test")
 	if err != nil {
 		t.Error("Error while publishing to server:", err)
+	}
+
+}
+
+func TestConstantPublish(t *testing.T) {
+	ServerUp()
+	client := CreateClient()
+	fmt.Println("clientID", client.clientID)
+	client.SetClientConnection("localhost", 8000)
+	client.SendConnect()
+	defer client.SendDisconnect()
+
+	time.Sleep(time.Second)
+	for i := 0; i < 10; i++ {
+		client.SendPublish([]byte(fmt.Sprint("test", i)), "x/y")
 	}
 
 }

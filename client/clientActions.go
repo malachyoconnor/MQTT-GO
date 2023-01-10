@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"time"
 )
 
 // Here we'll have the functions that make the client perform it's actions.
@@ -20,7 +21,7 @@ func (client *Client) SendConnect() error {
 	varHeader := packets.ConnectVariableHeader{}
 	payload := packets.PacketPayload{}
 
-	payload.ClientID = generateRandomClientID()
+	payload.ClientID = client.clientID
 
 	connectPacket := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
 	connectPacketArr, err := packets.CreateConnect(connectPacket)
@@ -33,14 +34,21 @@ func (client *Client) SendConnect() error {
 		return err
 	}
 	reader := bufio.NewReader(*client.brokerConnection)
-	result, _ := packets.ReadPacketFromConnection(reader)
+	result, err := packets.ReadPacketFromConnection(reader)
+	if err != nil {
+		return err
+	}
 	packet, _, _ := packets.DecodePacket(*result)
 
 	if packet.ControlHeader.Type != packets.CONNACK {
 		structures.PrintInterface(packet)
 		return errors.New("error: Received packet other than CONNACK from server")
 	} else {
+		// If the clientID already exists then we wait
 		if packet.VariableLengthHeader.(*packets.ConnackVariableHeader).ConnectReturnCode == 2 {
+			time.Sleep(time.Millisecond)
+			client.clientID = generateRandomClientID()
+			client.SetClientConnection(*ip, *port)
 			return client.SendConnect()
 		}
 	}
@@ -65,7 +73,6 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	if err != nil {
 		return err
 	}
-	// TODO: Get the err from this
 	_, err = (*client.brokerConnection).Write(*publishPacketArr)
 
 	if err != nil {
@@ -80,7 +87,6 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 
 	reader := bufio.NewReader(*client.brokerConnection)
 	result, err := packets.ReadPacketFromConnection(reader)
-
 	if err != nil {
 		return err
 	}

@@ -34,6 +34,8 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 		if err.Error() == "error: Client already exists" {
 			connack := packets.CreateConnACK(false, 2)
 			(*connection).Write(connack)
+			// Sleep for 50 millisconds while they digest this news that they're being disconnected before closing the connection
+			time.Sleep(time.Millisecond * 50)
 			(*connection).Close()
 		}
 		*connectedClient = ""
@@ -69,7 +71,6 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 		}
 
 		structures.PrintCentrally(fmt.Sprintln("RECEIVED", packets.PacketTypeName(packets.GetPacketType(packet))))
-		fmt.Println(clientTable.Get(clientID))
 		toSend := ClientMessage{ClientID: &clientID, Packet: packet, ClientConnection: connection}
 		packetPool <- toSend
 	}
@@ -118,8 +119,7 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 
 func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 	*connectedClient = ""
-	fmt.Println("Client handler disconnecting client")
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	// If the client has already been disconnected elsewhere
 	// by a call to client.Disconnect

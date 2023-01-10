@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
 	"strings"
 )
 
 type Client struct {
 	brokerConnection *net.Conn
+	receivedMessages chan *[]byte
+	clientID         string
 }
 
 var (
@@ -23,10 +26,34 @@ var (
 // Then send values to the server
 func StartClient() {
 	flag.Parse()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
 
-	client := Client{}
-	client.SetClientConnection(*ip, *port)
-	client.SendConnect()
+	client := CreateClient()
+	err := client.SetClientConnection(*ip, *port)
+	if err != nil {
+		if err.Error()[len(err.Error())-len("connection refused"):] == "connection refused" {
+			fmt.Println("Could not connect to server - connection was refused")
+		} else {
+			fmt.Println(err)
+		}
+
+		return
+	}
+	err = client.SendConnect()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	go func() {
+		for range c {
+			client.SendDisconnect()
+			(*client.brokerConnection).Close()
+			fmt.Println("\nConnection closed, goodbye")
+			os.Exit(0)
+		}
+	}()
 
 	fmt.Println("Connected to broker on port", *port)
 
@@ -51,6 +78,15 @@ func StartClient() {
 			}
 		}
 
+	}
+}
+
+func CreateClient() *Client {
+
+	messageChannel := make(chan *[]byte, 20)
+	return &Client{
+		receivedMessages: messageChannel,
+		clientID:         generateRandomClientID(),
 	}
 }
 
