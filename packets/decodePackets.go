@@ -115,8 +115,8 @@ var (
 	errPacketNotDefined error = errors.New("error: Packet type not defined")
 )
 
-func GetPacketType(packet *[]byte) byte {
-	return (*packet)[0] >> 4
+func GetPacketType(packet []byte) byte {
+	return packet[0] >> 4
 }
 
 var errZeroLengthPacketError = errors.New("error: Zero length packet read from byte pool")
@@ -129,7 +129,7 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 		return &Packet{}, 0, errZeroLengthPacketError
 	}
 
-	packetType := GetPacketType(&packet)
+	packetType := GetPacketType(packet)
 
 	var result *Packet
 	var err error
@@ -154,6 +154,9 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 
 	case DISCONNECT:
 		result, err = DecodeDisconnect(packet[:])
+
+	case SUBACK:
+		result, err = DecodeSuback(packet[:])
 
 	default:
 		fmt.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
@@ -419,6 +422,28 @@ func DecodePing(packet []byte) (*Packet, error) {
 	}
 
 	return resultPacket, nil
+
+}
+
+func DecodeSuback(packetArr []byte) (*Packet, error) {
+
+	fixedHeader, offset, err := DecodeFixedHeader(packetArr)
+	if err != nil {
+		return nil, err
+	}
+	variableHeader := SubackVariableHeader{
+		PacketIdentifier: CombineMsbLsb(packetArr[offset], packetArr[offset+1]),
+	}
+	payload := PacketPayload{
+		ApplicationMessage: packetArr[offset+2:],
+	}
+
+	resultPacket := Packet{
+		ControlHeader:        fixedHeader,
+		VariableLengthHeader: &variableHeader,
+		Payload:              &payload,
+	}
+	return &resultPacket, nil
 
 }
 

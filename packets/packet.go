@@ -52,6 +52,7 @@ func (*PublishVariableHeader) SafetyFunc()   {}
 func (*ConnectVariableHeader) SafetyFunc()   {}
 func (*SubscribeVariableHeader) SafetyFunc() {}
 func (*ConnackVariableHeader) SafetyFunc()   {}
+func (*SubackVariableHeader) SafetyFunc()    {}
 
 type ControlHeader struct {
 	Type            byte
@@ -83,6 +84,10 @@ type ConnectVariableHeader struct {
 type ConnackVariableHeader struct {
 	ConnectAcknowledgementFlags byte
 	ConnectReturnCode           byte
+}
+
+type SubackVariableHeader struct {
+	PacketIdentifier int
 }
 
 type SubscribeVariableHeader struct {

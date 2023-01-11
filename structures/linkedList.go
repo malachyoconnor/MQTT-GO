@@ -222,6 +222,37 @@ func (ll *LinkedList[T]) Delete(val T) error {
 	return ErrValDoesntExist
 }
 
+func (ll *LinkedList[T]) Filter(f func(T) bool) *LinkedList[T] {
+	ll.lock.RLock()
+	defer ll.lock.RUnlock()
+	result := CreateLinkedList[T]()
+	node := ll.head
+	for node != nil {
+		if f(node.val) {
+			result.Append(node.val)
+		}
+		node = node.next
+	}
+	return result
+}
+
+// Note this returns a POINTER to the item - because it needed to be able to return nil if naught was found
+func (ll *LinkedList[T]) FilterSingleItem(f func(T) bool) *T {
+
+	ll.lock.RLock()
+	defer ll.lock.RUnlock()
+
+	node := ll.head
+	for node != nil {
+		if f(node.val) {
+			return &node.val
+		}
+		node = node.next
+	}
+	return nil
+
+}
+
 type Node[T comparable] struct {
 	prev *(Node[T])
 	next *(Node[T])

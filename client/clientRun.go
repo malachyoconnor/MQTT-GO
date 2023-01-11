@@ -11,9 +11,10 @@ import (
 )
 
 type Client struct {
+	clientID         string
 	brokerConnection *net.Conn
 	receivedMessages chan *[]byte
-	clientID         string
+	waitingPackets   *waitingPackets
 }
 
 var (
@@ -31,6 +32,7 @@ func StartClient() {
 
 	client := CreateClient()
 	err := client.SetClientConnection(*ip, *port)
+	go client.ListenForPackets()
 	if err != nil {
 		if err.Error()[len(err.Error())-len("connection refused"):] == "connection refused" {
 			fmt.Println("Could not connect to server - connection was refused")
@@ -69,12 +71,20 @@ func StartClient() {
 		case "publish":
 			{
 				var stringBuilder strings.Builder
+				if len(words) == 1 {
+					continue
+				}
 				for _, word := range words[2:] {
 					stringBuilder.WriteString(word)
 					stringBuilder.WriteRune(' ')
 				}
 
 				client.SendPublish([]byte(stringBuilder.String())[:], words[1])
+			}
+		case "subscribe":
+			{
+				client.SendSubscribe(topicWithQoS{topic: "DoesThisWork"})
+
 			}
 		}
 
@@ -84,9 +94,11 @@ func StartClient() {
 func CreateClient() *Client {
 
 	messageChannel := make(chan *[]byte, 20)
+	waitingPackets := CreateWaitingPacketList()
 	return &Client{
 		receivedMessages: messageChannel,
 		clientID:         generateRandomClientID(),
+		waitingPackets:   waitingPackets,
 	}
 }
 

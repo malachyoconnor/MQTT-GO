@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-func ReadPacketFromConnection(connectionReader *bufio.Reader) (*[]byte, error) {
+func ReadPacketFromConnection(connectionReader *bufio.Reader) ([]byte, error) {
 
 	buffer, err := connectionReader.Peek(4)
 	if err != nil && len(buffer) == 0 {
@@ -24,5 +24,5 @@ func ReadPacketFromConnection(connectionReader *bufio.Reader) (*[]byte, error) {
 		return nil, err
 	}
 
-	return &packet, nil
+	return packet, nil
 }
