@@ -26,7 +26,7 @@ func (MessageSender) ListenAndSend(server *Server) {
 		}
 
 		ticket := client.Tickets.GetTicket()
-		packet := *clientMsg.Packet
+		packet := clientMsg.Packet
 
 		// packetType := packets.PacketTypeName(packets.GetPacketType(&packet))
 		// fmt.Println("Sending", packetType, "to", clientID)

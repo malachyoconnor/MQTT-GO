@@ -35,7 +35,7 @@ func (msgH *MessageHandler) Listen(server *Server) {
 
 		ticket := client.Tickets.GetTicket()
 		packetArray := clientMessage.Packet
-		packet, packetType, err := packets.DecodePacket(*packetArray)
+		packet, packetType, err := packets.DecodePacket(packetArray)
 
 		if err != nil {
 			fmt.Println(err)
@@ -72,7 +72,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		// Check if the reserved flag is zero, if not disconnect them
 		// Finally send out a CONACK [X]
 		connack := packets.CreateConnACK(false, 0)
-		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, &connack)
+		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, connack)
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
@@ -102,7 +102,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 
 		packetID := packet.VariableLengthHeader.(*packets.SubscribeVariableHeader).PacketIdentifier
 		subackPacket := packets.CreateSubACK(packetID, returnCodes)
-		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, &subackPacket)
+		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, subackPacket)
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.DISCONNECT:

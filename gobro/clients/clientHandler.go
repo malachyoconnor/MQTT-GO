@@ -14,10 +14,10 @@ import (
 type ClientMessage struct {
 	ClientID         *ClientID
 	ClientConnection *net.Conn
-	Packet           *[]byte
+	Packet           []byte
 }
 
-func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet *[]byte) ClientMessage {
+func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet []byte) ClientMessage {
 	clientMessage := ClientMessage{
 		ClientID:         &clientID,
 		ClientConnection: clientConnection,
@@ -62,7 +62,12 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 			if err == io.EOF {
 				break
 			}
+			if structures.StringEndsWith(err.Error(), "use of a closed network connection") {
+				break
+			}
+
 			fmt.Println("Error while reading", err)
+
 			client := clientTable.Get(clientID)
 			if client == nil {
 				return
@@ -110,7 +115,7 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 	}
 	clientTable.Put(clientID, newClient)
 
-	clientMsg := CreateClientMessage(clientID, connection, &packet)
+	clientMsg := CreateClientMessage(clientID, connection, packet)
 	packetPool <- clientMsg
 
 	return newClient, nil
