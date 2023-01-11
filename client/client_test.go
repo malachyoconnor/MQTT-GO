@@ -90,3 +90,26 @@ func TestConstantPublish(t *testing.T) {
 	}
 
 }
+
+func TestWaitingPackets(t *testing.T) {
+
+	waitingPacketsList := CreateWaitingPacketList()
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(2)
+
+	go func() {
+		waitingPacketsList.GetOrWait(0)
+		waitGroup.Add(-1)
+	}()
+	go func() {
+		waitingPacketsList.GetOrWait(2)
+		waitGroup.Add(-1)
+	}()
+
+	waitingPacketsList.AddItem(&storedPacket{packetID: 1})
+	waitingPacketsList.AddItem(&storedPacket{packetID: 5})
+	waitingPacketsList.AddItem(&storedPacket{packetID: 9})
+	waitingPacketsList.AddItem(&storedPacket{packetID: 2})
+	waitingPacketsList.AddItem(&storedPacket{packetID: 0})
+	waitGroup.Wait()
+}
