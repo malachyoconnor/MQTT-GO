@@ -13,14 +13,14 @@ import (
 
 func (client *Client) SendConnect() error {
 
-	if client.brokerConnection == nil {
+	if client.BrokerConnection == nil {
 		return errors.New("error: Client does not have a broker connection")
 	}
 
 	controlHeader := packets.ControlHeader{Type: packets.CONNECT, Flags: 0}
 	varHeader := packets.ConnectVariableHeader{}
 	payload := packets.PacketPayload{}
-	payload.ClientID = client.clientID
+	payload.ClientID = client.ClientID
 
 	connectPacket := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
 	connectPacketArr, err := packets.EncodeConnect(connectPacket)
@@ -28,11 +28,11 @@ func (client *Client) SendConnect() error {
 		return err
 	}
 
-	_, err = (*client.brokerConnection).Write(connectPacketArr)
+	_, err = (*client.BrokerConnection).Write(connectPacketArr)
 	if err != nil {
 		return err
 	}
-	reader := bufio.NewReader(*client.brokerConnection)
+	reader := bufio.NewReader(*client.BrokerConnection)
 	result, err := packets.ReadPacketFromConnection(reader)
 	fmt.Println(result, "Read connack")
 	if err != nil {
@@ -43,14 +43,16 @@ func (client *Client) SendConnect() error {
 	if packet.ControlHeader.Type != packets.CONNACK {
 		structures.PrintInterface(packet)
 		return errors.New("error: Received packet other than CONNACK from server")
-	} else {
+	} else if packet.VariableLengthHeader.(*packets.ConnackVariableHeader).ConnectReturnCode == 2 {
 		// If the clientID already exists then we wait
-		if packet.VariableLengthHeader.(*packets.ConnackVariableHeader).ConnectReturnCode == 2 {
-			time.Sleep(time.Millisecond)
-			client.clientID = generateRandomClientID()
-			client.SetClientConnection(*ip, *port)
-			return client.SendConnect()
+		time.Sleep(time.Millisecond)
+		client.ClientID = generateRandomClientID()
+		err := client.SetClientConnection(*ip, *port)
+		if err != nil {
+			fmt.Println("Error while setting client connection")
+			return err
 		}
+		return client.SendConnect()
 	}
 
 	return nil
@@ -75,7 +77,7 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	if err != nil {
 		return err
 	}
-	_, err = (*client.brokerConnection).Write(publishPacketArr)
+	_, err = (*client.BrokerConnection).Write(publishPacketArr)
 
 	if err != nil {
 		return err
@@ -124,7 +126,10 @@ func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 	if err != nil {
 		return err
 	}
-	(*client.brokerConnection).Write(encodedPacket)
+	_, err = (*client.BrokerConnection).Write(encodedPacket)
+	if err != nil {
+		return err
+	}
 	subackArr := client.waitingPackets.GetOrWait(packetID)
 	suback, _, _ := packets.DecodePacket(*subackArr)
 
@@ -151,8 +156,10 @@ func (client *Client) SendUnsubscribe(topics ...string) error {
 	if err != nil {
 		return err
 	}
-	(*client.brokerConnection).Write(encodedPacket)
-
+	_, err = (*client.BrokerConnection).Write(encodedPacket)
+	if err != nil {
+		return err
+	}
 	unsubackArr := client.waitingPackets.GetOrWait(packetID)
 	suback, _, _ := packets.DecodePacket(*unsubackArr)
 
@@ -170,7 +177,7 @@ func (client *Client) SendDisconnect() error {
 	controlHeader.RemainingLength = 0
 
 	disconnectArr := packets.EncodeFixedHeader(controlHeader)
-	_, err := (*client.brokerConnection).Write(disconnectArr)
+	_, err := (*client.BrokerConnection).Write(disconnectArr)
 
 	if err != nil {
 		return err

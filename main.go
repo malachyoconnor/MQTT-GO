@@ -21,7 +21,11 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		pprof.StartCPUProfile(f)
+		err = pprof.StartCPUProfile(f)
+		if err != nil {
+			fmt.Println("Error while starting profile", err)
+			return
+		}
 
 		go func() {
 			fmt.Println("STARTING PROFILING")

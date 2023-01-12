@@ -64,7 +64,10 @@ func (topicMap *TopicToSubscribers) Put(topicName string, clientID ClientID) err
 	clientLL, err := topicMap.get(topicName)
 	if err != nil {
 		if err == ErrTopicDoesntExist {
-			topicMap.AddTopic(topicName)
+			err := topicMap.AddTopic(topicName)
+			if err != nil {
+				return err
+			}
 			clientLL, _ = topicMap.get(topicName)
 		} else {
 			return err
@@ -105,11 +108,17 @@ func (topicMap *TopicToSubscribers) Unsubscribe(clientID ClientID, topicNames ..
 		// If no one is left subscribed to the topic, remove it.
 		// This is to avoid memory leaks
 		if subscribedClients.Size == 0 {
-			topicMap.Delete(topic)
+			err := topicMap.Delete(topic)
+			if err != nil {
+				// TODO: Add logging
+				fmt.Println("error while removing topic from topicMap", err)
+			}
 		}
 	}
 }
 
+// Delete() deletes a topic from the topic map - it can return an ErrTopicDoesntExist error
+// or nil
 func (t *TopicToSubscribers) Delete(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 

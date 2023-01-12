@@ -33,10 +33,14 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 		fmt.Println("Error handling connect ", err)
 		if err.Error() == "error: Client already exists" {
 			connack := packets.CreateConnACK(false, 2)
-			(*connection).Write(connack)
-			// Sleep for 50 millisconds while they digest this news that they're being disconnected before closing the connection
-			time.Sleep(time.Millisecond * 50)
-			(*connection).Close()
+			_, err := (*connection).Write(connack)
+			if err != nil {
+				(*connection).Close()
+			} else {
+				// Sleep for 50 millisconds while they digest this news that they're being disconnected before closing the connection
+				time.Sleep(time.Millisecond * 50)
+				(*connection).Close()
+			}
 		}
 		*connectedClient = ""
 		return

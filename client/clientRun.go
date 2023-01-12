@@ -12,8 +12,8 @@ import (
 )
 
 type Client struct {
-	clientID         string
-	brokerConnection *net.Conn
+	ClientID         string
+	BrokerConnection *net.Conn
 	receivedMessages chan *[]byte
 	waitingPackets   *waitingPackets
 }
@@ -54,8 +54,10 @@ func StartClient() {
 
 	go func() {
 		for range c {
-			client.SendDisconnect()
-			(*client.brokerConnection).Close()
+			err := client.SendDisconnect()
+			// TODO: add logging
+			fmt.Println("Error while disconnecting", err)
+			(*client.BrokerConnection).Close()
 			fmt.Println("\nConnection closed, goodbye")
 			os.Exit(0)
 		}
@@ -83,7 +85,9 @@ func StartClient() {
 					stringBuilder.WriteRune(' ')
 				}
 
-				client.SendPublish([]byte(stringBuilder.String())[:], words[1])
+				err := client.SendPublish([]byte(stringBuilder.String())[:], words[1])
+				// TODO: add logging
+				fmt.Println("Error while sending subscribe", err)
 			}
 		case "subscribe":
 			{
@@ -91,12 +95,18 @@ func StartClient() {
 				for _, word := range words[1:] {
 					topics = append(topics, packets.TopicWithQoS{Topic: word})
 				}
-				client.SendSubscribe(topics...)
+				err := client.SendSubscribe(topics...)
+				// TODO: add logging
+				fmt.Println("Error while sending subscribe", err)
 			}
 		case "unsubscribe":
 			{
 				topicsToUnsub := words[1:]
-				client.SendUnsubscribe(topicsToUnsub...)
+				err := client.SendUnsubscribe(topicsToUnsub...)
+				if err != nil {
+					// TODO: add logging
+					fmt.Println("Error while sending unsubscribe", err)
+				}
 			}
 		}
 
@@ -109,7 +119,7 @@ func CreateClient() *Client {
 	waitingPackets := CreateWaitingPacketList()
 	return &Client{
 		receivedMessages: messageChannel,
-		clientID:         generateRandomClientID(),
+		ClientID:         generateRandomClientID(),
 		waitingPackets:   waitingPackets,
 	}
 }
@@ -120,6 +130,6 @@ func (client *Client) SetClientConnection(ip string, port int) error {
 		return err
 	}
 
-	client.brokerConnection = &connection
+	client.BrokerConnection = &connection
 	return nil
 }

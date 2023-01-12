@@ -7,7 +7,7 @@ import (
 )
 
 func (client *Client) ListenForPackets() {
-	reader := bufio.NewReader(*client.brokerConnection)
+	reader := bufio.NewReader(*client.BrokerConnection)
 	for {
 		packet, err := packets.ReadPacketFromConnection(reader)
 		if err != nil {
@@ -23,9 +23,9 @@ func (client *Client) ListenForPackets() {
 				_, offset, _ := packets.DecodeFixedHeader(packet)
 				packetID := packets.CombineMsbLsb(packet[offset], packet[offset+1])
 
-				toStore := storedPacket{
-					packet:   packet,
-					packetID: packetID,
+				toStore := StoredPacket{
+					Packet:   packet,
+					PacketID: packetID,
 				}
 				client.waitingPackets.AddItem(&toStore)
 			}

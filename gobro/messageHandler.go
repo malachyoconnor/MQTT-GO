@@ -162,7 +162,11 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 		offset += utfStringLen + 1
 
 		if !topicClientMap.Contains(topic.TopicFilter) {
-			topicClientMap.AddTopic(topic.TopicFilter)
+			err = topicClientMap.AddTopic(topic.TopicFilter)
+			if err != nil {
+				fmt.Println("Error while adding new topic")
+				return nil, err
+			}
 		}
 	}
 
@@ -174,7 +178,11 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 
 	for _, newTopic := range newTopics {
 		client.AddTopic(newTopic)
-		topicClientMap.Put(newTopic.TopicFilter, client.ClientIdentifier)
+		err := topicClientMap.Put(newTopic.TopicFilter, client.ClientIdentifier)
+		if err != nil {
+			fmt.Println("Error while adding new topic")
+			return nil, err
+		}
 		structures.PrintCentrally("SUBSCRIBED TO ", newTopic.TopicFilter)
 	}
 
@@ -186,7 +194,9 @@ func handleUnsubscribe(topics []string, TCMAP *clients.TopicToSubscribers, clien
 
 	TCMAP.Unsubscribe(client.ClientIdentifier, topics...)
 	for _, topic := range topics {
-		client.RemoveTopic(clients.Topic{TopicFilter: topic})
+		err := client.RemoveTopic(clients.Topic{TopicFilter: topic})
+		// TODO: add logging
+		fmt.Println("Error while removing from client topic list", err)
 	}
 }
 

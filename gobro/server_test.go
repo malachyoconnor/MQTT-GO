@@ -1,6 +1,7 @@
-package gobro
+package gobro_test
 
 import (
+	"MQTT-GO/gobro"
 	"testing"
 	"time"
 )
@@ -15,7 +16,7 @@ func TestServerStarts(t *testing.T) {
 
 	}()
 
-	server := CreateServer()
+	server := gobro.CreateServer()
 	go server.StartServer()
 
 	time.Sleep(time.Millisecond * 200)

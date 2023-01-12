@@ -38,13 +38,13 @@ func getAndIncrementPacketId() int {
 }
 
 type waitingPackets struct {
-	packetList    *structures.LinkedList[*storedPacket]
+	packetList    *structures.LinkedList[*StoredPacket]
 	waitCondition *sync.Cond
 }
 
-type storedPacket struct {
-	packet   []byte
-	packetID int
+type StoredPacket struct {
+	Packet   []byte
+	PacketID int
 }
 
 func CreateWaitingPacketList() *waitingPackets {
@@ -52,13 +52,13 @@ func CreateWaitingPacketList() *waitingPackets {
 	conditionMutex := sync.Mutex{}
 	waitingPacketStruct := waitingPackets{
 		waitCondition: sync.NewCond(&conditionMutex),
-		packetList:    structures.CreateLinkedList[*storedPacket](),
+		packetList:    structures.CreateLinkedList[*StoredPacket](),
 	}
 
 	return &waitingPacketStruct
 }
 
-func (wp *waitingPackets) AddItem(storedPacket *storedPacket) {
+func (wp *waitingPackets) AddItem(storedPacket *StoredPacket) {
 	wp.waitCondition.L.Lock()
 	wp.packetList.Append(storedPacket)
 	wp.waitCondition.Broadcast()
@@ -66,10 +66,10 @@ func (wp *waitingPackets) AddItem(storedPacket *storedPacket) {
 }
 
 func (wp *waitingPackets) getItem(packetIdentifier int) *[]byte {
-	packetFinder := func(s *storedPacket) bool { return s.packetID == packetIdentifier }
+	packetFinder := func(s *StoredPacket) bool { return s.PacketID == packetIdentifier }
 	packetStore := wp.packetList.FilterSingleItem(packetFinder)
 	if packetStore != nil {
-		return &(*packetStore).packet
+		return &(*packetStore).Packet
 	}
 	return nil
 }
