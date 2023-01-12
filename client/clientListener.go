@@ -33,7 +33,7 @@ func (client *Client) ListenForPackets() {
 		case packets.PUBLISH:
 			{
 				result, _, _ := packets.DecodePacket(packet)
-				fmt.Println("Received request to publish", string(result.Payload.ApplicationMessage))
+				fmt.Println("Received request to publish", string(result.Payload.RawApplicationMessage))
 			}
 
 		default:

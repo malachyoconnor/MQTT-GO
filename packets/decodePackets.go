@@ -266,11 +266,10 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	}
 
 	if PasswordFlag {
-		password, addedOffset, err := FetchBytes(payloadDecode[offset:])
+		password, _, err := FetchBytes(payloadDecode[offset:])
 		if err != nil {
 			return nil, err
 		}
-		offset += addedOffset
 		resultPayload.Password = &password
 	}
 
@@ -317,7 +316,7 @@ func DecodeUnsubscribe(packet []byte) (*Packet, error) {
 	}
 
 	payload := PacketPayload{
-		TopicList: topics,
+		TopicList: ConvertStringsToTopicsWithQos(topics...),
 	}
 	resultPacket.Payload = &payload
 
@@ -347,7 +346,7 @@ func DecodeSubscribe(packet []byte) (*Packet, error) {
 
 	// Get payload
 	payload := PacketPayload{
-		ApplicationMessage: packet[offset:],
+		RawApplicationMessage: packet[offset:],
 	}
 	resultPacket.Payload = &payload
 
@@ -441,8 +440,8 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	resultPacket.VariableLengthHeader = &varHeader
 
 	var payload PacketPayload
-	payload.ApplicationMessage = make([]byte, payloadLength)
-	copy(payload.ApplicationMessage, packet[offset:offset+payloadLength])
+	payload.RawApplicationMessage = make([]byte, payloadLength)
+	copy(payload.RawApplicationMessage, packet[offset:offset+payloadLength])
 	resultPacket.Payload = &payload
 
 	return resultPacket, nil
@@ -474,7 +473,7 @@ func DecodeSuback(packetArr []byte) (*Packet, error) {
 		PacketIdentifier: CombineMsbLsb(packetArr[offset], packetArr[offset+1]),
 	}
 	payload := PacketPayload{
-		ApplicationMessage: packetArr[offset+2:],
+		RawApplicationMessage: packetArr[offset+2:],
 	}
 
 	resultPacket := Packet{

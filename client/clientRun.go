@@ -1,6 +1,7 @@
 package client
 
 import (
+	"MQTT-GO/packets"
 	"bufio"
 	"flag"
 	"fmt"
@@ -86,9 +87,9 @@ func StartClient() {
 			}
 		case "subscribe":
 			{
-				topics := make([]topicWithQoS, 0, len(words)-1)
+				topics := make([]packets.TopicWithQoS, 0, len(words)-1)
 				for _, word := range words[1:] {
-					topics = append(topics, topicWithQoS{topic: word})
+					topics = append(topics, packets.TopicWithQoS{Topic: word})
 				}
 				client.SendSubscribe(topics...)
 			}

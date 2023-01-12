@@ -67,7 +67,7 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	packetID := getAndIncrementPacketId()
 	varHeader.PacketIdentifier = packetID
 	payload := packets.PacketPayload{}
-	payload.ApplicationMessage = applicationMessage
+	payload.RawApplicationMessage = applicationMessage
 
 	publishPacket := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
 	publishPacketArr, err := packets.EncodePublish(publishPacket)
@@ -97,30 +97,25 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	return nil
 }
 
-type topicWithQoS struct {
-	topic string
-	QoS   byte
-}
-
-func (client *Client) SendSubscribe(topics ...topicWithQoS) error {
+func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 
 	controlHeader := packets.ControlHeader{Type: packets.SUBSCRIBE, Flags: 2}
 	varHeader := packets.SubscribeVariableHeader{}
 	packetID := getAndIncrementPacketId()
 	varHeader.PacketIdentifier = packetID
 	payload := packets.PacketPayload{}
-	payload.ApplicationMessage = make([]byte, 0, 2*len(topics))
+	payload.RawApplicationMessage = make([]byte, 0, 2*len(topics))
 
 	for _, topicWQos := range topics {
 		if topicWQos.QoS > 2 {
 			return errors.New("error: impossible QoS level provided")
 		}
-		encodedTopic, _, err := packets.EncodeUTFString(topicWQos.topic)
+		encodedTopic, _, err := packets.EncodeUTFString(topicWQos.Topic)
 		if err != nil {
 			return err
 		}
-		payload.ApplicationMessage = append(payload.ApplicationMessage, encodedTopic...)
-		payload.ApplicationMessage = append(payload.ApplicationMessage, topicWQos.QoS)
+		payload.RawApplicationMessage = append(payload.RawApplicationMessage, encodedTopic...)
+		payload.RawApplicationMessage = append(payload.RawApplicationMessage, topicWQos.QoS)
 	}
 
 	packet := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
@@ -149,7 +144,7 @@ func (client *Client) SendUnsubscribe(topics ...string) error {
 	packetID := getAndIncrementPacketId()
 	varHeader.PacketIdentifier = packetID
 	payload := packets.PacketPayload{}
-	payload.TopicList = topics
+	payload.TopicList = packets.ConvertStringsToTopicsWithQos(topics...)
 	packet := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
 	encodedPacket, err := packets.EncodeUnsubscribe(packet)
 

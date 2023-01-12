@@ -103,7 +103,7 @@ func EncodePublish(packet *Packet) ([]byte, error) {
 		resultVarHeader = append(resultVarHeader, packetIdMSB, packetIdLSB)
 	}
 
-	resultPayload := packet.Payload.ApplicationMessage
+	resultPayload := packet.Payload.RawApplicationMessage
 
 	packet.ControlHeader.RemainingLength = len(resultPayload) + len(resultVarHeader)
 	resultControlHeader := EncodeFixedHeader(*packet.ControlHeader)
@@ -119,7 +119,7 @@ func EncodeSubscribe(packet *Packet) ([]byte, error) {
 	packetIdentifier := packet.VariableLengthHeader.(*SubscribeVariableHeader).PacketIdentifier
 	resultVarHeader := make([]byte, 2)
 	resultVarHeader[0], resultVarHeader[1] = getMSBandLSB(packetIdentifier)
-	resultPayload := packet.Payload.ApplicationMessage
+	resultPayload := packet.Payload.RawApplicationMessage
 	packet.ControlHeader.RemainingLength = len(resultVarHeader) + len(resultPayload)
 	resultControlHeader := EncodeFixedHeader(*packet.ControlHeader)
 
@@ -135,8 +135,8 @@ func EncodeUnsubscribe(packet *Packet) ([]byte, error) {
 	resultVarHeader := make([]byte, 2)
 	resultVarHeader[0], resultVarHeader[1] = getMSBandLSB(packetIdentifier)
 	resultPayload := make([]byte, 0, len(packet.Payload.TopicList))
-	for _, topic := range packet.Payload.TopicList {
-		encodedTopic, _, err := EncodeUTFString(topic)
+	for _, topicWithQos := range packet.Payload.TopicList {
+		encodedTopic, _, err := EncodeUTFString(topicWithQos.Topic)
 		if err != nil {
 			return nil, nil
 		}
@@ -147,4 +147,13 @@ func EncodeUnsubscribe(packet *Packet) ([]byte, error) {
 
 	return CombineEncodedPacketSections(resultControlHeader, resultVarHeader, resultPayload), nil
 
+}
+
+func ConvertStringsToTopicsWithQos(topics ...string) []TopicWithQoS {
+	result := make([]TopicWithQoS, 0, len(topics))
+
+	for _, topic := range topics {
+		result = append(result, TopicWithQoS{Topic: topic})
+	}
+	return result
 }

@@ -77,7 +77,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
-		fmt.Println("Received request to publish:", string(packet.Payload.ApplicationMessage), "to topic:", string(packet.VariableLengthHeader.(*packets.PublishVariableHeader).TopicFilter))
+		fmt.Println("Received request to publish:", string(packet.Payload.RawApplicationMessage), "to topic:", string(packet.VariableLengthHeader.(*packets.PublishVariableHeader).TopicFilter))
 
 		varHeader := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
 		topic := clients.Topic{
@@ -108,7 +108,12 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 
 	case packets.UNSUBSCRIBE:
 		packetID := packet.VariableLengthHeader.(*packets.UnsubscribeVariableHeader).PacketIdentifier
-		handleUnsubscribe(packet.Payload.TopicList, topicClientMap, *client)
+		// Note that in an unsubscribe we don't need the QOS levels
+		topics := make([]string, 0, len(packet.Payload.TopicList))
+		for _, topic := range packet.Payload.TopicList {
+			topics = append(topics, topic.Topic)
+		}
+		handleUnsubscribe(topics, topicClientMap, *client)
 		unsubackPacket := packets.CreateUnSuback(packetID)
 		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, unsubackPacket)
 		packetsToSend = append(packetsToSend, &clientMsg)
@@ -134,7 +139,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 // Decode topics and store them in subscription table
 func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients.Client, packetPayload packets.PacketPayload) ([]clients.Topic, error) {
 	newTopics := make([]clients.Topic, 0)
-	payload := packetPayload.ApplicationMessage
+	payload := packetPayload.RawApplicationMessage
 	topicNumber, offset := 0, 0
 
 	// Progress through the payload and read every topic & QoS level that the client wants to subscribe to

@@ -101,11 +101,16 @@ type SubscribeVariableHeader struct {
 
 // TODO: change the byte lists to pointers to byte lists
 type PacketPayload struct {
-	ClientID           string
-	WillTopic          string
-	WillMessage        []byte
-	Username           string
-	Password           *[]byte
-	TopicList          []string
-	ApplicationMessage []byte
+	ClientID              string
+	WillTopic             string
+	WillMessage           []byte
+	Username              string
+	Password              *[]byte
+	TopicList             []TopicWithQoS
+	RawApplicationMessage []byte
+}
+
+type TopicWithQoS struct {
+	Topic string
+	QoS   byte
 }
