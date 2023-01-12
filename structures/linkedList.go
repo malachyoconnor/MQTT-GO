@@ -108,7 +108,7 @@ func CombineLinkedLists[T comparable](lists ...*LinkedList[T]) *LinkedList[T] {
 func (ll *LinkedList[T]) Head() *Node[T] {
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
-	return (*ll).head
+	return ll.head
 }
 
 func (ll *LinkedList[T]) Contains(val T) bool {
@@ -134,16 +134,18 @@ func (ll *LinkedList[T]) RemoveDuplicates() {
 		if !found {
 			existingItems[node.val] = true
 		} else {
-			if node == ll.head {
-				ll.head = ll.head.next
-				ll.head.prev = nil
-			} else if node == ll.tail {
+			switch node {
+			case ll.head:
+				{
+					ll.head = ll.head.next
+					ll.head.prev = nil
+				}
+			case ll.tail:
 				ll.tail = ll.tail.prev
 				ll.tail.next = nil
-			} else {
+			default:
 				node.delete()
 			}
-
 			ll.Size--
 		}
 		node = node.next
@@ -163,7 +165,7 @@ func (ll *LinkedList[T]) Append(val T) {
 		panic("error: Head of linked list is not nil and the tail is")
 	} else {
 		ll.tail.next = newNode
-		(*newNode).prev = ll.tail
+		newNode.prev = ll.tail
 		ll.tail = newNode
 	}
 }
@@ -260,11 +262,11 @@ func (node *Node[T]) Value() T {
 }
 
 func (node *Node[T]) Next() *Node[T] {
-	return (*node).next
+	return node.next
 }
 
 func (node *Node[T]) Prev() *Node[T] {
-	return (*node).prev
+	return node.prev
 }
 
 func (node *Node[T]) delete() {

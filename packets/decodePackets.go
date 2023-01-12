@@ -56,7 +56,7 @@ var errMalformedUTFString = errors.New("error: malformed UTF string")
 func DecodeUTFString(toFetch []byte) (string, int, error) {
 	var stringBuilder strings.Builder
 
-	var stringLen = CombineMsbLsb(toFetch[0], toFetch[1])
+	stringLen := CombineMsbLsb(toFetch[0], toFetch[1])
 	if !(0 <= stringLen && stringLen <= 65535) || (stringLen > len(toFetch)-2) {
 		return "", 0, errMalformedUTFString
 	}
@@ -99,7 +99,7 @@ var errShrunkenByteArr = errors.New("error: input byte string to FetchBytes was 
 // Returns the fetched bytes, the total length of this section
 // including the two bytes encoding the length, and a potential error.
 func FetchBytes(toFetch []byte) ([]byte, int, error) {
-	var numBytes = CombineMsbLsb(toFetch[0], toFetch[1])
+	numBytes := CombineMsbLsb(toFetch[0], toFetch[1])
 	if len(toFetch) < numBytes+2 {
 		return []byte{}, 0, errShrunkenByteArr
 	}
@@ -132,32 +132,32 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 	switch packetType {
 
 	case CONNECT:
-		result, err = DecodeConnect(packet[:])
+		result, err = DecodeConnect(packet)
 
 	case CONNACK:
-		result, err = DecodeCONNACK(packet[:])
+		result, err = DecodeCONNACK(packet)
 
 	case SUBSCRIBE:
-		result, err = DecodeSubscribe(packet[:])
+		result, err = DecodeSubscribe(packet)
 
 	case PUBLISH:
-		result, err = DecodePublish(packet[:])
+		result, err = DecodePublish(packet)
 
 	case PINGREQ:
 		fmt.Println("Ping")
-		result, err = DecodePing(packet[:])
+		result, err = DecodePing(packet)
 
 	case DISCONNECT:
-		result, err = DecodeDisconnect(packet[:])
+		result, err = DecodeDisconnect(packet)
 
 	case SUBACK:
-		result, err = DecodeSuback(packet[:])
+		result, err = DecodeSuback(packet)
 
 	case UNSUBACK:
-		result, err = DecodeUnsuback(packet[:])
+		result, err = DecodeUnsuback(packet)
 
 	case UNSUBSCRIBE:
-		result, err = DecodeUnsubscribe(packet[:])
+		result, err = DecodeUnsubscribe(packet)
 
 	default:
 		fmt.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
@@ -375,7 +375,7 @@ var errMalformedInt = errors.New("error: malformed variable length integer")
 // Returns the encoded int, the length of the fixed length header in bytes
 // and a potential error.
 func DecodeVarLengthInt(toDecode []byte) (value int, length int, err error) {
-	var multiplier = 1
+	multiplier := 1
 	for {
 		encodedByte := toDecode[length]
 		value += int((encodedByte & 127)) * multiplier

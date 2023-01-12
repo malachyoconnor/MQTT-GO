@@ -105,7 +105,7 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 		return &Client{}, err
 	}
 
-	var clientID ClientID = ClientID(connectPacket.Payload.ClientID)
+	clientID := ClientID(connectPacket.Payload.ClientID)
 
 	if connectPacket.Payload.ClientID == "" {
 		clientID = generateClientID()

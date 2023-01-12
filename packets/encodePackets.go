@@ -135,7 +135,7 @@ func EncodeUnsubscribe(packet *Packet) ([]byte, error) {
 	for _, topicWithQos := range packet.Payload.TopicList {
 		encodedTopic, _, err := EncodeUTFString(topicWithQos.Topic)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 		resultPayload = append(resultPayload, encodedTopic...)
 	}

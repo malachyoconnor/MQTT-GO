@@ -130,14 +130,14 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 	ticket.TicketCompleted()
 }
 
-// Decode topics and store them in subscription table
+// Decode topics and store them in subscription table.
 func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients.Client, packetPayload packets.PacketPayload) ([]clients.Topic, error) {
 	newTopics := make([]clients.Topic, 0)
 	payload := packetPayload.RawApplicationMessage
 	topicNumber, offset := 0, 0
 
 	// Progress through the payload and read every topic & QoS level that the client wants to subscribe to
-	// Then add them to a list to be handled
+	// Then add them to a list to be handled.
 	for offset < len(payload) {
 		topicFilter, utfStringLen, err := packets.DecodeUTFString(payload[offset:])
 		if err != nil {
@@ -162,10 +162,7 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 			}
 		}
 	}
-
-	clientTopics := client.Topics
-
-	if clientTopics == nil {
+	if client.Topics == nil {
 		client.Topics = structures.CreateLinkedList[clients.Topic]()
 	}
 

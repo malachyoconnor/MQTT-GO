@@ -57,8 +57,8 @@ func (*SubackVariableHeader) SafetyFunc()      {}
 func (*UnsubscribeVariableHeader) SafetyFunc() {}
 
 type ControlHeader struct {
-	Type            byte
 	RemainingLength int
+	Type            byte
 	Flags           byte
 }
 
@@ -69,9 +69,9 @@ type PublishVariableHeader struct {
 
 type ConnectVariableHeader struct {
 	ProtocolName  string
-	ProtocolLevel byte
 	KeepAlive     int
 	ConnectFlags  byte
+	ProtocolLevel byte
 	// The flags are (IN INCREASING ORDER):
 
 	// Reserved (1 bit) set to 0

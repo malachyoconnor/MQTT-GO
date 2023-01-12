@@ -86,7 +86,7 @@ func StartClient() {
 					stringBuilder.WriteRune(' ')
 				}
 
-				err := client.SendPublish([]byte(stringBuilder.String())[:], words[1])
+				err := client.SendPublish([]byte(stringBuilder.String()), words[1])
 				// TODO: add logging
 				fmt.Println("Error while sending subscribe", err)
 			}

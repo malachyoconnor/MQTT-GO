@@ -15,11 +15,11 @@ func EncodeVarLengthInt(initialInt int) []byte {
 	for intMoreThanZero := true; intMoreThanZero; intMoreThanZero = (initialInt > 0) {
 
 		encodedByte := initialInt % 128
-		initialInt = initialInt / 128
+		initialInt /= 128
 
 		// if there is more data to encode, set the top bit of this byte
 		if initialInt > 0 {
-			encodedByte = encodedByte | 128
+			encodedByte |= 128
 		}
 		result = append(result, byte(encodedByte))
 	}

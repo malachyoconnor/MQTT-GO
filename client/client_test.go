@@ -12,8 +12,8 @@ import (
 
 var (
 	server       gobro.Server
-	serverUpLock sync.Mutex = sync.Mutex{}
-	serverUp     bool       = false
+	serverUpLock = sync.Mutex{}
+	serverUp     = false
 )
 
 func ServerUp() {

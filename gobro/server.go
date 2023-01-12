@@ -109,7 +109,7 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 		go func() {
 			time.Sleep(time.Millisecond * 200)
 			fmt.Print("Connected clients: ")
-			structures.PrintArray(connectedClients[:], "")
+			structures.PrintArray(connectedClients, "")
 		}()
 
 		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable, server.topicClientMap, newArrayPos)
