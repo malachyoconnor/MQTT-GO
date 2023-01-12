@@ -126,7 +126,7 @@ var errZeroLengthPacketError = errors.New("error: Zero length packet read from b
 func DecodePacket(packet []byte) (*Packet, byte, error) {
 
 	if len(packet) == 0 {
-		return &Packet{}, 0, errZeroLengthPacketError
+		return nil, 0, errZeroLengthPacketError
 	}
 
 	packetType := GetPacketType(packet)
@@ -149,8 +149,8 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 		result, err = DecodePublish(packet[:])
 
 	case PINGREQ:
-		result, err = DecodePing(packet[:])
 		fmt.Println("Ping")
+		result, err = DecodePing(packet[:])
 
 	case DISCONNECT:
 		result, err = DecodeDisconnect(packet[:])
@@ -158,13 +158,19 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 	case SUBACK:
 		result, err = DecodeSuback(packet[:])
 
+	case UNSUBACK:
+		result, err = DecodeUnsuback(packet[:])
+
+	case UNSUBSCRIBE:
+		result, err = DecodeUnsubscribe(packet[:])
+
 	default:
 		fmt.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
-		return &Packet{}, 0, errPacketNotDefined
+		return nil, 0, errPacketNotDefined
 	}
 
 	if err != nil {
-		return &Packet{}, 0, err
+		return nil, 0, err
 	}
 	return result, packetType, nil
 }
@@ -183,12 +189,12 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	fixedHeader, fixedHeaderLen, err := DecodeFixedHeader(packet)
 
 	if err != nil {
-		return &Packet{}, err
+		return nil, err
 	}
 
 	if fixedHeader.Type != 1 {
 		err := fmt.Errorf("error: Incorrect packet type. Given type %v to connect ", fixedHeader.Type)
-		return &Packet{}, err
+		return nil, err
 	}
 
 	resultPacket.ControlHeader = fixedHeader
@@ -199,7 +205,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 
 	protocolName, offset, err := DecodeUTFString(varHeaderDecode)
 	if err != nil {
-		return &Packet{}, err
+		return nil, err
 	}
 	varHeader.ProtocolName = protocolName
 
@@ -229,20 +235,20 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 
 	clientID, offset, err := DecodeUTFString(payloadDecode)
 	if err != nil {
-		return &Packet{}, err
+		return nil, err
 	}
 	resultPayload.ClientID = clientID
 
 	if WillFlag {
 		willTopic, addedOffset, err := DecodeUTFString(payloadDecode[offset:])
 		if err != nil {
-			return &Packet{}, err
+			return nil, err
 		}
 		offset += addedOffset
 
 		willMessage, addedOffset, err := FetchBytes(payloadDecode[offset:])
 		if err != nil {
-			return &Packet{}, err
+			return nil, err
 		}
 		offset += addedOffset
 
@@ -253,7 +259,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	if UsernameFlag {
 		username, addedOffset, err := DecodeUTFString(payloadDecode[offset:])
 		if err != nil {
-			return &Packet{}, err
+			return nil, err
 		}
 		offset += addedOffset
 		resultPayload.Username = username
@@ -262,7 +268,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	if PasswordFlag {
 		password, addedOffset, err := FetchBytes(payloadDecode[offset:])
 		if err != nil {
-			return &Packet{}, err
+			return nil, err
 		}
 		offset += addedOffset
 		resultPayload.Password = &password
@@ -286,16 +292,49 @@ func DecodeCONNACK(packet []byte) (*Packet, error) {
 	return CombinePacketSections(header, &varHeader, nil), nil
 }
 
+func DecodeUnsubscribe(packet []byte) (*Packet, error) {
+
+	resultPacket := &Packet{}
+	fixedHeader, offset, err := DecodeFixedHeader(packet)
+	resultPacket.ControlHeader = fixedHeader
+	if err != nil {
+		return nil, err
+	}
+
+	varHeader := UnsubscribeVariableHeader{}
+	varHeader.PacketIdentifier = CombineMsbLsb(packet[offset], packet[offset+1])
+	resultPacket.VariableLengthHeader = &varHeader
+	offset += 2
+	topics := make([]string, 0, 3)
+
+	for offset < len(packet) {
+		topic, addedOffset, err := DecodeUTFString(packet[offset:])
+		if err != nil {
+			return nil, errors.New("error: Malformed UTF string")
+		}
+		topics = append(topics, topic)
+		offset += addedOffset
+	}
+
+	payload := PacketPayload{
+		TopicList: topics,
+	}
+	resultPacket.Payload = &payload
+
+	return resultPacket, nil
+
+}
+
 func DecodeSubscribe(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
 	if err != nil {
-		return &Packet{}, err
+		return nil, err
 	}
 
 	if fixedHeader.Flags != 2 {
-		return &Packet{}, errors.New("error: Malformed Subscribe packet sent by client")
+		return nil, errors.New("error: Malformed Subscribe packet sent by client")
 	}
 
 	// Handle var header
@@ -373,7 +412,7 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
 
 	if err != nil {
-		return &Packet{}, err
+		return nil, err
 	}
 	resultPacket.ControlHeader = fixedHeader
 
@@ -392,7 +431,7 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	}
 
 	if err != nil {
-		return &Packet{}, err
+		return nil, err
 	}
 
 	varHeader.TopicFilter = topicName
@@ -414,11 +453,11 @@ func DecodePing(packet []byte) (*Packet, error) {
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
 	if err != nil {
-		return &Packet{}, err
+		return nil, err
 	}
 	resultPacket.ControlHeader = fixedHeader
 	if offset != len(packet) {
-		return &Packet{}, errInvalidLength
+		return nil, errInvalidLength
 	}
 
 	return resultPacket, nil
@@ -442,6 +481,26 @@ func DecodeSuback(packetArr []byte) (*Packet, error) {
 		ControlHeader:        fixedHeader,
 		VariableLengthHeader: &variableHeader,
 		Payload:              &payload,
+	}
+	return &resultPacket, nil
+
+}
+
+func DecodeUnsuback(packetArr []byte) (*Packet, error) {
+	fixedHeader, offset, err := DecodeFixedHeader(packetArr)
+	if err != nil {
+		return nil, err
+	}
+	variableHeader := SubackVariableHeader{
+		PacketIdentifier: CombineMsbLsb(packetArr[offset], packetArr[offset+1]),
+	}
+
+	if len(packetArr) != 4 {
+		return nil, errors.New("error: Unsuback is incorrectly sized")
+	}
+	resultPacket := Packet{
+		ControlHeader:        fixedHeader,
+		VariableLengthHeader: &variableHeader,
 	}
 	return &resultPacket, nil
 

@@ -90,6 +90,26 @@ func (topicMap *TopicToSubscribers) Contains(topicName string) bool {
 	return err == nil
 }
 
+func (topicMap *TopicToSubscribers) Unsubscribe(clientID ClientID, topicNames ...string) {
+	for _, topic := range topicNames {
+		subscribedClients, err := topicMap.get(topic)
+		if err != nil {
+			fmt.Println("Error while unsubscribing:", err)
+			continue
+		}
+		err = subscribedClients.Delete(clientID)
+		if err != nil {
+			fmt.Println("Error while deleting client:", err)
+			continue
+		}
+		// If no one is left subscribed to the topic, remove it.
+		// This is to avoid memory leaks
+		if subscribedClients.Size == 0 {
+			topicMap.Delete(topic)
+		}
+	}
+}
+
 func (t *TopicToSubscribers) Delete(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 
@@ -130,7 +150,6 @@ func (topicClientStore *TopicToSubscribers) AddTopic(topicName string) error {
 	}
 }
 
-// TODO: Rename to GetMatchingClients.
 func (topicToClient *TopicToSubscribers) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {
 
 	if topicName == "" {

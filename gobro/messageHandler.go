@@ -66,6 +66,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 	clientID := *clientMessage.ClientID
 	clientConnection := *clientMessage.ClientConnection
 	packetsToSend := make([]*clients.ClientMessage, 0, 10)
+	topicClientMap := server.topicClientMap
 
 	switch packetType {
 	case packets.CONNECT:
@@ -76,7 +77,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
-		fmt.Println("Received request to publish:", string(packet.Payload.ApplicationMessage[:]), "to topic:", string(packet.VariableLengthHeader.(*packets.PublishVariableHeader).TopicFilter))
+		fmt.Println("Received request to publish:", string(packet.Payload.ApplicationMessage), "to topic:", string(packet.VariableLengthHeader.(*packets.PublishVariableHeader).TopicFilter))
 
 		varHeader := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
 		topic := clients.Topic{
@@ -84,11 +85,11 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 			Qos:         packet.ControlHeader.Flags & 6,
 		}
 		// Adds to the packets to send
-		handlePublish(server.topicClientMap, topic, clientMessage, server.outputChan, server.clientTable, &packetsToSend)
+		handlePublish(topicClientMap, topic, clientMessage, server.outputChan, server.clientTable, &packetsToSend)
 
 	case packets.SUBSCRIBE:
 		// Add the client to the topic in the subscription table
-		topics, err := handleSubscribe(server.topicClientMap, client, *packet.Payload)
+		topics, err := handleSubscribe(topicClientMap, client, *packet.Payload)
 		if err != nil {
 			fmt.Println("Error during subscribe:", err)
 			return
@@ -105,11 +106,18 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, subackPacket)
 		packetsToSend = append(packetsToSend, &clientMsg)
 
+	case packets.UNSUBSCRIBE:
+		packetID := packet.VariableLengthHeader.(*packets.UnsubscribeVariableHeader).PacketIdentifier
+		handleUnsubscribe(packet.Payload.TopicList, topicClientMap, clientID)
+		unsubackPacket := packets.CreateUnSuback(packetID)
+		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, unsubackPacket)
+		packetsToSend = append(packetsToSend, &clientMsg)
+
 	case packets.DISCONNECT:
 		// Close the client TCP connection.
 		// Remove the packet from the client list
 		ticket.WaitOnTicket()
-		client.Disconnect(server.topicClientMap, clientTable)
+		client.Disconnect(topicClientMap, clientTable)
 		ticket.TicketCompleted()
 		return
 	}
@@ -166,6 +174,12 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 	}
 
 	return newTopics, nil
+
+}
+
+func handleUnsubscribe(topics []string, TCMAP *clients.TopicToSubscribers, clientID clients.ClientID) {
+
+	TCMAP.Unsubscribe(clientID, topics...)
 
 }
 

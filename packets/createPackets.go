@@ -55,3 +55,14 @@ func CreateSubACK(packetIdentifier int, returnCodes []byte) []byte {
 
 	return result
 }
+
+func CreateUnSuback(packetIdentifier int) []byte {
+	result := make([]byte, 4)
+	result[0] = UNSUBACK << 4
+	result[1] = 2
+
+	idMSB, idLSB := getMSBandLSB(packetIdentifier)
+	result[2] = idMSB
+	result[3] = idLSB
+	return result
+}

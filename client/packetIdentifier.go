@@ -37,9 +37,6 @@ func getAndIncrementPacketId() int {
 	return packetIdentifier.packetIdentifier - 1
 }
 
-// TODO:
-// Basically working on receiving ACKS and waiting on the packet identifier
-
 type waitingPackets struct {
 	packetList    *structures.LinkedList[*storedPacket]
 	waitCondition *sync.Cond
@@ -81,13 +78,11 @@ func (wp *waitingPackets) GetOrWait(packetIdentifier int) *[]byte {
 
 	wp.waitCondition.L.Lock()
 	for {
-		fmt.Print("AWAKE", packetIdentifier)
 		storedPacket := wp.getItem(packetIdentifier)
 		if storedPacket == nil {
 			fmt.Println()
 			wp.waitCondition.Wait()
 		} else {
-			fmt.Println("Got the item")
 			wp.waitCondition.L.Unlock()
 			return storedPacket
 		}

@@ -32,7 +32,6 @@ func StartClient() {
 
 	client := CreateClient()
 	err := client.SetClientConnection(*ip, *port)
-	go client.ListenForPackets()
 	if err != nil {
 		if err.Error()[len(err.Error())-len("connection refused"):] == "connection refused" {
 			fmt.Println("Could not connect to server - connection was refused")
@@ -47,6 +46,10 @@ func StartClient() {
 		fmt.Println(err)
 		return
 	}
+
+	// We need to start listening for responses AFTER we send the connect, because the connect packet doesn't have
+	// a packet identifier to listen on.
+	go client.ListenForPackets()
 
 	go func() {
 		for range c {
@@ -63,17 +66,17 @@ func StartClient() {
 	for {
 		fmt.Print("-> ")
 		text, _ := reader.ReadString('\n')
-		// convert CRLF to LF
 		text = strings.Replace(text, "\n", "", -1)
 		words := strings.Split(text, " ")
+
+		if len(words) == 1 {
+			continue
+		}
 
 		switch words[0] {
 		case "publish":
 			{
 				var stringBuilder strings.Builder
-				if len(words) == 1 {
-					continue
-				}
 				for _, word := range words[2:] {
 					stringBuilder.WriteString(word)
 					stringBuilder.WriteRune(' ')
@@ -83,8 +86,16 @@ func StartClient() {
 			}
 		case "subscribe":
 			{
-				client.SendSubscribe(topicWithQoS{topic: "DoesThisWork"})
-
+				topics := make([]topicWithQoS, 0, len(words)-1)
+				for _, word := range words[1:] {
+					topics = append(topics, topicWithQoS{topic: word})
+				}
+				client.SendSubscribe(topics...)
+			}
+		case "unsubscribe":
+			{
+				topicsToUnsub := words[1:]
+				client.SendUnsubscribe(topicsToUnsub...)
 			}
 		}
 

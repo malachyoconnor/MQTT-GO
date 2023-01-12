@@ -48,11 +48,12 @@ type VariableLengthHeader interface {
 
 // This ensures we only pass around POINTERS to our variable header structs
 // Otherwise we could be passing the structs itself and not realise it
-func (*PublishVariableHeader) SafetyFunc()   {}
-func (*ConnectVariableHeader) SafetyFunc()   {}
-func (*SubscribeVariableHeader) SafetyFunc() {}
-func (*ConnackVariableHeader) SafetyFunc()   {}
-func (*SubackVariableHeader) SafetyFunc()    {}
+func (*PublishVariableHeader) SafetyFunc()     {}
+func (*ConnectVariableHeader) SafetyFunc()     {}
+func (*SubscribeVariableHeader) SafetyFunc()   {}
+func (*ConnackVariableHeader) SafetyFunc()     {}
+func (*SubackVariableHeader) SafetyFunc()      {}
+func (*UnsubscribeVariableHeader) SafetyFunc() {}
 
 type ControlHeader struct {
 	Type            byte
@@ -90,6 +91,10 @@ type SubackVariableHeader struct {
 	PacketIdentifier int
 }
 
+type UnsubscribeVariableHeader struct {
+	PacketIdentifier int
+}
+
 type SubscribeVariableHeader struct {
 	PacketIdentifier int
 }
@@ -101,6 +106,6 @@ type PacketPayload struct {
 	WillMessage        []byte
 	Username           string
 	Password           *[]byte
-	TopicName          string
+	TopicList          []string
 	ApplicationMessage []byte
 }

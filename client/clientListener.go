@@ -18,7 +18,7 @@ func (client *Client) ListenForPackets() {
 		fmt.Println("Received", packets.PacketTypeName(packetType))
 
 		switch packetType {
-		case packets.SUBACK, packets.CONNACK, packets.PUBACK:
+		case packets.SUBACK, packets.CONNACK, packets.PUBACK, packets.UNSUBACK:
 			{
 				_, offset, _ := packets.DecodeFixedHeader(packet)
 				packetID := packets.CombineMsbLsb(packet[offset], packet[offset+1])
@@ -28,12 +28,17 @@ func (client *Client) ListenForPackets() {
 					packetID: packetID,
 				}
 				client.waitingPackets.AddItem(&toStore)
-				fmt.Println("Stored in", packetID)
-
 			}
+
+		case packets.PUBLISH:
+			{
+				result, _, _ := packets.DecodePacket(packet)
+				fmt.Println("Received request to publish", string(result.Payload.ApplicationMessage))
+			}
+
 		default:
 			{
-				fmt.Println(packet, "Read some random packet of type", packets.PacketTypeName(packetType))
+				fmt.Println(packet, "Read some packet of type", packets.PacketTypeName(packetType))
 			}
 		}
 

@@ -126,3 +126,25 @@ func EncodeSubscribe(packet *Packet) ([]byte, error) {
 	return CombineEncodedPacketSections(resultControlHeader, resultVarHeader, resultPayload), nil
 
 }
+
+func EncodeUnsubscribe(packet *Packet) ([]byte, error) {
+	if packet.ControlHeader.Type != UNSUBSCRIBE {
+		panic("Error encode unsubscribe passed non-unsubscribe packet")
+	}
+	packetIdentifier := packet.VariableLengthHeader.(*UnsubscribeVariableHeader).PacketIdentifier
+	resultVarHeader := make([]byte, 2)
+	resultVarHeader[0], resultVarHeader[1] = getMSBandLSB(packetIdentifier)
+	resultPayload := make([]byte, 0, len(packet.Payload.TopicList))
+	for _, topic := range packet.Payload.TopicList {
+		encodedTopic, _, err := EncodeUTFString(topic)
+		if err != nil {
+			return nil, nil
+		}
+		resultPayload = append(resultPayload, encodedTopic...)
+	}
+	packet.ControlHeader.RemainingLength = len(resultVarHeader) + len(resultPayload)
+	resultControlHeader := EncodeFixedHeader(*packet.ControlHeader)
+
+	return CombineEncodedPacketSections(resultControlHeader, resultVarHeader, resultPayload), nil
+
+}

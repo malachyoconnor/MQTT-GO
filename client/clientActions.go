@@ -64,7 +64,8 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	controlHeader := packets.ControlHeader{Type: packets.PUBLISH, Flags: 0}
 	varHeader := packets.PublishVariableHeader{}
 	varHeader.TopicFilter = topic
-	varHeader.PacketIdentifier = getAndIncrementPacketId()
+	packetID := getAndIncrementPacketId()
+	varHeader.PacketIdentifier = packetID
 	payload := packets.PacketPayload{}
 	payload.ApplicationMessage = applicationMessage
 
@@ -86,13 +87,8 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 		return nil
 	}
 
-	reader := bufio.NewReader(*client.brokerConnection)
-	result, err := packets.ReadPacketFromConnection(reader)
-	if err != nil {
-		return err
-	}
-
-	packet, _, _ := packets.DecodePacket(result)
+	pubackArr := client.waitingPackets.GetOrWait(packetID)
+	packet, _, _ := packets.DecodePacket(*pubackArr)
 
 	if packet.ControlHeader.Type != packets.PUBACK {
 		return errors.New("error: Didn't receive PUBACK from server")
@@ -134,10 +130,6 @@ func (client *Client) SendSubscribe(topics ...topicWithQoS) error {
 		return err
 	}
 	(*client.brokerConnection).Write(encodedPacket)
-
-	// Working - but I need to come up with some functions to listen for our
-	// packet identifier innit!
-
 	subackArr := client.waitingPackets.GetOrWait(packetID)
 	suback, _, _ := packets.DecodePacket(*subackArr)
 
@@ -147,6 +139,31 @@ func (client *Client) SendSubscribe(topics ...topicWithQoS) error {
 
 	returnCodes := (*subackArr)[4:]
 	fmt.Println(returnCodes)
+
+	return nil
+}
+
+func (client *Client) SendUnsubscribe(topics ...string) error {
+	controlHeader := packets.ControlHeader{Type: packets.UNSUBSCRIBE}
+	varHeader := packets.UnsubscribeVariableHeader{}
+	packetID := getAndIncrementPacketId()
+	varHeader.PacketIdentifier = packetID
+	payload := packets.PacketPayload{}
+	payload.TopicList = topics
+	packet := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
+	encodedPacket, err := packets.EncodeUnsubscribe(packet)
+
+	if err != nil {
+		return err
+	}
+	(*client.brokerConnection).Write(encodedPacket)
+
+	unsubackArr := client.waitingPackets.GetOrWait(packetID)
+	suback, _, _ := packets.DecodePacket(*unsubackArr)
+
+	if suback.ControlHeader.Type != packets.UNSUBACK {
+		return errors.New("error: Our UNSUBACK got nabbed")
+	}
 
 	return nil
 }
