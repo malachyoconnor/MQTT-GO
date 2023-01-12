@@ -108,7 +108,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 
 	case packets.UNSUBSCRIBE:
 		packetID := packet.VariableLengthHeader.(*packets.UnsubscribeVariableHeader).PacketIdentifier
-		handleUnsubscribe(packet.Payload.TopicList, topicClientMap, clientID)
+		handleUnsubscribe(packet.Payload.TopicList, topicClientMap, *client)
 		unsubackPacket := packets.CreateUnSuback(packetID)
 		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, unsubackPacket)
 		packetsToSend = append(packetsToSend, &clientMsg)
@@ -177,10 +177,12 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 
 }
 
-func handleUnsubscribe(topics []string, TCMAP *clients.TopicToSubscribers, clientID clients.ClientID) {
+func handleUnsubscribe(topics []string, TCMAP *clients.TopicToSubscribers, client clients.Client) {
 
-	TCMAP.Unsubscribe(clientID, topics...)
-
+	TCMAP.Unsubscribe(client.ClientIdentifier, topics...)
+	for _, topic := range topics {
+		client.RemoveTopic(clients.Topic{TopicFilter: topic})
+	}
 }
 
 func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {

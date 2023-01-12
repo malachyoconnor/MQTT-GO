@@ -2,6 +2,7 @@ package clients
 
 import (
 	"MQTT-GO/structures"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -9,8 +10,8 @@ import (
 
 type ClientID string
 
+// Topics is used so we don't have to search the whole topic tree when removing a client
 type Client struct {
-	// Should be a max of 23 characters!
 	ClientIdentifier ClientID
 	Topics           *structures.LinkedList[Topic]
 	TCPConnection    net.Conn
@@ -37,7 +38,13 @@ func (client *Client) AddTopic(newTopic Topic) {
 	if !client.Topics.Contains(newTopic) {
 		client.Topics.Append(newTopic)
 	}
+}
 
+func (client *Client) RemoveTopic(newTopic Topic) error {
+	if client.Topics == nil {
+		return errors.New("error: Client has not initialized a topic list")
+	}
+	return client.Topics.Delete(newTopic)
 }
 
 func (client *Client) Disconnect(topicClientMap *TopicToSubscribers, clientTable *structures.SafeMap[ClientID, *Client]) {
@@ -48,6 +55,7 @@ func (client *Client) Disconnect(topicClientMap *TopicToSubscribers, clientTable
 	// from the topic to client lists for each topic
 	topicClientMap.DeleteClientSubscriptions(client)
 	clientTable.Delete(client.ClientIdentifier)
+	client.Topics.DeleteLinkedList()
 	client.TCPConnection.Close()
 }
 
