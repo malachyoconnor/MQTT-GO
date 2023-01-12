@@ -65,7 +65,7 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	controlHeader := packets.ControlHeader{Type: packets.PUBLISH, Flags: 0}
 	varHeader := packets.PublishVariableHeader{}
 	varHeader.TopicFilter = topic
-	packetID := getAndIncrementPacketId()
+	packetID := getAndIncrementPacketID()
 	varHeader.PacketIdentifier = packetID
 	payload := packets.PacketPayload{}
 	payload.RawApplicationMessage = applicationMessage
@@ -100,7 +100,7 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 	controlHeader := packets.ControlHeader{Type: packets.SUBSCRIBE, Flags: 2}
 	varHeader := packets.SubscribeVariableHeader{}
-	packetID := getAndIncrementPacketId()
+	packetID := getAndIncrementPacketID()
 	varHeader.PacketIdentifier = packetID
 	payload := packets.PacketPayload{}
 	payload.RawApplicationMessage = make([]byte, 0, 2*len(topics))
@@ -142,7 +142,7 @@ func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 func (client *Client) SendUnsubscribe(topics ...string) error {
 	controlHeader := packets.ControlHeader{Type: packets.UNSUBSCRIBE}
 	varHeader := packets.UnsubscribeVariableHeader{}
-	packetID := getAndIncrementPacketId()
+	packetID := getAndIncrementPacketID()
 	varHeader.PacketIdentifier = packetID
 	payload := packets.PacketPayload{}
 	payload.TopicList = packets.ConvertStringsToTopicsWithQos(topics...)

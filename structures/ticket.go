@@ -27,7 +27,7 @@ func CreateTicketStand() *TicketStand {
 func (tHolder *TicketStand) GetTicket() Ticket {
 	tHolder.holderLock.Lock()
 	ticketNumber := tHolder.nextTicket
-	tHolder.nextTicket += 1
+	tHolder.nextTicket++
 	tHolder.holderLock.Unlock()
 
 	return Ticket{
@@ -52,7 +52,7 @@ func (ticket *Ticket) WaitOnTicket() {
 func (ticket *Ticket) TicketCompleted() {
 	ticket.ticketStand.ticketCompleted.L.Lock()
 	ticket.ticketStand.holderLock.Lock()
-	ticket.ticketStand.currentTicket += 1
+	ticket.ticketStand.currentTicket++
 	ticket.ticketStand.holderLock.Unlock()
 	ticket.ticketStand.ticketCompleted.Broadcast()
 	ticket.ticketStand.ticketCompleted.L.Unlock()

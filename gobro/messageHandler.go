@@ -81,7 +81,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 			Qos:         packet.ControlHeader.Flags & 6,
 		}
 		// Adds to the packets to send
-		handlePublish(topicClientMap, topic, clientMessage, server.outputChan, server.clientTable, &packetsToSend)
+		handlePublish(topicClientMap, topic, clientMessage, server.clientTable, &packetsToSend)
 
 	case packets.SUBSCRIBE:
 		// Add the client to the topic in the subscription table
@@ -191,7 +191,7 @@ func handleUnsubscribe(topics []string, TCMAP *clients.TopicToSubscribers, clien
 	}
 }
 
-func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
+func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
 	clientList, err := TCMap.GetMatchingClients(topic.TopicFilter)
 	if err != nil {
 		fmt.Println(err)

@@ -7,14 +7,14 @@ import (
 	"MQTT-GO/structures"
 )
 
-type packetIdStore struct {
+type packetIDStore struct {
 	packetIdentifier int
-	packetIdLock     sync.Mutex
+	packetIDLock     sync.Mutex
 }
 
-var packetIdentifier = packetIdStore{
+var packetIdentifier = packetIDStore{
 	packetIdentifier: 0,
-	packetIdLock:     sync.Mutex{},
+	packetIDLock:     sync.Mutex{},
 }
 
 // func incrementPacketId() {
@@ -29,15 +29,15 @@ var packetIdentifier = packetIdStore{
 // 	return packetIdentifier.packetIdentifier
 // }
 
-func getAndIncrementPacketId() int {
-	packetIdentifier.packetIdLock.Lock()
-	defer packetIdentifier.packetIdLock.Unlock()
+func getAndIncrementPacketID() int {
+	packetIdentifier.packetIDLock.Lock()
+	defer packetIdentifier.packetIDLock.Unlock()
 	packetIdentifier.packetIdentifier++
 	return packetIdentifier.packetIdentifier - 1
 }
 
-type waitingPackets struct {
-	packetList    *structures.LinkedList[*StoredPacket]
+type WaitingPackets struct {
+	PacketList    *structures.LinkedList[*StoredPacket]
 	waitCondition *sync.Cond
 }
 
@@ -46,33 +46,33 @@ type StoredPacket struct {
 	PacketID int
 }
 
-func CreateWaitingPacketList() *waitingPackets {
+func CreateWaitingPacketList() *WaitingPackets {
 	conditionMutex := sync.Mutex{}
-	waitingPacketStruct := waitingPackets{
+	waitingPacketStruct := WaitingPackets{
 		waitCondition: sync.NewCond(&conditionMutex),
-		packetList:    structures.CreateLinkedList[*StoredPacket](),
+		PacketList:    structures.CreateLinkedList[*StoredPacket](),
 	}
 
 	return &waitingPacketStruct
 }
 
-func (wp *waitingPackets) AddItem(storedPacket *StoredPacket) {
+func (wp *WaitingPackets) AddItem(storedPacket *StoredPacket) {
 	wp.waitCondition.L.Lock()
-	wp.packetList.Append(storedPacket)
+	wp.PacketList.Append(storedPacket)
 	wp.waitCondition.Broadcast()
 	wp.waitCondition.L.Unlock()
 }
 
-func (wp *waitingPackets) getItem(packetIdentifier int) *[]byte {
+func (wp *WaitingPackets) getItem(packetIdentifier int) *[]byte {
 	packetFinder := func(s *StoredPacket) bool { return s.PacketID == packetIdentifier }
-	packetStore := wp.packetList.FilterSingleItem(packetFinder)
+	packetStore := wp.PacketList.FilterSingleItem(packetFinder)
 	if packetStore != nil {
 		return &(*packetStore).Packet
 	}
 	return nil
 }
 
-func (wp *waitingPackets) GetOrWait(packetIdentifier int) *[]byte {
+func (wp *WaitingPackets) GetOrWait(packetIdentifier int) *[]byte {
 	wp.waitCondition.L.Lock()
 	for {
 		storedPacket := wp.getItem(packetIdentifier)

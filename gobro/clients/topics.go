@@ -149,11 +149,10 @@ func (topicClientStore *TopicToSubscribers) AddTopic(topicName string) error {
 	if topicClientStore.topLevelMap.Contains(topicSections[0]) {
 		topLevelTopic := topicClientStore.topLevelMap.Get(topicSections[0])
 		return topLevelTopic.AddTopic(topicSections[1:])
-	} else {
-		baseTopic := makeBaseTopic(topicSections[0])
-		topicClientStore.topLevelMap.Put(topicSections[0], baseTopic)
-		return baseTopic.AddTopic(topicSections[1:])
 	}
+	baseTopic := makeBaseTopic(topicSections[0])
+	topicClientStore.topLevelMap.Put(topicSections[0], baseTopic)
+	return baseTopic.AddTopic(topicSections[1:])
 }
 
 func (topicToClient *TopicToSubscribers) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {

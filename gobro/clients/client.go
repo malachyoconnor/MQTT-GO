@@ -60,13 +60,13 @@ func (client *Client) Disconnect(topicClientMap *TopicToSubscribers, clientTable
 
 var (
 	numClientsMutex sync.Mutex
-	numClients      int64 = 0
+	numClients      int64
 )
 
 func generateClientID() ClientID {
 	// TODO: Make this return a better unique string per new client
 	numClientsMutex.Lock()
-	numClients += 1
+	numClients++
 	username := fmt.Sprint(numClients)
 	numClientsMutex.Unlock()
 

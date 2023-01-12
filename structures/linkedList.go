@@ -144,7 +144,7 @@ func (ll *LinkedList[T]) RemoveDuplicates() {
 				node.delete()
 			}
 
-			ll.Size -= 1
+			ll.Size--
 		}
 		node = node.next
 	}
@@ -155,7 +155,7 @@ func (ll *LinkedList[T]) Append(val T) {
 	defer ll.lock.Unlock()
 	// If the list is empty
 	newNode := &Node[T]{val: val}
-	ll.Size += 1
+	ll.Size++
 	if ll.head == nil {
 		ll.head = newNode
 		ll.tail = newNode
@@ -193,24 +193,24 @@ func (ll *LinkedList[T]) Delete(val T) error {
 	// If we've only got one item in the list
 	if ll.tail == ll.head && ll.head.val == val {
 		ll.head, ll.tail = nil, nil
-		ll.Size -= 1
+		ll.Size--
 		return nil
 	}
 
 	if ll.head.val == val {
 		ll.head = ll.head.next
-		ll.Size -= 1
+		ll.Size--
 		return nil
 	} else if ll.tail.val == val {
 		ll.tail = ll.tail.prev
-		ll.Size -= 1
+		ll.Size--
 		return nil
 	}
 
 	node := ll.head
 	for i := 0; i < ll.Size; i++ {
 		if node.val == val {
-			ll.Size -= 1
+			ll.Size--
 			node.delete()
 			return nil
 		}

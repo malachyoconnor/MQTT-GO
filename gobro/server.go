@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	ADDRESS                  = "localhost"
-	PORT                     = "8000"
-	serverStop chan struct{} = make(chan struct{}, 1)
+	ADDRESS    = "localhost"
+	PORT       = "8000"
+	serverStop = make(chan struct{}, 1)
 )
 
 type Server struct {

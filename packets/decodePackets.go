@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	errPacketTooShort error = errors.New("error: cannot decode packet: packet too short to be a connect packet")
-	errInvalidType    error = errors.New("error: cannot decode packet: invalid control type")
-	errInvalidLength  error = errors.New("error: packet length differs from the advertised fixed length")
+	errPacketTooShort = errors.New("error: cannot decode packet: packet too short to be a connect packet")
+	errInvalidType    = errors.New("error: cannot decode packet: invalid control type")
+	errInvalidLength  = errors.New("error: packet length differs from the advertised fixed length")
 )
 
 // DecodeFixedHeader takes a packet and decodes the fixed header.
@@ -56,7 +56,7 @@ var errMalformedUTFString = errors.New("error: malformed UTF string")
 func DecodeUTFString(toFetch []byte) (string, int, error) {
 	var stringBuilder strings.Builder
 
-	var stringLen int = CombineMsbLsb(toFetch[0], toFetch[1])
+	var stringLen = CombineMsbLsb(toFetch[0], toFetch[1])
 	if !(0 <= stringLen && stringLen <= 65535) || (stringLen > len(toFetch)-2) {
 		return "", 0, errMalformedUTFString
 	}
@@ -92,14 +92,14 @@ func EncodeUTFString(toEncode string) ([]byte, int, error) {
 	return resultEncoding, len(toEncode) + 2, nil
 }
 
-var errShrunkenByteArr error = errors.New("error: input byte string to FetchBytes was too short")
+var errShrunkenByteArr = errors.New("error: input byte string to FetchBytes was too short")
 
 // FetchBytes fetches as many bytes as given by the first two bytes
 // in an input byte array (excluding the first 2 bits (the length itself)).
 // Returns the fetched bytes, the total length of this section
 // including the two bytes encoding the length, and a potential error.
 func FetchBytes(toFetch []byte) ([]byte, int, error) {
-	var numBytes int = CombineMsbLsb(toFetch[0], toFetch[1])
+	var numBytes = CombineMsbLsb(toFetch[0], toFetch[1])
 	if len(toFetch) < numBytes+2 {
 		return []byte{}, 0, errShrunkenByteArr
 	}
@@ -109,7 +109,7 @@ func FetchBytes(toFetch []byte) ([]byte, int, error) {
 	return resultArr, 2 + numBytes, nil
 }
 
-var errPacketNotDefined error = errors.New("error: Packet type not defined")
+var errPacketNotDefined = errors.New("error: Packet type not defined")
 
 func GetPacketType(packet []byte) byte {
 	return packet[0] >> 4
@@ -367,7 +367,7 @@ func CombineMsbLsb(msb byte, lsb byte) int {
 	return int(msb)<<8 + int(lsb)
 }
 
-var errMalformedInt error = errors.New("error: malformed variable length integer")
+var errMalformedInt = errors.New("error: malformed variable length integer")
 
 // DecodeVarLengthInt takes a list of bytes and decodes a variable length
 // header contained in the first 4 bytes. This works according to the
@@ -375,7 +375,7 @@ var errMalformedInt error = errors.New("error: malformed variable length integer
 // Returns the encoded int, the length of the fixed length header in bytes
 // and a potential error.
 func DecodeVarLengthInt(toDecode []byte) (value int, length int, err error) {
-	var multiplier int = 1
+	var multiplier = 1
 	for {
 		encodedByte := toDecode[length]
 		value += int((encodedByte & 127)) * multiplier
@@ -384,7 +384,7 @@ func DecodeVarLengthInt(toDecode []byte) (value int, length int, err error) {
 		if multiplier > 128*128*128 {
 			return 0, 0, errMalformedInt
 		}
-		length += 1
+		length++
 
 		if encodedByte&128 == 0 {
 			break
@@ -488,19 +488,19 @@ func DecodeUnsuback(packetArr []byte) (*Packet, error) {
 	return &resultPacket, nil
 }
 
-func CreateByteInline(input_binary []byte) byte {
-	res, _ := CreateByte(input_binary)
+func CreateByteInline(inputBinary []byte) byte {
+	res, _ := CreateByte(inputBinary)
 	return res
 }
 
 // CreateByte takes an array of 0s and 1s and returns the byte representation
 // along with a boolean "ok".
-func CreateByte(input_binary []byte) (byte, bool) {
-	if len(input_binary) > 8 {
+func CreateByte(inputBinary []byte) (byte, bool) {
+	if len(inputBinary) > 8 {
 		return 0, false
 	}
-	var result byte = 0
-	for i, v := range input_binary {
+	var result byte
+	for i, v := range inputBinary {
 		if !(v == 0 || v == 1) {
 			return 0, false
 		}

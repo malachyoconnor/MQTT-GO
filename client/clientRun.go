@@ -16,7 +16,7 @@ type Client struct {
 	ClientID         string
 	BrokerConnection *net.Conn
 	receivedMessages chan *[]byte
-	waitingPackets   *waitingPackets
+	waitingPackets   *WaitingPackets
 }
 
 var (

@@ -36,10 +36,9 @@ func (clientTable *SafeMap[Key, Value]) Delete(key Key) {
 func (clientTable *SafeMap[Key, Value]) PutIfAbsent(key Key, value Value) Value {
 	if clientTable.Contains(key) {
 		return clientTable.Get(key)
-	} else {
-		clientTable.Put(key, value)
-		return value
 	}
+	clientTable.Put(key, value)
+	return value
 }
 
 func CreateSafeMap[Key comparable, Value any]() *SafeMap[Key, Value] {
