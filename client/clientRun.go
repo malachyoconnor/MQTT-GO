@@ -1,7 +1,6 @@
 package client
 
 import (
-	"MQTT-GO/packets"
 	"bufio"
 	"flag"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+
+	"MQTT-GO/packets"
 )
 
 type Client struct {
@@ -114,7 +115,6 @@ func StartClient() {
 }
 
 func CreateClient() *Client {
-
 	messageChannel := make(chan *[]byte, 20)
 	waitingPackets := CreateWaitingPacketList()
 	return &Client{

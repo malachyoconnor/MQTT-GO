@@ -40,7 +40,6 @@ func CreateConnACK(cleanSession bool, returnCode byte) []byte {
 }
 
 func CreateSubACK(packetIdentifier int, returnCodes []byte) []byte {
-
 	result := make([]byte, 4+byte(len(returnCodes)))
 	result[0] = SUBACK << 4
 	result[1] = 2 + byte(len(returnCodes))

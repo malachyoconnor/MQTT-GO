@@ -1,8 +1,9 @@
 package gobro
 
 import (
-	"MQTT-GO/gobro/clients"
 	"fmt"
+
+	"MQTT-GO/gobro/clients"
 )
 
 type MessageSender struct {
@@ -45,5 +46,4 @@ func (MessageSender) ListenAndSend(server *Server) {
 		continue
 
 	}
-
 }

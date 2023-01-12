@@ -1,12 +1,13 @@
 package gobro
 
 import (
-	"MQTT-GO/gobro/clients"
-	"MQTT-GO/structures"
 	"fmt"
 	"net"
 	"sync"
 	"time"
+
+	"MQTT-GO/gobro/clients"
+	"MQTT-GO/structures"
 )
 
 var (
@@ -23,7 +24,6 @@ type Server struct {
 }
 
 func CreateServer() Server {
-
 	clientTable := clients.CreateClientTable()
 	topicClientMap := clients.CreateTopicMap()
 	inputChan := make(chan clients.ClientMessage)
@@ -35,7 +35,6 @@ func CreateServer() Server {
 		inputChan:      &inputChan,
 		outputChan:     &outputChan,
 	}
-
 }
 
 func (server *Server) StopServer() {
@@ -43,11 +42,9 @@ func (server *Server) StopServer() {
 }
 
 func (server *Server) StartServer() {
-
 	// Listen for TCP connections
 	fmt.Println("Listening for TCP connections")
 	listener, err := net.Listen("tcp", ADDRESS+":"+PORT)
-
 	if err != nil {
 		fmt.Println("Error while trying to listen for TCP connections", err)
 		return
@@ -78,7 +75,6 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 		}
 
 		connection, err := (*listener).Accept()
-
 		if err != nil {
 			fmt.Println(err)
 			return

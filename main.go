@@ -1,19 +1,19 @@
 package main
 
 import (
-	"MQTT-GO/client"
-	"MQTT-GO/gobro"
 	"flag"
 	"fmt"
 	"os"
 	"runtime/pprof"
 	"time"
+
+	"MQTT-GO/client"
+	"MQTT-GO/gobro"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 
 func main() {
-
 	numFlags := permuteArgs()
 	flag.Parse()
 	if *cpuprofile != "" {
@@ -50,12 +50,10 @@ func main() {
 	} else {
 		fmt.Println("Malformed input, exiting")
 	}
-
 }
 
 // I want to be able to put non-options before the flags - to do this we permute the os.args
 func permuteArgs() (numFlags int) {
-
 	args := os.Args[1:]
 
 	for i := range args {
@@ -65,5 +63,4 @@ func permuteArgs() (numFlags int) {
 		}
 	}
 	return numFlags
-
 }

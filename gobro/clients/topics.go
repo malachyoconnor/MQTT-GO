@@ -1,10 +1,11 @@
 package clients
 
 import (
-	"MQTT-GO/structures"
 	"errors"
 	"fmt"
 	"strings"
+
+	"MQTT-GO/structures"
 )
 
 // Rename to TopicToSubscriberStore
@@ -35,7 +36,6 @@ func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
 	for node != nil {
 		topic := node.Value().TopicFilter
 		clientLL, err := topicMap.get(topic)
-
 		// Race condition
 		if err != nil {
 			fmt.Println("Tried to remove topic that had already been deleted")
@@ -56,11 +56,9 @@ func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
 
 		node = node.Next()
 	}
-
 }
 
 func (topicMap *TopicToSubscribers) Put(topicName string, clientID ClientID) error {
-
 	clientLL, err := topicMap.get(topicName)
 	if err != nil {
 		if err == ErrTopicDoesntExist {
@@ -133,7 +131,6 @@ func (t *TopicToSubscribers) Delete(topicName string) error {
 
 	val := t.topLevelMap.Get(topicSections[0])
 	return val.DeleteTopic(topicSections[1:])
-
 }
 
 var ErrTopicAlreadyExists = errors.New("error: Trying to add client that already exists")
@@ -160,7 +157,6 @@ func (topicClientStore *TopicToSubscribers) AddTopic(topicName string) error {
 }
 
 func (topicToClient *TopicToSubscribers) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {
-
 	if topicName == "" {
 		return nil, errors.New("error: Cannot search for empty topic")
 	}
@@ -248,7 +244,6 @@ func makeBaseTopic(topicName string) *topic {
 var ErrTopicDoesntExist = errors.New("error: Topic doesn't exist")
 
 func (t *topic) DeleteTopic(topicSections []string) error {
-
 	if len(topicSections) == 1 {
 
 		for i, child := range t.children {
@@ -262,7 +257,6 @@ func (t *topic) DeleteTopic(topicSections []string) error {
 				t.children = t.children[:len(t.children)-1]
 				return nil
 			}
-
 		}
 		return ErrTopicDoesntExist
 	}
@@ -311,7 +305,6 @@ func (t *topic) getAllLowerLevelClients() *structures.LinkedList[ClientID] {
 		result = structures.Concatenate(result, child.getAllLowerLevelClients())
 	}
 	return result
-
 }
 
 // TODO: Add + support
@@ -336,7 +329,6 @@ func (t *topic) getMatchingClients(topicSections []string) *structures.LinkedLis
 		}
 	}
 	return result
-
 }
 
 // Can return a client list of nil (if the topic doesn't exist)

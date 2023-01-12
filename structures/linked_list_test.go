@@ -7,7 +7,6 @@ import (
 )
 
 func TestRemovingDuplicates(t *testing.T) {
-
 	ll := CreateLinkedList[int]()
 	ll.Append(1)
 	ll.Append(2)
@@ -18,5 +17,4 @@ func TestRemovingDuplicates(t *testing.T) {
 	if !slices.Equal(ll.GetItems(), []int{1, 2, 3}) {
 		t.Error("Remove duplicates not working correctly.")
 	}
-
 }

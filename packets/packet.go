@@ -23,10 +23,11 @@ func PacketTypeName(packetType byte) string {
 	if packetType > 15 {
 		return "UNDEFINED"
 	}
-	return []string{"RESERVED", "CONNECT", "CONNACK", "PUBLISH", "PUBACK",
+	return []string{
+		"RESERVED", "CONNECT", "CONNACK", "PUBLISH", "PUBACK",
 		"PUBREC", "PUBREL", "PUBCOMP", "SUBSCRIBE", "SUBACK", "UNSUBSCRIBE",
-		"UNSUBACK", "PINGREQ", "PINGRESP", "DISCONNECT", "AUTH"}[packetType]
-
+		"UNSUBACK", "PINGREQ", "PINGRESP", "DISCONNECT", "AUTH",
+	}[packetType]
 }
 
 func isValidControlType(controlType byte) bool {

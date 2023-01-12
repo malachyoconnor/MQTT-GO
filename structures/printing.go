@@ -16,7 +16,6 @@ func center(s string, w int) string {
 }
 
 func PrintCentrally(toPrint ...string) {
-
 	stringBuilder := strings.Builder{}
 	for _, str := range toPrint {
 		stringBuilder.WriteString(str)
@@ -35,21 +34,16 @@ func (ll *LinkedList[T]) PrintItems() {
 		node = node.next
 	}
 	fmt.Print("]")
-
 }
 
 func PrintArray[T comparable](arr []T, defaultValue T) {
-
 	fmt.Print("[ ")
 
 	for _, val := range arr {
-
 		if val != defaultValue {
 			fmt.Print(val, " ")
 		}
-
 	}
 
 	fmt.Print("]\n")
-
 }

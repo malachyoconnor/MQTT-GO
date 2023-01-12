@@ -1,9 +1,10 @@
 package client
 
 import (
-	"MQTT-GO/packets"
 	"bufio"
 	"fmt"
+
+	"MQTT-GO/packets"
 )
 
 func (client *Client) ListenForPackets() {
@@ -43,5 +44,4 @@ func (client *Client) ListenForPackets() {
 		}
 
 	}
-
 }

@@ -7,7 +7,6 @@ import (
 )
 
 func TestEncodingVarInts(test *testing.T) {
-
 	for i := 0; i < 200; i++ {
 		arr := EncodeVarLengthInt(i)
 		x, _, _ := DecodeVarLengthInt(arr[:])
@@ -19,7 +18,6 @@ func TestEncodingVarInts(test *testing.T) {
 }
 
 func TestEncodingFixedHeader(t *testing.T) {
-
 	for _, header := range []ControlHeader{
 		{Type: 4, RemainingLength: 40, Flags: 10},
 		{Type: 1, RemainingLength: 25, Flags: 11},
@@ -35,5 +33,4 @@ func TestEncodingFixedHeader(t *testing.T) {
 		}
 
 	}
-
 }

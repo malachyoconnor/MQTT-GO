@@ -12,7 +12,6 @@ type TicketStand struct {
 }
 
 func CreateTicketStand() *TicketStand {
-
 	conditionMutex := sync.Mutex{}
 
 	tStand := TicketStand{
@@ -35,7 +34,6 @@ func (tHolder *TicketStand) GetTicket() Ticket {
 		ticketNumber: ticketNumber,
 		ticketStand:  tHolder,
 	}
-
 }
 
 type Ticket struct {
@@ -44,13 +42,11 @@ type Ticket struct {
 }
 
 func (ticket *Ticket) WaitOnTicket() {
-
 	ticket.ticketStand.ticketCompleted.L.Lock()
 	for ticket.ticketNumber != ticket.ticketStand.currentTicket {
 		ticket.ticketStand.ticketCompleted.Wait()
 	}
 	ticket.ticketStand.ticketCompleted.L.Unlock()
-
 }
 
 func (ticket *Ticket) TicketCompleted() {

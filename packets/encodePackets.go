@@ -11,7 +11,6 @@ func CombineEncodedPacketSections(controlHeader []byte, varLengthHeader []byte, 
 }
 
 func EncodeFixedHeader(fixedHeader ControlHeader) []byte {
-
 	result := make([]byte, 1)
 	result[0] = (fixedHeader.Type << 4) | (fixedHeader.Flags)
 	result = append(result, EncodeVarLengthInt(fixedHeader.RemainingLength)...)
@@ -112,7 +111,6 @@ func EncodePublish(packet *Packet) ([]byte, error) {
 }
 
 func EncodeSubscribe(packet *Packet) ([]byte, error) {
-
 	if packet.ControlHeader.Type != SUBSCRIBE {
 		panic("Error create publish passed non-publish packet")
 	}
@@ -124,7 +122,6 @@ func EncodeSubscribe(packet *Packet) ([]byte, error) {
 	resultControlHeader := EncodeFixedHeader(*packet.ControlHeader)
 
 	return CombineEncodedPacketSections(resultControlHeader, resultVarHeader, resultPayload), nil
-
 }
 
 func EncodeUnsubscribe(packet *Packet) ([]byte, error) {
@@ -146,7 +143,6 @@ func EncodeUnsubscribe(packet *Packet) ([]byte, error) {
 	resultControlHeader := EncodeFixedHeader(*packet.ControlHeader)
 
 	return CombineEncodedPacketSections(resultControlHeader, resultVarHeader, resultPayload), nil
-
 }
 
 func ConvertStringsToTopicsWithQos(topics ...string) []TopicWithQoS {

@@ -15,5 +15,4 @@ func generateRandomClientID() string {
 	}
 
 	return stringBuilder.String()
-
 }

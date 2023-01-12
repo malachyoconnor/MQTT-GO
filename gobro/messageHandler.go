@@ -1,10 +1,11 @@
 package gobro
 
 import (
+	"fmt"
+
 	"MQTT-GO/gobro/clients"
 	"MQTT-GO/packets"
 	"MQTT-GO/structures"
-	"fmt"
 )
 
 type MessageHandler struct {
@@ -20,7 +21,6 @@ func CreateMessageHandler(inputChanAddress *chan clients.ClientMessage, outputCh
 }
 
 func (msgH *MessageHandler) Listen(server *Server) {
-
 	clientTable := server.clientTable
 
 	for {
@@ -36,14 +36,12 @@ func (msgH *MessageHandler) Listen(server *Server) {
 		ticket := client.Tickets.GetTicket()
 		packetArray := clientMessage.Packet
 		packet, packetType, err := packets.DecodePacket(packetArray)
-
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 		// General case for if the client doesn't exist if NOT a connect packet
 		if packetType != packets.CONNECT {
-
 			if !clientTable.Contains(clientID) {
 				fmt.Println("Client not in the client table sent", packets.PacketTypeName(packetType), "message, disconnecting.")
 				// If the client hasn't already been disconnected by the client handler
@@ -52,13 +50,11 @@ func (msgH *MessageHandler) Listen(server *Server) {
 				}
 				continue
 			}
-
 		}
 
 		go HandleMessage(packetType, packet, client, server, clientMessage, ticket)
 
 	}
-
 }
 
 func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Client, server *Server, clientMessage clients.ClientMessage, ticket structures.Ticket) {
@@ -129,9 +125,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 
 	ticket.WaitOnTicket()
 	for _, packet := range packetsToSend {
-
 		(*server.outputChan) <- *packet
-
 	}
 	ticket.TicketCompleted()
 }
@@ -146,7 +140,6 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 	// Then add them to a list to be handled
 	for offset < len(payload) {
 		topicFilter, utfStringLen, err := packets.DecodeUTFString(payload[offset:])
-
 		if err != nil {
 			return nil, err
 		}
@@ -187,11 +180,9 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 	}
 
 	return newTopics, nil
-
 }
 
 func handleUnsubscribe(topics []string, TCMAP *clients.TopicToSubscribers, client clients.Client) {
-
 	TCMAP.Unsubscribe(client.ClientIdentifier, topics...)
 	for _, topic := range topics {
 		err := client.RemoveTopic(clients.Topic{TopicFilter: topic})
@@ -202,7 +193,6 @@ func handleUnsubscribe(topics []string, TCMAP *clients.TopicToSubscribers, clien
 
 func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, outputChannel *chan clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
 	clientList, err := TCMap.GetMatchingClients(topic.TopicFilter)
-
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -225,5 +215,4 @@ func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgTo
 		(*toSend) = append(*toSend, &alteredMsg)
 		clientNode = clientNode.Next()
 	}
-
 }

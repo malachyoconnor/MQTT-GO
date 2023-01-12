@@ -97,7 +97,6 @@ func TestDeletingLowerLevel(t *testing.T) {
 	if _, err := topicStore.GetMatchingClients("x"); err == ErrTopicDoesntExist {
 		t.Error("Unable to access base element after child is deleted")
 	}
-
 }
 
 func TestDeletingOneChild(t *testing.T) {
@@ -122,7 +121,6 @@ func TestDeletingOneChild(t *testing.T) {
 	}
 
 	topicStore.PrintTopics()
-
 }
 
 func TestAddingClientIDs(t *testing.T) {
@@ -151,7 +149,6 @@ func TestDuplicatesAreRemoved(t *testing.T) {
 	if result.Size != 1 || result.Head().Value() != "abc" {
 		t.Error("Duplicates are not being removed correctly")
 	}
-
 }
 
 func TestHashWildcard(t *testing.T) {
@@ -166,7 +163,6 @@ func TestHashWildcard(t *testing.T) {
 		len(clientArr) != 2 {
 		t.Error("Didn't find correct clients")
 	}
-
 }
 
 func TestPlusWildcard(t *testing.T) {
@@ -180,5 +176,4 @@ func TestPlusWildcard(t *testing.T) {
 	if cLL.Size != 1 || cLL.Head().Value() != "xyz" {
 		t.Error("+ didn't work correctly.")
 	}
-
 }

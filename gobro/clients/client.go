@@ -1,11 +1,12 @@
 package clients
 
 import (
-	"MQTT-GO/structures"
 	"errors"
 	"fmt"
 	"net"
 	"sync"
+
+	"MQTT-GO/structures"
 )
 
 type ClientID string
@@ -19,7 +20,6 @@ type Client struct {
 }
 
 func CreateClient(clientID ClientID, conn *net.Conn) *Client {
-
 	client := Client{}
 	client.ClientIdentifier = clientID
 	client.TCPConnection = *conn
@@ -29,7 +29,6 @@ func CreateClient(clientID ClientID, conn *net.Conn) *Client {
 }
 
 func (client *Client) AddTopic(newTopic Topic) {
-
 	if client.Topics == nil {
 		newLL := structures.CreateLinkedList[Topic]()
 		client.Topics = newLL
@@ -59,8 +58,10 @@ func (client *Client) Disconnect(topicClientMap *TopicToSubscribers, clientTable
 	client.TCPConnection.Close()
 }
 
-var numClientsMutex sync.Mutex
-var numClients int64 = 0
+var (
+	numClientsMutex sync.Mutex
+	numClients      int64 = 0
+)
 
 func generateClientID() ClientID {
 	// TODO: Make this return a better unique string per new client
@@ -70,5 +71,4 @@ func generateClientID() ClientID {
 	numClientsMutex.Unlock()
 
 	return ClientID(username)
-
 }

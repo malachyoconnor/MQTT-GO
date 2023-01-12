@@ -80,7 +80,6 @@ func Concatenate[T comparable](llA *LinkedList[T], llB *LinkedList[T]) *LinkedLi
 }
 
 func (ll *LinkedList[T]) DeepCopy() *LinkedList[T] {
-
 	result := CreateLinkedList[T]()
 	node := ll.head
 	for node != nil {
@@ -88,7 +87,6 @@ func (ll *LinkedList[T]) DeepCopy() *LinkedList[T] {
 		node = node.next
 	}
 	return result
-
 }
 
 func CombineLinkedLists[T comparable](lists ...*LinkedList[T]) *LinkedList[T] {
@@ -238,7 +236,6 @@ func (ll *LinkedList[T]) Filter(f func(T) bool) *LinkedList[T] {
 
 // Note this returns a POINTER to the item - because it needed to be able to return nil if naught was found
 func (ll *LinkedList[T]) FilterSingleItem(f func(T) bool) *T {
-
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
 
@@ -250,7 +247,6 @@ func (ll *LinkedList[T]) FilterSingleItem(f func(T) bool) *T {
 		node = node.next
 	}
 	return nil
-
 }
 
 type Node[T comparable] struct {

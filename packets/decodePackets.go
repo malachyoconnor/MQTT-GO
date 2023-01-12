@@ -92,9 +92,7 @@ func EncodeUTFString(toEncode string) ([]byte, int, error) {
 	return resultEncoding, len(toEncode) + 2, nil
 }
 
-var (
-	errShrunkenByteArr error = errors.New("error: input byte string to FetchBytes was too short")
-)
+var errShrunkenByteArr error = errors.New("error: input byte string to FetchBytes was too short")
 
 // FetchBytes fetches as many bytes as given by the first two bytes
 // in an input byte array (excluding the first 2 bits (the length itself)).
@@ -111,9 +109,7 @@ func FetchBytes(toFetch []byte) ([]byte, int, error) {
 	return resultArr, 2 + numBytes, nil
 }
 
-var (
-	errPacketNotDefined error = errors.New("error: Packet type not defined")
-)
+var errPacketNotDefined error = errors.New("error: Packet type not defined")
 
 func GetPacketType(packet []byte) byte {
 	return packet[0] >> 4
@@ -124,7 +120,6 @@ var errZeroLengthPacketError = errors.New("error: Zero length packet read from b
 // DecodePacket takes a byte array encoding a packet and returns
 // (*Packet, PacketType, error)
 func DecodePacket(packet []byte) (*Packet, byte, error) {
-
 	if len(packet) == 0 {
 		return nil, 0, errZeroLengthPacketError
 	}
@@ -187,7 +182,6 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, fixedHeaderLen, err := DecodeFixedHeader(packet)
-
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +286,6 @@ func DecodeCONNACK(packet []byte) (*Packet, error) {
 }
 
 func DecodeUnsubscribe(packet []byte) (*Packet, error) {
-
 	resultPacket := &Packet{}
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
 	resultPacket.ControlHeader = fixedHeader
@@ -321,7 +314,6 @@ func DecodeUnsubscribe(packet []byte) (*Packet, error) {
 	resultPacket.Payload = &payload
 
 	return resultPacket, nil
-
 }
 
 func DecodeSubscribe(packet []byte) (*Packet, error) {
@@ -354,7 +346,6 @@ func DecodeSubscribe(packet []byte) (*Packet, error) {
 }
 
 func DecodeDisconnect(packet []byte) (*Packet, error) {
-
 	resultPacket := &Packet{}
 	resultPacket.ControlHeader = &ControlHeader{
 		Type:            14,
@@ -363,9 +354,7 @@ func DecodeDisconnect(packet []byte) (*Packet, error) {
 	}
 
 	if packet[0]>>4 != 14 || packet[0]-14<<4 != 0 || packet[1] != 0 {
-
 		return nil, errors.New("error: Incorrectly formed DISCONNECT packet")
-
 	}
 
 	return resultPacket, nil
@@ -402,14 +391,12 @@ func DecodeVarLengthInt(toDecode []byte) (value int, length int, err error) {
 		}
 	}
 	return value, length, nil
-
 }
 
 func DecodePublish(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
-
 	if err != nil {
 		return nil, err
 	}
@@ -460,11 +447,9 @@ func DecodePing(packet []byte) (*Packet, error) {
 	}
 
 	return resultPacket, nil
-
 }
 
 func DecodeSuback(packetArr []byte) (*Packet, error) {
-
 	fixedHeader, offset, err := DecodeFixedHeader(packetArr)
 	if err != nil {
 		return nil, err
@@ -482,7 +467,6 @@ func DecodeSuback(packetArr []byte) (*Packet, error) {
 		Payload:              &payload,
 	}
 	return &resultPacket, nil
-
 }
 
 func DecodeUnsuback(packetArr []byte) (*Packet, error) {
@@ -502,7 +486,6 @@ func DecodeUnsuback(packetArr []byte) (*Packet, error) {
 		VariableLengthHeader: &variableHeader,
 	}
 	return &resultPacket, nil
-
 }
 
 func CreateByteInline(input_binary []byte) byte {

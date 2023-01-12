@@ -1,9 +1,10 @@
 package client
 
 import (
-	"MQTT-GO/structures"
 	"fmt"
 	"sync"
+
+	"MQTT-GO/structures"
 )
 
 type packetIdStore struct {
@@ -11,12 +12,10 @@ type packetIdStore struct {
 	packetIdLock     sync.Mutex
 }
 
-var (
-	packetIdentifier = packetIdStore{
-		packetIdentifier: 0,
-		packetIdLock:     sync.Mutex{},
-	}
-)
+var packetIdentifier = packetIdStore{
+	packetIdentifier: 0,
+	packetIdLock:     sync.Mutex{},
+}
 
 // func incrementPacketId() {
 // 	packetIdentifier.packetIdLock.Lock()
@@ -48,7 +47,6 @@ type StoredPacket struct {
 }
 
 func CreateWaitingPacketList() *waitingPackets {
-
 	conditionMutex := sync.Mutex{}
 	waitingPacketStruct := waitingPackets{
 		waitCondition: sync.NewCond(&conditionMutex),
@@ -75,7 +73,6 @@ func (wp *waitingPackets) getItem(packetIdentifier int) *[]byte {
 }
 
 func (wp *waitingPackets) GetOrWait(packetIdentifier int) *[]byte {
-
 	wp.waitCondition.L.Lock()
 	for {
 		storedPacket := wp.getItem(packetIdentifier)

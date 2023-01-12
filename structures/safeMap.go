@@ -8,11 +8,9 @@ type SafeMap[Key comparable, Value any] struct {
 }
 
 func (clientTable *SafeMap[Key, Value]) Get(key Key) Value {
-
 	clientTable.tableLock.RLock()
 	defer clientTable.tableLock.RUnlock()
 	return clientTable.clientTable[key]
-
 }
 
 func (clientTable *SafeMap[Key, Value]) Contains(key Key) bool {
@@ -24,11 +22,9 @@ func (clientTable *SafeMap[Key, Value]) Contains(key Key) bool {
 }
 
 func (clientTable *SafeMap[Key, Value]) Put(key Key, value Value) {
-
 	clientTable.tableLock.Lock()
 	defer clientTable.tableLock.Unlock()
 	clientTable.clientTable[key] = value
-
 }
 
 func (clientTable *SafeMap[Key, Value]) Delete(key Key) {
@@ -55,7 +51,6 @@ func CreateSafeMap[Key comparable, Value any]() *SafeMap[Key, Value] {
 }
 
 func (table *SafeMap[Key, Value]) Values() []Value {
-
 	values := make([]Value, len(table.clientTable))
 	i := 0
 	for _, val := range table.clientTable {

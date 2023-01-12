@@ -1,18 +1,18 @@
 package client
 
 import (
-	"MQTT-GO/packets"
-	"MQTT-GO/structures"
 	"bufio"
 	"errors"
 	"fmt"
 	"time"
+
+	"MQTT-GO/packets"
+	"MQTT-GO/structures"
 )
 
 // Here we'll have the functions that make the client perform it's actions.
 
 func (client *Client) SendConnect() error {
-
 	if client.BrokerConnection == nil {
 		return errors.New("error: Client does not have a broker connection")
 	}
@@ -62,7 +62,6 @@ func (client *Client) SendConnect() error {
 // TODO: Check if everything you would need for a publish packet is present!
 
 func (client *Client) SendPublish(applicationMessage []byte, topic string) error {
-
 	controlHeader := packets.ControlHeader{Type: packets.PUBLISH, Flags: 0}
 	varHeader := packets.PublishVariableHeader{}
 	varHeader.TopicFilter = topic
@@ -73,7 +72,6 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 
 	publishPacket := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
 	publishPacketArr, err := packets.EncodePublish(publishPacket)
-
 	if err != nil {
 		return err
 	}
@@ -100,7 +98,6 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 }
 
 func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
-
 	controlHeader := packets.ControlHeader{Type: packets.SUBSCRIBE, Flags: 2}
 	varHeader := packets.SubscribeVariableHeader{}
 	packetID := getAndIncrementPacketId()
@@ -122,7 +119,6 @@ func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 
 	packet := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
 	encodedPacket, err := packets.EncodeSubscribe(packet)
-
 	if err != nil {
 		return err
 	}
@@ -152,7 +148,6 @@ func (client *Client) SendUnsubscribe(topics ...string) error {
 	payload.TopicList = packets.ConvertStringsToTopicsWithQos(topics...)
 	packet := packets.CombinePacketSections(&controlHeader, &varHeader, &payload)
 	encodedPacket, err := packets.EncodeUnsubscribe(packet)
-
 	if err != nil {
 		return err
 	}
@@ -178,7 +173,6 @@ func (client *Client) SendDisconnect() error {
 
 	disconnectArr := packets.EncodeFixedHeader(controlHeader)
 	_, err := (*client.BrokerConnection).Write(disconnectArr)
-
 	if err != nil {
 		return err
 	}

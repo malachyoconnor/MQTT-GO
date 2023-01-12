@@ -1,14 +1,15 @@
 package clients
 
 import (
-	"MQTT-GO/packets"
-	"MQTT-GO/structures"
 	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"time"
+
+	"MQTT-GO/packets"
+	"MQTT-GO/structures"
 )
 
 type ClientMessage struct {
@@ -27,7 +28,6 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet [
 }
 
 func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
-
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
 		fmt.Println("Error handling connect ", err)
@@ -61,7 +61,6 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	for {
 
 		packet, err := packets.ReadPacketFromConnection(reader)
-
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -85,7 +84,6 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	}
 	fmt.Println("Client", clientID, "connection closed")
 	*connectedClient = ""
-
 }
 
 // handleInitialConnect decodes the packet to find a ClientID - if none exists
@@ -123,7 +121,6 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 	packetPool <- clientMsg
 
 	return newClient, nil
-
 }
 
 func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {

@@ -1,12 +1,13 @@
 package client_test
 
 import (
-	"MQTT-GO/client"
-	"MQTT-GO/gobro"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
+
+	"MQTT-GO/client"
+	"MQTT-GO/gobro"
 )
 
 var (
@@ -47,7 +48,6 @@ func TestConnectToServer(t *testing.T) {
 	fmt.Println("clientID", client.ClientID)
 	defer testErr(t, client.SendDisconnect())
 	err := client.SetClientConnection("localhost", 8000)
-
 	if err != nil {
 		t.Error("Error while getting TCP connection to server", err)
 	}
@@ -57,7 +57,6 @@ func TestConnectToServer(t *testing.T) {
 	if err != nil {
 		t.Error("Error while sending CONNECT to server:", err)
 	}
-
 }
 
 func TestPublishToServer(t *testing.T) {
@@ -80,7 +79,6 @@ func TestPublishToServer(t *testing.T) {
 	if err != nil {
 		t.Error("Error while publishing to server:", err)
 	}
-
 }
 
 func TestConstantPublish(t *testing.T) {
@@ -96,11 +94,9 @@ func TestConstantPublish(t *testing.T) {
 		err := client.SendPublish([]byte(fmt.Sprint("test", i)), "x/y")
 		testErr(t, err)
 	}
-
 }
 
 func TestWaitingPackets(t *testing.T) {
-
 	waitingPacketsList := client.CreateWaitingPacketList()
 	waitGroup := sync.WaitGroup{}
 	waitGroup.Add(2)
