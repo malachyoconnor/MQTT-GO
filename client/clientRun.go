@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -29,10 +30,9 @@ var (
 // Then send values to the server
 func StartClient() {
 	flag.Parse()
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
 
 	client := CreateClient()
+	listenForExit(client)
 	err := client.SetClientConnection(*ip, *port)
 	if err != nil {
 		if err.Error()[len(err.Error())-len("connection refused"):] == "connection refused" {
@@ -52,17 +52,6 @@ func StartClient() {
 	// We need to start listening for responses AFTER we send the connect, because the connect packet doesn't have
 	// a packet identifier to listen on.
 	go client.ListenForPackets()
-
-	go func() {
-		for range c {
-			err := client.SendDisconnect()
-			// TODO: add logging
-			fmt.Println("Error while disconnecting", err)
-			(*client.BrokerConnection).Close()
-			fmt.Println("\nConnection closed, goodbye")
-			os.Exit(0)
-		}
-	}()
 
 	fmt.Println("Connected to broker on port", *port)
 
@@ -87,9 +76,8 @@ func StartClient() {
 				}
 
 				err := client.SendPublish([]byte(stringBuilder.String()), words[1])
-				// TODO: add logging
 				if err != nil {
-					fmt.Println("Error while sending subscribe", err)
+					log.Println("Error while sending subscribe", err)
 				}
 			}
 		case "subscribe":
@@ -99,9 +87,8 @@ func StartClient() {
 					topics = append(topics, packets.TopicWithQoS{Topic: word})
 				}
 				err := client.SendSubscribe(topics...)
-				// TODO: add logging
 				if err != nil {
-					fmt.Println("Error while sending subscribe", err)
+					log.Println("Error while sending subscribe", err)
 				}
 			}
 		case "unsubscribe":
@@ -109,8 +96,7 @@ func StartClient() {
 				topicsToUnsub := words[1:]
 				err := client.SendUnsubscribe(topicsToUnsub...)
 				if err != nil {
-					// TODO: add logging
-					fmt.Println("Error while sending unsubscribe", err)
+					log.Println("Error while sending unsubscribe", err)
 				}
 			}
 		}
@@ -136,4 +122,29 @@ func (client *Client) SetClientConnection(ip string, port int) error {
 
 	client.BrokerConnection = &connection
 	return nil
+}
+
+func listenForExit(client *Client) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		for range c {
+			cleanupAndExit(client)
+		}
+	}()
+}
+
+func cleanupAndExit(client *Client) {
+	if client != nil {
+		client.SendDisconnect()
+		if client.BrokerConnection != nil {
+			(*client.BrokerConnection).Close()
+			log.Println("\nConnection closed, goodbye")
+		}
+	} else {
+		log.Println("Client is already nil when we tried to exit")
+	}
+
+	os.Exit(0)
 }

@@ -20,6 +20,7 @@ func main() {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 		err = pprof.StartCPUProfile(f)
 		if err != nil {

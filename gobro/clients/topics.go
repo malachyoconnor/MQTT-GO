@@ -13,6 +13,13 @@ type TopicToSubscribers struct {
 	topLevelMap *structures.SafeMap[string, *topic]
 }
 
+// TODO
+func (topicToSubs TopicToSubscribers) DeleteAll() {
+	for _, topic := range topicToSubs.topLevelMap.Values() {
+		topic.deleteSelf()
+	}
+}
+
 func CreateTopicMap() *TopicToSubscribers {
 	topicMap := TopicToSubscribers{
 		topLevelMap: structures.CreateSafeMap[string, *topic](),
@@ -247,10 +254,7 @@ func (t *topic) DeleteTopic(topicSections []string) error {
 
 		for i, child := range t.children {
 			if child.name == topicSections[0] {
-				child.children = nil
-				child.connectedClients.DeleteLinkedList()
-				child.connectedClients = nil
-
+				child.deleteSelf()
 				// Remove that child from your children
 				t.children[i] = t.children[len(t.children)-1]
 				t.children = t.children[:len(t.children)-1]
@@ -267,6 +271,17 @@ func (t *topic) DeleteTopic(topicSections []string) error {
 	}
 
 	return ErrTopicDoesntExist
+}
+
+func (t *topic) deleteSelf() {
+	if t == nil {
+		return
+	}
+	for _, child := range t.children {
+		child.deleteSelf()
+	}
+	t.connectedClients.DeleteLinkedList()
+	t.connectedClients = nil
 }
 
 func (t *topic) AddTopic(topicSections []string) error {

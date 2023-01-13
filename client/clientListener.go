@@ -13,6 +13,7 @@ func (client *Client) ListenForPackets() {
 		packet, err := packets.ReadPacketFromConnection(reader)
 		if err != nil {
 			fmt.Println(err)
+			cleanupAndExit(client)
 		}
 
 		packetType := packets.GetPacketType(packet)

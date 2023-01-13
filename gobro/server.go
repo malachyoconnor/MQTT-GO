@@ -2,8 +2,10 @@ package gobro
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
+	"os/signal"
 	"sync"
 	"time"
 
@@ -21,6 +23,7 @@ type Server struct {
 	topicClientMap *clients.TopicToSubscribers
 	inputChan      *chan clients.ClientMessage
 	outputChan     *chan clients.ClientMessage
+	logFile        *os.File
 }
 
 func CreateServer() Server {
@@ -38,15 +41,28 @@ func CreateServer() Server {
 }
 
 func (server *Server) StopServer() {
-	os.Exit(0)
+	cleanupAndExit(server)
 }
 
 func (server *Server) StartServer() {
+
+	file, err := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	server.logFile = file
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	listenForExit(server)
+	log.SetOutput(file)
+	// Sets the log to storefile & line numbers
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
+	log.Println("--Server starting--")
 	// Listen for TCP connections
 	fmt.Println("Listening for TCP connections")
 	listener, err := net.Listen("tcp", ADDRESS+":"+PORT)
 	if err != nil {
-		fmt.Println("Error while trying to listen for TCP connections", err)
+		log.Println("- Error while trying to listen for TCP connections:", err)
+		fmt.Println("Error while trying to listen for TCP connections:", err)
 		return
 	}
 	defer listener.Close()
@@ -71,7 +87,7 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 
 		connection, err := (*listener).Accept()
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("Error while accepting a connection from '%v': %v\n", connection.RemoteAddr(), err)
 			return
 		}
 
@@ -81,7 +97,7 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 		err = connection.(*net.TCPConn).SetKeepAlivePeriod(5 * time.Second)
 
 		if err != nil {
-			fmt.Println(err)
+			log.Println("- Error while setting a keep alive period:", err)
 			return
 		}
 
@@ -110,4 +126,27 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable, server.topicClientMap, newArrayPos)
 
 	}
+}
+
+func listenForExit(server *Server) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		for range c {
+			cleanupAndExit(server)
+		}
+	}()
+}
+
+func cleanupAndExit(server *Server) {
+	for _, client := range server.clientTable.Values() {
+		client.Disconnect(server.topicClientMap, server.clientTable)
+	}
+	server.topicClientMap.DeleteAll()
+	log.Print("--Server exiting--\n\n")
+	if server.logFile != nil {
+		server.logFile.Close()
+	}
+	os.Exit(0)
 }

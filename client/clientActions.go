@@ -102,6 +102,7 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	return nil
 }
 
+// TODO: handle the return codes
 func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 	controlHeader := packets.ControlHeader{Type: packets.SUBSCRIBE, Flags: 2}
 	varHeader := packets.SubscribeVariableHeader{}
@@ -140,9 +141,6 @@ func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 	if suback.ControlHeader.Type != packets.SUBACK {
 		return errors.New("error: Our SUBACK got nabbed")
 	}
-
-	returnCodes := (*subackArr)[4:]
-	fmt.Println(returnCodes)
 
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"time"
 
@@ -30,7 +31,7 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet [
 func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
-		fmt.Println("Error handling connect ", err)
+		log.Printf("- Error handling connect from %v: %v\n", newClient.TCPConnection.RemoteAddr(), err)
 		if err.Error() == "error: Client already exists" {
 			connack := packets.CreateConnACK(false, 2)
 			_, err := (*connection).Write(connack)
@@ -46,6 +47,7 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 		return
 	}
 
+	log.Printf("+ Client '%v' joined from  and global addr '%v'\n", newClient.ClientIdentifier, (*connection).RemoteAddr())
 	// We wait 1 seconds to wait for everything else to catch up
 	defer handleDisconnect(*newClient, clientTable, topicToClient, connectedClient)
 
@@ -82,7 +84,7 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 		toSend := ClientMessage{ClientID: &clientID, Packet: packet, ClientConnection: connection}
 		packetPool <- toSend
 	}
-	fmt.Println("Client", clientID, "connection closed")
+	log.Printf("+ Client %v connection closed\n", clientID)
 	*connectedClient = ""
 }
 

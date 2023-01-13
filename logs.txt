@@ -1,0 +1,30 @@
+2023/01/13 14:05:34 server.go:57: --Server starting--
+2023/01/13 14:05:36 clientHandler.go:50: + Client 'i' joined
+2023/01/13 14:05:38 messageHandler.go:195: - Error while getting matching clients during a publish to 'abc' by '0xc000218030': error: Topic doesn't exist
+2023/01/13 14:05:51 clientHandler.go:87: + Client i connection closed
+2023/01/13 14:06:40 clientHandler.go:50: + Client 'pqg' joined
+2023/01/13 14:06:41 clientHandler.go:87: + Client pqg connection closed
+2023/01/13 14:06:56 clientHandler.go:50: + Client 'wo' joined
+2023/01/13 14:06:56 clientHandler.go:87: + Client wo connection closed
+2023/01/13 14:07:32 clientHandler.go:50: + Client '1' joined
+2023/01/13 14:07:33 clientHandler.go:87: + Client 1 connection closed
+2023/01/13 14:08:04 clientHandler.go:50: + Client 'u' joined
+2023/01/13 14:08:05 clientHandler.go:87: + Client u connection closed
+2023/01/13 14:08:11 server.go:139: --Server exiting--
+
+2023/01/13 14:12:27 server.go:59: --Server starting--
+2023/01/13 14:12:29 clientHandler.go:50: + Client 'dvw' joined
+2023/01/13 14:12:34 messageHandler.go:195: - Error while getting matching clients during a publish to 'abc' by 'dvw': error: Topic doesn't exist
+2023/01/13 14:12:35 clientHandler.go:87: + Client dvw connection closed
+2023/01/13 14:12:38 server.go:147: --Server exiting--
+
+2023/01/13 14:16:44 server.go:59: --Server starting--
+2023/01/13 14:16:45 clientHandler.go:50: + Client 'qhq' joined from local addr '127.0.0.1:8000' and global addr '127.0.0.1:35470'
+2023/01/13 14:16:46 clientHandler.go:87: + Client qhq connection closed
+2023/01/13 14:16:48 server.go:147: --Server exiting--
+
+2023/01/13 14:18:49 server.go:59: --Server starting--
+2023/01/13 14:18:51 clientHandler.go:50: + Client 'fk' joined from local addr '127.0.0.1:8000' and global addr '127.0.0.1:47160'
+2023/01/13 14:18:52 clientHandler.go:87: + Client fk connection closed
+2023/01/13 14:18:53 server.go:147: --Server exiting--
+

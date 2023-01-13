@@ -2,6 +2,7 @@ package gobro
 
 import (
 	"fmt"
+	"log"
 
 	"MQTT-GO/gobro/clients"
 	"MQTT-GO/packets"
@@ -29,7 +30,8 @@ func (msgH *MessageHandler) Listen(server *Server) {
 		client := clientTable.Get(clientID)
 
 		if client == nil {
-			fmt.Printf("Client '%v', who no longer exists, sent a message", clientID)
+			packetType := packets.PacketTypeName(packets.GetPacketType(clientMessage.Packet))
+			log.Printf("- Client '%v', who no longer exists, sent a %v packet\n", clientID, packetType)
 			continue
 		}
 
@@ -37,13 +39,13 @@ func (msgH *MessageHandler) Listen(server *Server) {
 		packetArray := clientMessage.Packet
 		packet, packetType, err := packets.DecodePacket(packetArray)
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("- Error during decoding '%v', from '%v': %v\n", packets.PacketTypeName(packetType), clientID, err)
 			continue
 		}
 		// General case for if the client doesn't exist if NOT a connect packet
 		if packetType != packets.CONNECT {
 			if !clientTable.Contains(clientID) {
-				fmt.Println("Client not in the client table sent", packets.PacketTypeName(packetType), "message, disconnecting.")
+				log.Printf("Client '%v' not in the client table sent %v message, disconnecting.\n", clientID, packets.PacketTypeName(packetType))
 				// If the client hasn't already been disconnected by the client handler
 				if client != nil {
 					client.TCPConnection.Close()
@@ -87,7 +89,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		// Add the client to the topic in the subscription table
 		topics, err := handleSubscribe(topicClientMap, client, *packet.Payload)
 		if err != nil {
-			fmt.Println("Error during subscribe:", err)
+			log.Printf("Error during subscribe: %v, from client '%v'\n", err, clientID)
 			return
 		}
 
@@ -157,7 +159,7 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 		if !topicClientMap.Contains(topic.TopicFilter) {
 			err = topicClientMap.AddTopic(topic.TopicFilter)
 			if err != nil {
-				fmt.Println("Error while adding new topic")
+				log.Printf("- Error while adding new topic %v, the topic name was '%v'\n", err, topicFilter)
 				return nil, err
 			}
 		}
@@ -170,7 +172,7 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 		client.AddTopic(newTopic)
 		err := topicClientMap.Put(newTopic.TopicFilter, client.ClientIdentifier)
 		if err != nil {
-			fmt.Println("Error while adding new topic")
+			log.Printf("- Error while adding new topic %v, the topic name was '%v'\n", err, newTopic.TopicFilter)
 			return nil, err
 		}
 		structures.PrintCentrally("SUBSCRIBED TO ", newTopic.TopicFilter)
@@ -183,15 +185,14 @@ func handleUnsubscribe(topics []string, TCMAP *clients.TopicToSubscribers, clien
 	TCMAP.Unsubscribe(client.ClientIdentifier, topics...)
 	for _, topic := range topics {
 		err := client.RemoveTopic(clients.Topic{TopicFilter: topic})
-		// TODO: add logging
-		fmt.Println("Error while removing from client topic list", err)
+		log.Printf("- Error while removing '%v' from client topic list: %v \n", client.ClientIdentifier, err)
 	}
 }
 
 func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
 	clientList, err := TCMap.GetMatchingClients(topic.TopicFilter)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("- Error while getting matching clients during a publish to '%v' by '%v': %v\n", topic.TopicFilter, *msgToForward.ClientID, err)
 		return
 	}
 	clientNode := clientList.Head()
@@ -204,7 +205,7 @@ func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgTo
 		if client := clientTable.Get(clientID); client != nil {
 			alteredMsg.ClientConnection = &(client.TCPConnection)
 		} else {
-			fmt.Printf("error: Can't find subscribed client '%v' in clientTable", clientID)
+			log.Printf("- Error: Can't find subscribed client '%v' in clientTable\n", clientID)
 			clientNode = clientNode.Next()
 			continue
 		}
