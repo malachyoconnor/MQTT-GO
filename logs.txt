@@ -28,3 +28,23 @@
 2023/01/13 14:18:52 clientHandler.go:87: + Client fk connection closed
 2023/01/13 14:18:53 server.go:147: --Server exiting--
 
+2023/01/13 16:54:55 server.go:65: --Server starting--
+2023/01/13 16:55:09 clientHandler.go:50: + Client 'ot' joined from  and global addr '127.0.0.1:39114'
+2023/01/13 16:55:11 clientHandler.go:87: + Client ot connection closed
+2023/01/13 16:55:12 server.go:153: --Server exiting--
+
+2023/01/13 17:04:58 server.go:65: --Server starting--
+2023/01/13 17:06:04 clientHandler.go:50: + Client 'o' joined from  and global addr '127.0.0.1:46040'
+2023/01/13 17:07:05 clientHandler.go:87: + Client o connection closed
+2023/01/13 17:07:23 clientHandler.go:50: + Client 'bqv' joined from  and global addr '127.0.0.1:47908'
+2023/01/13 17:07:24 messageHandler.go:208: - Error: Can't find subscribed client 'o' in clientTable
+2023/01/13 17:07:25 messageHandler.go:208: - Error: Can't find subscribed client 'o' in clientTable
+2023/01/13 17:07:26 messageHandler.go:208: - Error: Can't find subscribed client 'o' in clientTable
+2023/01/13 17:07:27 messageHandler.go:208: - Error: Can't find subscribed client 'o' in clientTable
+2023/01/13 17:07:28 messageHandler.go:208: - Error: Can't find subscribed client 'o' in clientTable
+2023/01/13 17:07:29 messageHandler.go:208: - Error: Can't find subscribed client 'o' in clientTable
+2023/01/13 17:07:30 messageHandler.go:208: - Error: Can't find subscribed client 'o' in clientTable
+2023/01/13 17:07:31 messageHandler.go:208: - Error: Can't find subscribed client 'o' in clientTable
+2023/01/13 17:07:31 clientHandler.go:87: + Client bqv connection closed
+2023/01/13 17:07:32 server.go:153: --Server exiting--
+

@@ -1,6 +1,7 @@
 package gobro
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -14,8 +15,10 @@ import (
 )
 
 var (
-	ADDRESS = "localhost"
-	PORT    = "8000"
+	ServerIP   = flag.String("serverip", "localhost", "Address to host on")
+	ServerPort = flag.String("serverport", "8000", "Port to listen on")
+	ADDRESS    = ""
+	PORT       = ""
 )
 
 type Server struct {
@@ -45,6 +48,9 @@ func (server *Server) StopServer() {
 }
 
 func (server *Server) StartServer() {
+	flag.Parse()
+	ADDRESS = *ServerIP
+	PORT = *ServerPort
 
 	file, err := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	server.logFile = file

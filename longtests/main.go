@@ -12,10 +12,12 @@ import (
 
 var (
 	doSubscribes = flag.Bool("continualSubscribe", false, "Continually subscribe")
-	runServer    = flag.Bool("continualSubscribe", false, "Start a server")
+	runServer    = flag.Bool("runServer", false, "Start a server")
 )
 
 func main() {
+	fmt.Println("Starting")
+	flag.Parse()
 	switch true {
 	case *doSubscribes:
 		continualSubscribe()
@@ -38,6 +40,7 @@ func continualSubscribe() {
 	}
 
 	err = client.SendConnect()
+	go client.ListenForPackets()
 
 	if err != nil {
 		fmt.Println(err)

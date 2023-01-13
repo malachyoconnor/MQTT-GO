@@ -43,7 +43,9 @@ func StartClient() {
 
 		return
 	}
+	fmt.Println("Got here")
 	err = client.SendConnect()
+	fmt.Println("Got here")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -115,7 +117,9 @@ func CreateClient() *Client {
 }
 
 func (client *Client) SetClientConnection(ip string, port int) error {
+	fmt.Println("Starting dial")
 	connection, err := net.Dial("tcp", net.JoinHostPort(ip, fmt.Sprint(port)))
+	fmt.Println("Finished dial")
 	if err != nil {
 		return err
 	}
