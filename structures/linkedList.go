@@ -34,6 +34,9 @@ func (ll *LinkedList[T]) GetItems() []T {
 }
 
 func (ll *LinkedList[T]) DeleteLinkedList() {
+	if ll == nil {
+		return
+	}
 	node := ll.head
 	for node != nil {
 		nextNode := node.next

@@ -88,7 +88,9 @@ func StartClient() {
 
 				err := client.SendPublish([]byte(stringBuilder.String()), words[1])
 				// TODO: add logging
-				fmt.Println("Error while sending subscribe", err)
+				if err != nil {
+					fmt.Println("Error while sending subscribe", err)
+				}
 			}
 		case "subscribe":
 			{
@@ -98,7 +100,9 @@ func StartClient() {
 				}
 				err := client.SendSubscribe(topics...)
 				// TODO: add logging
-				fmt.Println("Error while sending subscribe", err)
+				if err != nil {
+					fmt.Println("Error while sending subscribe", err)
+				}
 			}
 		case "unsubscribe":
 			{

@@ -18,13 +18,13 @@ func EncodeFixedHeader(fixedHeader ControlHeader) []byte {
 	return result
 }
 
-// TODO: We discard errors in this function...
 func EncodeConnect(packet *Packet) ([]byte, error) {
 	if packet.ControlHeader.Type != CONNECT {
 		panic("Tried to create a connect packet from a non-connect packet")
 	}
-	// Need to do control header last because only at the end can we know the value of the remaining length field
 
+	// The control header is added last because only at the end can we know the
+	// value of the remaining length field.
 	varLengthHeader := packet.VariableLengthHeader.(*ConnectVariableHeader)
 	// TODO: Random choice of 30 here - could be improved with some looking into, same for the Payload.
 	resultVarHeader := make([]byte, 0, 30)

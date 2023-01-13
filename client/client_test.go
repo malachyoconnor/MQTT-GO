@@ -28,11 +28,12 @@ func ServerUp() {
 		server.StartServer()
 	}()
 	serverUp = true
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
 }
 
 func TestMain(m *testing.M) {
 	ServerUp()
+	time.Sleep(time.Millisecond * 500)
 	m.Run()
 	server.StopServer()
 }
@@ -45,14 +46,13 @@ func testErr(t *testing.T, err error) {
 
 func TestConnectToServer(t *testing.T) {
 	client := client.CreateClient()
-	fmt.Println("clientID", client.ClientID)
-	defer testErr(t, client.SendDisconnect())
 	err := client.SetClientConnection("localhost", 8000)
+
 	if err != nil {
 		t.Error("Error while getting TCP connection to server", err)
 	}
-
 	err = client.SendConnect()
+	defer client.SendDisconnect()
 
 	if err != nil {
 		t.Error("Error while sending CONNECT to server:", err)
@@ -60,16 +60,13 @@ func TestConnectToServer(t *testing.T) {
 }
 
 func TestPublishToServer(t *testing.T) {
-	ServerUp()
-
 	client := client.CreateClient()
-	fmt.Println("clientID", client.ClientID)
 	err := client.SetClientConnection("localhost", 8000)
 	if err != nil {
 		t.Error(err)
 	}
 	err = client.SendConnect()
-	defer testErr(t, client.SendDisconnect())
+	defer client.SendDisconnect()
 
 	if err != nil {
 		t.Error("Error while connecting to server", err)
@@ -82,12 +79,10 @@ func TestPublishToServer(t *testing.T) {
 }
 
 func TestConstantPublish(t *testing.T) {
-	ServerUp()
 	client := client.CreateClient()
-	fmt.Println("clientID", client.ClientID)
-	err := client.SetClientConnection("localhost", 8000)
-	testErr(t, err)
-	defer testErr(t, client.SendDisconnect())
+	testErr(t, client.SetClientConnection("localhost", 8000))
+	testErr(t, client.SendConnect())
+	defer client.SendDisconnect()
 
 	time.Sleep(time.Second)
 	for i := 0; i < 10; i++ {
@@ -103,11 +98,11 @@ func TestWaitingPackets(t *testing.T) {
 
 	go func() {
 		waitingPacketsList.GetOrWait(0)
-		waitGroup.Add(-1)
+		waitGroup.Done()
 	}()
 	go func() {
 		waitingPacketsList.GetOrWait(2)
-		waitGroup.Add(-1)
+		waitGroup.Done()
 	}()
 
 	waitingPacketsList.AddItem(&client.StoredPacket{PacketID: 1})

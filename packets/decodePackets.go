@@ -422,7 +422,7 @@ func DecodePublish(packet []byte) (*Packet, error) {
 
 	varHeader.TopicFilter = topicName
 	payloadLength := fixedHeader.RemainingLength - varHeaderLen
-	offset = offset + varHeaderLen
+	offset += varHeaderLen
 
 	resultPacket.VariableLengthHeader = &varHeader
 

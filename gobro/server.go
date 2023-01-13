@@ -3,6 +3,7 @@ package gobro
 import (
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -11,9 +12,8 @@ import (
 )
 
 var (
-	ADDRESS    = "localhost"
-	PORT       = "8000"
-	serverStop = make(chan struct{}, 1)
+	ADDRESS = "localhost"
+	PORT    = "8000"
 )
 
 type Server struct {
@@ -38,7 +38,7 @@ func CreateServer() Server {
 }
 
 func (server *Server) StopServer() {
-	serverStop <- struct{}{}
+	os.Exit(0)
 }
 
 func (server *Server) StartServer() {
@@ -68,11 +68,6 @@ var (
 func AcceptConnections(listener *net.Listener, server *Server) {
 	fmt.Println("??", connectedClients)
 	for {
-
-		if len(serverStop) != 0 {
-			fmt.Println("Stopping server")
-			return
-		}
 
 		connection, err := (*listener).Accept()
 		if err != nil {
