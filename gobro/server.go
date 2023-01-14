@@ -15,10 +15,11 @@ import (
 )
 
 var (
-	ServerIP   = flag.String("serverip", "localhost", "Address to host on")
-	ServerPort = flag.String("serverport", "8000", "Port to listen on")
-	ADDRESS    = ""
-	PORT       = ""
+	ServerIP          = flag.String("serverip", "localhost", "Address to host on")
+	ServerPort        = flag.String("serverport", "8000", "Port to listen on")
+	ScheduledShutdown = flag.Float64("shutdown", 0.0, "Schedule a shutdown after a certain number of hours")
+	ADDRESS           = ""
+	PORT              = ""
 )
 
 type Server struct {
@@ -49,6 +50,8 @@ func (server *Server) StopServer() {
 
 func (server *Server) StartServer() {
 	flag.Parse()
+	fmt.Println(*ServerIP)
+	fmt.Println(*ServerPort)
 	ADDRESS = *ServerIP
 	PORT = *ServerPort
 
@@ -58,6 +61,8 @@ func (server *Server) StartServer() {
 		log.Fatal(err)
 	}
 	defer file.Close()
+	go scheduleShutdown(server)
+
 	listenForExit(server)
 	log.SetOutput(file)
 	// Sets the log to storefile & line numbers
@@ -65,6 +70,7 @@ func (server *Server) StartServer() {
 	log.Println("--Server starting--")
 	// Listen for TCP connections
 	fmt.Println("Listening for TCP connections")
+	fmt.Printf("Listening on %v\n", ADDRESS+":"+PORT)
 	listener, err := net.Listen("tcp", ADDRESS+":"+PORT)
 	if err != nil {
 		log.Println("- Error while trying to listen for TCP connections:", err)
@@ -132,6 +138,16 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable, server.topicClientMap, newArrayPos)
 
 	}
+}
+
+func scheduleShutdown(server *Server) {
+
+	if *ScheduledShutdown != 0 {
+		// Convert from microseconds to seconds to hours
+		time.Sleep(time.Duration(*ScheduledShutdown * 1000000000 * 3600))
+		server.StopServer()
+	}
+
 }
 
 func listenForExit(server *Server) {

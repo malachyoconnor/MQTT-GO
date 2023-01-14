@@ -13,6 +13,8 @@ import (
 var (
 	doSubscribes = flag.Bool("continualSubscribe", false, "Continually subscribe")
 	runServer    = flag.Bool("runServer", false, "Start a server")
+	ip           = flag.String("testip", "localhost", "Ip")
+	port         = flag.Int("testport", 8000, "Port")
 )
 
 func main() {
@@ -33,7 +35,7 @@ const (
 
 func continualSubscribe() {
 	client := client.CreateClient()
-	err := client.SetClientConnection("localhost", 8000)
+	err := client.SetClientConnection(*ip, *port)
 	if err != nil {
 		fmt.Println(err)
 		return
