@@ -8,7 +8,7 @@ import (
 )
 
 func (client *Client) ListenForPackets() {
-	reader := bufio.NewReader(*client.BrokerConnection)
+	reader := bufio.NewReader(client.BrokerConnection)
 	for {
 		packet, err := packets.ReadPacketFromConnection(reader)
 		if err != nil {

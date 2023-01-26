@@ -1,21 +1,21 @@
 package client
 
 import (
+	"MQTT-GO/network"
 	"MQTT-GO/packets"
-	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 )
 
 var (
 	WaitingPacketBufferSize = 100
+	ConnectionType          = network.TCP
 )
 
 type Client struct {
 	ClientID         string
-	BrokerConnection *net.Conn
+	BrokerConnection network.Con
 	ReceivedPackets  chan *packets.Packet
 	waitingAckStruct *WaitingAcks
 }
@@ -45,12 +45,16 @@ func CreateAndConnectClient(ip string, port int) (*Client, error) {
 }
 
 func (client *Client) SetClientConnection(ip string, port int) error {
-	connection, err := net.Dial("tcp", net.JoinHostPort(ip, fmt.Sprint(port)))
+	connection, err := network.NewCon(ConnectionType)
+	if err != nil {
+		return err
+	}
+	err = connection.Connect(ip, port)
 	if err != nil {
 		return err
 	}
 
-	client.BrokerConnection = &connection
+	client.BrokerConnection = connection
 	return nil
 }
 
@@ -69,7 +73,7 @@ func cleanupAndExit(client *Client) {
 	if client != nil {
 		client.SendDisconnect()
 		if client.BrokerConnection != nil {
-			(*client.BrokerConnection).Close()
+			client.BrokerConnection.Close()
 			log.Println("\nConnection closed, goodbye")
 		}
 	} else {

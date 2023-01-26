@@ -30,11 +30,11 @@ func (client *Client) SendConnect() error {
 	if client.BrokerConnection == nil {
 		return errors.New("error: connection is closed")
 	}
-	_, err = (*client.BrokerConnection).Write(connectPacketArr)
+	_, err = client.BrokerConnection.Write(connectPacketArr)
 	if err != nil {
 		return err
 	}
-	reader := bufio.NewReader(*client.BrokerConnection)
+	reader := bufio.NewReader(client.BrokerConnection)
 	result, err := packets.ReadPacketFromConnection(reader)
 	fmt.Println(result, "Read connack")
 	if err != nil {
@@ -80,7 +80,7 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	if client.BrokerConnection == nil {
 		return errors.New("error: connection is closed")
 	}
-	_, err = (*client.BrokerConnection).Write(publishPacketArr)
+	_, err = (client.BrokerConnection).Write(publishPacketArr)
 
 	if err != nil {
 		return err
@@ -131,7 +131,7 @@ func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 	if client.BrokerConnection == nil {
 		return errors.New("error: connection is closed")
 	}
-	_, err = (*client.BrokerConnection).Write(encodedPacket)
+	_, err = client.BrokerConnection.Write(encodedPacket)
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func (client *Client) SendUnsubscribe(topics ...string) error {
 	if client.BrokerConnection == nil {
 		return errors.New("error: connection is closed")
 	}
-	_, err = (*client.BrokerConnection).Write(encodedPacket)
+	_, err = client.BrokerConnection.Write(encodedPacket)
 	if err != nil {
 		return err
 	}
@@ -186,7 +186,7 @@ func (client *Client) SendDisconnect() error {
 		return errors.New("error: connection is closed")
 	}
 
-	_, err := (*client.BrokerConnection).Write(disconnectArr)
+	_, err := client.BrokerConnection.Write(disconnectArr)
 	if err != nil {
 		return err
 	}

@@ -4,13 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"sync"
 	"time"
 
 	"MQTT-GO/gobro/clients"
+	"MQTT-GO/network"
 	"MQTT-GO/structures"
 )
 
@@ -18,6 +18,7 @@ var (
 	ServerIP          = flag.String("serverip", "localhost", "Address to host on")
 	ServerPort        = flag.Int("serverport", 8000, "Port to listen on")
 	ScheduledShutdown = flag.Float64("shutdown", 0.0, "Schedule a shutdown after a certain number of hours")
+	ConnectionType    = network.TCP
 )
 
 type Server struct {
@@ -64,7 +65,15 @@ func (server *Server) StartServer() {
 	// Listen for TCP connections
 	fmt.Println("Listening for TCP connections")
 	fmt.Printf("Listening on %v\n", getServerIpAndPort())
-	listener, err := net.Listen("tcp", getServerIpAndPort())
+
+	listener, err := network.NewListener(ConnectionType)
+	if err != nil {
+		log.Print(err)
+		fmt.Println("FATAL:", err)
+		return
+	}
+	err = listener.Listen(*ServerIP, *ServerPort)
+
 	if err != nil {
 		log.Println("- Error while trying to listen for TCP connections:", err)
 		fmt.Println("Error while trying to listen for TCP connections:", err)
@@ -78,7 +87,7 @@ func (server *Server) StartServer() {
 	msgListener := CreateMessageHandler(server.inputChan, server.outputChan)
 	go msgListener.Listen(server)
 
-	AcceptConnections(&listener, server)
+	AcceptConnections(listener, server)
 }
 
 var (
@@ -86,11 +95,10 @@ var (
 	connectedClientsMutex = sync.Mutex{}
 )
 
-func AcceptConnections(listener *net.Listener, server *Server) {
-	fmt.Println("??", connectedClients)
+func AcceptConnections(listener network.Listener, server *Server) {
+	fmt.Println("Connected clients:", connectedClients)
 	for {
-
-		connection, err := (*listener).Accept()
+		connection, err := (listener).Accept()
 		if err != nil {
 			log.Printf("Error while accepting a connection from '%v': %v\n", connection.RemoteAddr(), err)
 			return
