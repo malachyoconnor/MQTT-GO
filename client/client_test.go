@@ -8,6 +8,8 @@ import (
 
 	"MQTT-GO/client"
 	"MQTT-GO/gobro"
+	"MQTT-GO/packets"
+	"MQTT-GO/structures"
 )
 
 var (
@@ -45,13 +47,9 @@ func testErr(t *testing.T, err error) {
 }
 
 func TestConnectToServer(t *testing.T) {
-	client := client.CreateClient()
-	err := client.SetClientConnection("localhost", 8000)
+	client, err := client.CreateAndConnectClient("localhost", 8000)
+	testErr(t, err)
 
-	if err != nil {
-		t.Error("Error while getting TCP connection to server", err)
-	}
-	err = client.SendConnect()
 	defer client.SendDisconnect()
 
 	if err != nil {
@@ -60,12 +58,8 @@ func TestConnectToServer(t *testing.T) {
 }
 
 func TestPublishToServer(t *testing.T) {
-	client := client.CreateClient()
-	err := client.SetClientConnection("localhost", 8000)
-	if err != nil {
-		t.Error(err)
-	}
-	err = client.SendConnect()
+	client, err := client.CreateAndConnectClient("localhost", 8000)
+	testErr(t, err)
 	defer client.SendDisconnect()
 
 	if err != nil {
@@ -79,12 +73,10 @@ func TestPublishToServer(t *testing.T) {
 }
 
 func TestConstantPublish(t *testing.T) {
-	client := client.CreateClient()
-	testErr(t, client.SetClientConnection("localhost", 8000))
-	testErr(t, client.SendConnect())
+	client, err := client.CreateAndConnectClient("localhost", 8000)
+	testErr(t, err)
 	defer client.SendDisconnect()
 
-	time.Sleep(time.Second)
 	for i := 0; i < 10; i++ {
 		err := client.SendPublish([]byte(fmt.Sprint("test", i)), "x/y")
 		testErr(t, err)
@@ -111,4 +103,59 @@ func TestWaitingPackets(t *testing.T) {
 	waitingPacketsList.AddItem(&client.StoredPacket{PacketID: 2})
 	waitingPacketsList.AddItem(&client.StoredPacket{PacketID: 0})
 	waitGroup.Wait()
+}
+
+func TestReceivingPublish(t *testing.T) {
+	client1, err := client.CreateAndConnectClient("localhost", 8000)
+	testErr(t, err)
+	client2, err := client.CreateAndConnectClient("localhost", 8000)
+	testErr(t, err)
+
+	client1.SendSubscribe(packets.TopicWithQoS{Topic: "testing"})
+	client2.SendPublish([]byte("test message"), "testing")
+
+	done := false
+
+	go func() {
+		time.Sleep(time.Millisecond * 200)
+		if !done {
+			t.Error("publish took too long")
+		}
+	}()
+
+	structures.PrintInterface(<-client1.ReceivedPackets)
+	done = true
+}
+
+func TestReceivingMultiplePublishes(t *testing.T) {
+	client1, err := client.CreateAndConnectClient("localhost", 8000)
+	testErr(t, err)
+	err = client1.SendSubscribe(packets.TopicWithQoS{Topic: "testing"})
+	testErr(t, err)
+	publishClients := make([]*client.Client, 10)
+
+	for i := 0; i < 10; i++ {
+		publishClients[i], err = client.CreateAndConnectClient("localhost", 8000)
+		testErr(t, err)
+	}
+
+	for i, client := range publishClients {
+		err = client.SendPublish([]byte(fmt.Sprintln("Testing", i)), "testing")
+		testErr(t, err)
+	}
+
+	done := false
+
+	go func() {
+		time.Sleep(time.Millisecond * 500)
+		if !done {
+			t.Error("publish took too long")
+		}
+	}()
+
+	for i := 0; i < 10; i++ {
+		<-client1.ReceivedPackets
+		fmt.Println("Got", i)
+	}
+	done = true
 }
