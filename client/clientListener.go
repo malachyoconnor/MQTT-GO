@@ -29,12 +29,17 @@ func (client *Client) ListenForPackets() {
 					Packet:   packet,
 					PacketID: packetID,
 				}
-				client.waitingPackets.AddItem(&toStore)
+				client.waitingAckStruct.AddItem(&toStore)
 			}
 
 		case packets.PUBLISH:
 			{
 				result, _, _ := packets.DecodePacket(packet)
+				// If we fill the buffer - form a queue
+				if len(client.ReceivedPackets) == WaitingPacketBufferSize {
+					go func() { client.ReceivedPackets <- result }()
+				}
+				client.ReceivedPackets <- result
 				fmt.Println("Received request to publish", string(result.Payload.RawApplicationMessage))
 			}
 

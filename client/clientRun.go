@@ -5,20 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
-	"os/signal"
 	"strings"
 
 	"MQTT-GO/packets"
 )
-
-type Client struct {
-	ClientID         string
-	BrokerConnection *net.Conn
-	receivedMessages chan *[]byte
-	waitingPackets   *WaitingPackets
-}
 
 var (
 	port = flag.Int("port", 8000, "Get the port the server is being run on")
@@ -104,51 +95,4 @@ func StartClient() {
 		}
 
 	}
-}
-
-func CreateClient() *Client {
-	messageChannel := make(chan *[]byte, 20)
-	waitingPackets := CreateWaitingPacketList()
-	return &Client{
-		receivedMessages: messageChannel,
-		ClientID:         generateRandomClientID(),
-		waitingPackets:   waitingPackets,
-	}
-}
-
-func (client *Client) SetClientConnection(ip string, port int) error {
-	fmt.Println("Starting dial")
-	connection, err := net.Dial("tcp", net.JoinHostPort(ip, fmt.Sprint(port)))
-	fmt.Println("Finished dial")
-	if err != nil {
-		return err
-	}
-
-	client.BrokerConnection = &connection
-	return nil
-}
-
-func listenForExit(client *Client) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-
-	go func() {
-		for range c {
-			cleanupAndExit(client)
-		}
-	}()
-}
-
-func cleanupAndExit(client *Client) {
-	if client != nil {
-		client.SendDisconnect()
-		if client.BrokerConnection != nil {
-			(*client.BrokerConnection).Close()
-			log.Println("\nConnection closed, goodbye")
-		}
-	} else {
-		log.Println("Client is already nil when we tried to exit")
-	}
-
-	os.Exit(0)
 }

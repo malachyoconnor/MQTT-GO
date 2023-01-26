@@ -16,10 +16,8 @@ import (
 
 var (
 	ServerIP          = flag.String("serverip", "localhost", "Address to host on")
-	ServerPort        = flag.String("serverport", "8000", "Port to listen on")
+	ServerPort        = flag.Int("serverport", 8000, "Port to listen on")
 	ScheduledShutdown = flag.Float64("shutdown", 0.0, "Schedule a shutdown after a certain number of hours")
-	ADDRESS           = ""
-	PORT              = ""
 )
 
 type Server struct {
@@ -50,11 +48,6 @@ func (server *Server) StopServer() {
 
 func (server *Server) StartServer() {
 	flag.Parse()
-	fmt.Println(*ServerIP)
-	fmt.Println(*ServerPort)
-	ADDRESS = *ServerIP
-	PORT = *ServerPort
-
 	file, err := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	server.logFile = file
 	if err != nil {
@@ -70,8 +63,8 @@ func (server *Server) StartServer() {
 	log.Println("--Server starting--")
 	// Listen for TCP connections
 	fmt.Println("Listening for TCP connections")
-	fmt.Printf("Listening on %v\n", ADDRESS+":"+PORT)
-	listener, err := net.Listen("tcp", ADDRESS+":"+PORT)
+	fmt.Printf("Listening on %v\n", getServerIpAndPort())
+	listener, err := net.Listen("tcp", getServerIpAndPort())
 	if err != nil {
 		log.Println("- Error while trying to listen for TCP connections:", err)
 		fmt.Println("Error while trying to listen for TCP connections:", err)
@@ -104,9 +97,9 @@ func AcceptConnections(listener *net.Listener, server *Server) {
 		}
 
 		fmt.Println("Accepted a connection")
-		// Set a keep alive period because there isn't a foolproof way of checking if the connection
-		// suddenly closes - we want to wait for DISCONNECT messages or timeout.
-		err = connection.(*net.TCPConn).SetKeepAlivePeriod(5 * time.Second)
+		// // Set a keep alive period because there isn't a foolproof way of checking if the connection
+		// // suddenly closes - we want to wait for DISCONNECT messages or timeout.
+		// err = connection.(*net.TCPConn).SetKeepAlivePeriod(5 * time.Second)
 
 		if err != nil {
 			log.Println("- Error while setting a keep alive period:", err)
@@ -171,4 +164,8 @@ func cleanupAndExit(server *Server) {
 		server.logFile.Close()
 	}
 	os.Exit(0)
+}
+
+func getServerIpAndPort() string {
+	return fmt.Sprint(*ServerIP, ":", *ServerPort)
 }

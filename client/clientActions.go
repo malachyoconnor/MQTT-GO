@@ -92,7 +92,7 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 		return nil
 	}
 
-	pubackArr := client.waitingPackets.GetOrWait(packetID)
+	pubackArr := client.waitingAckStruct.GetOrWait(packetID)
 	packet, _, _ := packets.DecodePacket(*pubackArr)
 
 	if packet.ControlHeader.Type != packets.PUBACK {
@@ -135,7 +135,7 @@ func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 	if err != nil {
 		return err
 	}
-	subackArr := client.waitingPackets.GetOrWait(packetID)
+	subackArr := client.waitingAckStruct.GetOrWait(packetID)
 	suback, _, _ := packets.DecodePacket(*subackArr)
 
 	if suback.ControlHeader.Type != packets.SUBACK {
@@ -164,7 +164,7 @@ func (client *Client) SendUnsubscribe(topics ...string) error {
 	if err != nil {
 		return err
 	}
-	unsubackArr := client.waitingPackets.GetOrWait(packetID)
+	unsubackArr := client.waitingAckStruct.GetOrWait(packetID)
 	suback, _, _ := packets.DecodePacket(*unsubackArr)
 
 	if suback.ControlHeader.Type != packets.UNSUBACK {
