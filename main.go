@@ -9,6 +9,7 @@ import (
 
 	"MQTT-GO/client"
 	"MQTT-GO/gobro"
+	"MQTT-GO/stresstests"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -43,14 +44,29 @@ func main() {
 		return
 	}
 
-	if args[numFlags] == "gobro" {
-		server := gobro.CreateServer()
-		server.StartServer()
-	} else if args[numFlags] == "client" {
-		client.StartClient()
-	} else {
-		fmt.Println("Malformed input, exiting")
+	switch args[numFlags] {
+	case "gobro":
+		{
+			server := gobro.CreateServer()
+			server.StartServer()
+		}
+	case "client":
+		{
+			client.StartClient()
+		}
+
+	case "stresstest":
+		{
+			stresstests.ConnectAndPublish(200)
+		}
+
+	default:
+		{
+			fmt.Println("Malformed input, exiting")
+		}
+
 	}
+
 }
 
 // I want to be able to put non-options before the flags - to do this we permute the os.args
