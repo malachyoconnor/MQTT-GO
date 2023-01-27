@@ -31,7 +31,7 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet [
 func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
-		log.Printf("- Error handling connect from %v: %v\n", newClient.TCPConnection.RemoteAddr(), err)
+		log.Printf("- Error handling connect from %v: %v\n", newClient.NetworkConnection.RemoteAddr(), err)
 		if err.Error() == "error: Client already exists" {
 			connack := packets.CreateConnACK(false, 2)
 			_, err := (*connection).Write(connack)
@@ -61,13 +61,9 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 
 	reader := bufio.NewReader(*connection)
 	for {
-
 		packet, err := packets.ReadPacketFromConnection(reader)
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			if structures.StringEndsWith(err.Error(), "use of a closed network connection") {
+			if err == io.EOF || errors.Is(err, net.ErrClosed) {
 				break
 			}
 
@@ -86,6 +82,7 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	}
 	log.Printf("+ Client %v connection closed\n", clientID)
 	*connectedClient = ""
+
 }
 
 // handleInitialConnect decodes the packet to find a ClientID - if none exists
@@ -131,7 +128,7 @@ func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *
 
 	// If the client has already been disconnected elsewhere
 	// by a call to client.Disconnect
-	if !clientTable.Contains(client.ClientIdentifier) || client.TCPConnection.Close() != nil {
+	if !clientTable.Contains(client.ClientIdentifier) || client.NetworkConnection.Close() != nil {
 		return
 	}
 

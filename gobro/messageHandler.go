@@ -48,7 +48,7 @@ func (msgH *MessageHandler) Listen(server *Server) {
 				log.Printf("Client '%v' not in the client table sent %v message, disconnecting.\n", clientID, packets.PacketTypeName(packetType))
 				// If the client hasn't already been disconnected by the client handler
 				if client != nil {
-					client.TCPConnection.Close()
+					client.NetworkConnection.Close()
 				}
 				continue
 			}
@@ -117,7 +117,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.DISCONNECT:
-		// Close the client TCP connection.
+		// Close the client connection.
 		// Remove the packet from the client list
 		ticket.WaitOnTicket()
 		client.Disconnect(topicClientMap, clientTable)
@@ -203,7 +203,7 @@ func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgTo
 		alteredMsg.ClientID = &clientID
 
 		if client := clientTable.Get(clientID); client != nil {
-			alteredMsg.ClientConnection = &(client.TCPConnection)
+			alteredMsg.ClientConnection = &(client.NetworkConnection)
 		} else {
 			log.Printf("- Error: Can't find subscribed client '%v' in clientTable\n", clientID)
 			clientNode = clientNode.Next()

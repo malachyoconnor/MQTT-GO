@@ -28,10 +28,30 @@ func NewCon(networkID byte) (Con, error) {
 		{
 			return &TCPCon{}, nil
 		}
+	case UDP:
+		{
+			return &UDPCon{}, nil
+		}
 	}
 	return nil, fmt.Errorf("error: Supplied networkID %v is not defined", networkID)
 }
 
 type TCPCon struct {
 	connection *net.Conn
+}
+
+const (
+	UDP_SERVER_CONNECTION byte = 1
+	UDP_CLIENT_CONNECTION byte = 2
+)
+
+type UDPCon struct {
+	connection     *net.UDPConn
+	packetBuffer   chan []byte
+	localAddr      string
+	remoteAddr     string
+	connected      bool
+	connectionType byte
+
+	serverConnectionDeleter func()
 }

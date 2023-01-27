@@ -13,16 +13,16 @@ type ClientID string
 
 // Topics is used so we don't have to search the whole topic tree when removing a client
 type Client struct {
-	ClientIdentifier ClientID
-	Topics           *structures.LinkedList[Topic]
-	TCPConnection    net.Conn
-	Tickets          *structures.TicketStand
+	ClientIdentifier  ClientID
+	Topics            *structures.LinkedList[Topic]
+	NetworkConnection net.Conn
+	Tickets           *structures.TicketStand
 }
 
 func CreateClient(clientID ClientID, conn *net.Conn) *Client {
 	client := Client{}
 	client.ClientIdentifier = clientID
-	client.TCPConnection = *conn
+	client.NetworkConnection = *conn
 	client.Tickets = structures.CreateTicketStand()
 
 	return &client
@@ -55,7 +55,7 @@ func (client *Client) Disconnect(topicClientMap *TopicToSubscribers, clientTable
 	topicClientMap.DeleteClientSubscriptions(client)
 	clientTable.Delete(client.ClientIdentifier)
 	client.Topics.DeleteLinkedList()
-	client.TCPConnection.Close()
+	client.NetworkConnection.Close()
 }
 
 var (

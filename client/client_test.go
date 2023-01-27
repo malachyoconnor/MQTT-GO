@@ -147,7 +147,7 @@ func TestReceivingMultiplePublishes(t *testing.T) {
 	done := false
 
 	go func() {
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Millisecond * 50)
 		if !done {
 			t.Error("publish took too long")
 		}
