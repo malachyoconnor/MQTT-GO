@@ -23,10 +23,6 @@ func (topicToClient *TopicToClient) Print() {
 }
 
 func (topicToClient *TopicToClient) AddTopicClientPair(topic Topic, newClientID ClientID) {
-	// TODO: HANDLE WILDCARD TOPICS
-	// We should just maintain a list of topics and find a way of querying the closest
-	// one to the wildcard
-
 	clientLL := (*topicToClient)[topic]
 	if !clientLL.Contains(newClientID) {
 		clientLL.Append(newClientID)

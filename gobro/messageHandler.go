@@ -181,16 +181,16 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 	return newTopics, nil
 }
 
-func handleUnsubscribe(topics []string, TCMAP *clients.TopicToSubscribers, client clients.Client) {
-	TCMAP.Unsubscribe(client.ClientIdentifier, topics...)
+func handleUnsubscribe(topics []string, topicToSubscribers *clients.TopicToSubscribers, client clients.Client) {
+	topicToSubscribers.Unsubscribe(client.ClientIdentifier, topics...)
 	for _, topic := range topics {
 		err := client.RemoveTopic(clients.Topic{TopicFilter: topic})
 		log.Printf("- Error while removing '%v' from client topic list: %v \n", client.ClientIdentifier, err)
 	}
 }
 
-func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
-	clientList, err := TCMap.GetMatchingClients(topic.TopicFilter)
+func handlePublish(topicToSubscribers *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
+	clientList, err := topicToSubscribers.GetMatchingClients(topic.TopicFilter)
 	if err != nil {
 		log.Printf("- Error while getting matching clients during a publish to '%v' by '%v': %v\n", topic.TopicFilter, *msgToForward.ClientID, err)
 		return

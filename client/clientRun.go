@@ -25,18 +25,13 @@ func StartClient() {
 	client := CreateClient()
 	listenForExit(client)
 	err := client.SetClientConnection(*ip, *port)
-	if err != nil {
-		if err.Error()[len(err.Error())-len("connection refused"):] == "connection refused" {
-			fmt.Println("Could not connect to server - connection was refused")
-		} else {
-			fmt.Println(err)
-		}
 
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
-	fmt.Println("Got here")
+
 	err = client.SendConnect()
-	fmt.Println("Got here")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -52,7 +47,7 @@ func StartClient() {
 	for {
 		fmt.Print("-> ")
 		text, _ := reader.ReadString('\n')
-		text = strings.Replace(text, "\n", "", -1)
+		text = strings.ReplaceAll(text, "\n", "")
 		words := strings.Split(text, " ")
 
 		if len(words) == 1 {
@@ -62,13 +57,9 @@ func StartClient() {
 		switch words[0] {
 		case "publish":
 			{
-				var stringBuilder strings.Builder
-				for _, word := range words[2:] {
-					stringBuilder.WriteString(word)
-					stringBuilder.WriteRune(' ')
-				}
+				combinedWords := strings.Join(words[2:], " ")
 
-				err := client.SendPublish([]byte(stringBuilder.String()), words[1])
+				err := client.SendPublish([]byte(combinedWords), words[1])
 				if err != nil {
 					log.Println("Error while sending subscribe", err)
 				}

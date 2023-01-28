@@ -64,7 +64,6 @@ var (
 )
 
 func generateClientID() ClientID {
-	// TODO: Make this return a better unique string per new client
 	numClientsMutex.Lock()
 	numClients++
 	username := fmt.Sprint(numClients)

@@ -62,17 +62,11 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	reader := bufio.NewReader(*connection)
 	for {
 		packet, err := packets.ReadPacketFromConnection(reader)
+		if err == io.EOF || errors.Is(err, net.ErrClosed) {
+			break
+		}
 		if err != nil {
-			if err == io.EOF || errors.Is(err, net.ErrClosed) {
-				break
-			}
-
 			fmt.Println("Error while reading", err)
-
-			client := clientTable.Get(clientID)
-			if client == nil {
-				return
-			}
 			break
 		}
 

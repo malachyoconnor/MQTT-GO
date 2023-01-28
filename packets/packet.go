@@ -49,12 +49,24 @@ type VariableLengthHeader interface {
 
 // This ensures we only pass around POINTERS to our variable header structs
 // Otherwise we could be passing the structs itself and not realise it
-func (*PublishVariableHeader) SafetyFunc()     {}
-func (*ConnectVariableHeader) SafetyFunc()     {}
-func (*SubscribeVariableHeader) SafetyFunc()   {}
-func (*ConnackVariableHeader) SafetyFunc()     {}
-func (*SubackVariableHeader) SafetyFunc()      {}
-func (*UnsubscribeVariableHeader) SafetyFunc() {}
+func (*PublishVariableHeader) SafetyFunc() {
+	//Safety func to ensure passing pointers to variable headers - remove once finished development
+}
+func (*ConnectVariableHeader) SafetyFunc() {
+	//Safety func to ensure passing pointers to variable headers - remove once finished development
+}
+func (*SubscribeVariableHeader) SafetyFunc() {
+	//Safety func to ensure passing pointers to variable headers - remove once finished development
+}
+func (*ConnackVariableHeader) SafetyFunc() {
+	//Safety func to ensure passing pointers to variable headers - remove once finished development
+}
+func (*SubackVariableHeader) SafetyFunc() {
+	//Safety func to ensure passing pointers to variable headers - remove once finished development
+}
+func (*UnsubscribeVariableHeader) SafetyFunc() {
+	//Safety func to ensure passing pointers to variable headers - remove once finished development
+}
 
 type ControlHeader struct {
 	RemainingLength int
@@ -100,7 +112,6 @@ type SubscribeVariableHeader struct {
 	PacketIdentifier int
 }
 
-// TODO: change the byte lists to pointers to byte lists
 type PacketPayload struct {
 	ClientID              string
 	WillTopic             string

@@ -9,7 +9,7 @@ import (
 func TestEncodingVarInts(test *testing.T) {
 	for i := 0; i < 200; i++ {
 		arr := EncodeVarLengthInt(i)
-		x, _, _ := DecodeVarLengthInt(arr[:])
+		x, _, _ := DecodeVarLengthInt(arr)
 
 		if x != i {
 			test.Error("Encoding and decoding are not symmetrical")

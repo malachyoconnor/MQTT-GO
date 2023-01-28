@@ -97,6 +97,8 @@ var (
 
 func AcceptConnections(listener network.Listener, server *Server) {
 	fmt.Println("Connected clients:", connectedClients)
+	waitingToPrint := sync.Mutex{}
+	lastPrintTime := time.Now()
 	for {
 		connection, err := (listener).Accept()
 		if err != nil {
@@ -131,9 +133,19 @@ func AcceptConnections(listener network.Listener, server *Server) {
 		connectedClientsMutex.Unlock()
 
 		go func() {
+
 			time.Sleep(time.Millisecond * 200)
+			if !(time.Since(lastPrintTime) > time.Second) {
+				return
+			}
+			// Prevent output writing overtop of itself
+			if !waitingToPrint.TryLock() {
+				return
+			}
+			lastPrintTime = time.Now()
 			fmt.Print("Connected clients: ")
 			structures.PrintArray(connectedClients, "")
+			waitingToPrint.Unlock()
 		}()
 
 		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable, server.topicClientMap, newArrayPos)

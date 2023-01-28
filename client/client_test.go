@@ -97,6 +97,11 @@ func TestWaitingPackets(t *testing.T) {
 		waitGroup.Done()
 	}()
 
+	go func() {
+		time.Sleep(time.Second)
+		t.Error("Took to long to complete")
+	}()
+
 	waitingPacketsList.AddItem(&client.StoredPacket{PacketID: 1})
 	waitingPacketsList.AddItem(&client.StoredPacket{PacketID: 5})
 	waitingPacketsList.AddItem(&client.StoredPacket{PacketID: 9})

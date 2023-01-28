@@ -12,6 +12,10 @@ import (
 
 // Here we'll have the functions that make the client perform it's actions.
 
+var (
+	errConnectionClosed = errors.New("error: connection is closed")
+)
+
 func (client *Client) SendConnect() error {
 	if client.BrokerConnection == nil {
 		return errors.New("error: Client does not have a broker connection")
@@ -28,7 +32,7 @@ func (client *Client) SendConnect() error {
 		return err
 	}
 	if client.BrokerConnection == nil {
-		return errors.New("error: connection is closed")
+		return errConnectionClosed
 	}
 	_, err = client.BrokerConnection.Write(connectPacketArr)
 	if err != nil {
@@ -78,7 +82,7 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 		return err
 	}
 	if client.BrokerConnection == nil {
-		return errors.New("error: connection is closed")
+		return errConnectionClosed
 	}
 	_, err = (client.BrokerConnection).Write(publishPacketArr)
 
@@ -129,7 +133,7 @@ func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 		return err
 	}
 	if client.BrokerConnection == nil {
-		return errors.New("error: connection is closed")
+		return errConnectionClosed
 	}
 	_, err = client.BrokerConnection.Write(encodedPacket)
 	if err != nil {
@@ -158,7 +162,7 @@ func (client *Client) SendUnsubscribe(topics ...string) error {
 		return err
 	}
 	if client.BrokerConnection == nil {
-		return errors.New("error: connection is closed")
+		return errConnectionClosed
 	}
 	_, err = client.BrokerConnection.Write(encodedPacket)
 	if err != nil {
@@ -183,7 +187,7 @@ func (client *Client) SendDisconnect() error {
 	disconnectArr := packets.EncodeFixedHeader(controlHeader)
 
 	if client.BrokerConnection == nil {
-		return errors.New("error: connection is closed")
+		return errConnectionClosed
 	}
 
 	_, err := client.BrokerConnection.Write(disconnectArr)

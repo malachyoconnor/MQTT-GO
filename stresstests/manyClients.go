@@ -24,13 +24,13 @@ func ConnectAndPublish(numClients int) {
 		}
 		clients[i] = *client
 
-		client.SendPublish([]byte("dsadsadsadsa"), "abc")
+		client.SendPublish([]byte("TEST"), "abc")
 	}
 
 	fmt.Fprintln(storedStdout, "Connected all the clients")
 
 	for _, client := range clients {
-		client.SendPublish([]byte("dsadsadsadsa"), "abc")
+		client.SendPublish([]byte("TEST"), "abc")
 	}
 
 	fmt.Fprintln(storedStdout, "Published from all clients")

@@ -3,6 +3,7 @@ package clients
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"MQTT-GO/structures"
@@ -13,7 +14,6 @@ type TopicToSubscribers struct {
 	topLevelMap *structures.SafeMap[string, *topic]
 }
 
-// TODO
 func (topicToSubs TopicToSubscribers) DeleteAll() {
 	for _, topic := range topicToSubs.topLevelMap.Values() {
 		topic.deleteSelf()
@@ -115,7 +115,7 @@ func (topicMap *TopicToSubscribers) Unsubscribe(clientID ClientID, topicNames ..
 		if subscribedClients.Size == 0 {
 			err := topicMap.Delete(topic)
 			if err != nil {
-				// TODO: Add logging
+				log.Println("- error while removing topic from topicMap", err)
 				fmt.Println("error while removing topic from topicMap", err)
 			}
 		}
@@ -200,10 +200,10 @@ func (topicToClient *TopicToSubscribers) GetMatchingClients(topicName string) (*
 }
 
 // err can be ErrTopicDoesntExist or nil
-func (TopicToClient *TopicToSubscribers) get(topicName string) (*structures.LinkedList[ClientID], error) {
+func (topicToClient *TopicToSubscribers) get(topicName string) (*structures.LinkedList[ClientID], error) {
 	topicSections := strings.Split(topicName, "/")
 
-	topLevelTopic := TopicToClient.topLevelMap.Get(topicSections[0])
+	topLevelTopic := topicToClient.topLevelMap.Get(topicSections[0])
 	if topLevelTopic == nil {
 		return nil, ErrTopicDoesntExist
 	}
@@ -321,7 +321,6 @@ func (t *topic) getAllLowerLevelClients() *structures.LinkedList[ClientID] {
 	return result
 }
 
-// TODO: Add + support
 func (t *topic) getMatchingClients(topicSections []string) *structures.LinkedList[ClientID] {
 	// If we've gotten to the end of the topic list
 	if len(topicSections) == 0 {

@@ -20,7 +20,7 @@ var (
 func main() {
 	fmt.Println("Starting")
 	flag.Parse()
-	switch true {
+	switch {
 	case *doSubscribes:
 		continualSubscribe()
 	case *runServer:
