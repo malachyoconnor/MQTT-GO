@@ -1,7 +1,6 @@
 package gobro
 
 import (
-	"fmt"
 	"log"
 
 	"MQTT-GO/gobro/clients"
@@ -75,7 +74,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
-		fmt.Println("Received request to publish:", string(packet.Payload.RawApplicationMessage), "to topic:", string(packet.VariableLengthHeader.(*packets.PublishVariableHeader).TopicFilter))
+		clients.ServerPrintln("Received request to publish:", string(packet.Payload.RawApplicationMessage), "to topic:", string(packet.VariableLengthHeader.(*packets.PublishVariableHeader).TopicFilter))
 
 		varHeader := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
 		topic := clients.Topic{
@@ -189,8 +188,8 @@ func handleUnsubscribe(topics []string, topicToSubscribers *clients.TopicToSubsc
 	}
 }
 
-func handlePublish(topicToSubscribers *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
-	clientList, err := topicToSubscribers.GetMatchingClients(topic.TopicFilter)
+func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
+	clientList, err := TCMap.GetMatchingClients(topic.TopicFilter)
 	if err != nil {
 		log.Printf("- Error while getting matching clients during a publish to '%v' by '%v': %v\n", topic.TopicFilter, *msgToForward.ClientID, err)
 		return

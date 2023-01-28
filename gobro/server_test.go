@@ -15,7 +15,7 @@ func TestServerStarts(t *testing.T) {
 		}
 	}()
 
-	server := gobro.CreateServer()
+	server := gobro.NewServer()
 	go server.StartServer()
 
 	time.Sleep(time.Millisecond * 200)

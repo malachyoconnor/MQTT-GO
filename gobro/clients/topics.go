@@ -2,7 +2,6 @@ package clients
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 
@@ -30,7 +29,7 @@ func CreateTopicMap() *TopicToSubscribers {
 func (topicMap *TopicToSubscribers) PrintTopics() {
 	for _, topic := range topicMap.topLevelMap.Values() {
 		topic.PrintTopics()
-		fmt.Println()
+		ServerPrintln()
 	}
 }
 
@@ -45,14 +44,14 @@ func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
 		clientLL, err := topicMap.get(topic)
 		// Race condition
 		if err != nil {
-			fmt.Println("Tried to remove topic that had already been deleted")
+			ServerPrintln("Tried to remove topic that had already been deleted")
 			node = node.Next()
 			continue
 		}
 
 		err = clientLL.Delete(client.ClientIdentifier)
 		if err != nil {
-			fmt.Println("Tried to delete client and got:", err)
+			ServerPrintln("Tried to delete client and got:", err)
 		}
 		if clientLL.Size == 0 {
 			err := topicMap.Delete(topic)
@@ -102,12 +101,12 @@ func (topicMap *TopicToSubscribers) Unsubscribe(clientID ClientID, topicNames ..
 	for _, topic := range topicNames {
 		subscribedClients, err := topicMap.get(topic)
 		if err != nil {
-			fmt.Println("Error while unsubscribing:", err)
+			ServerPrintln("Error while unsubscribing:", err)
 			continue
 		}
 		err = subscribedClients.Delete(clientID)
 		if err != nil {
-			fmt.Println("Error while deleting client:", err)
+			ServerPrintln("Error while deleting client:", err)
 			continue
 		}
 		// If no one is left subscribed to the topic, remove it.
@@ -116,7 +115,7 @@ func (topicMap *TopicToSubscribers) Unsubscribe(clientID ClientID, topicNames ..
 			err := topicMap.Delete(topic)
 			if err != nil {
 				log.Println("- error while removing topic from topicMap", err)
-				fmt.Println("error while removing topic from topicMap", err)
+				ServerPrintln("error while removing topic from topicMap", err)
 			}
 		}
 	}
@@ -220,11 +219,11 @@ func (topicToClient *TopicToSubscribers) get(topicName string) (*structures.Link
 }
 
 func (t *topic) PrintTopics() {
-	fmt.Print(t.name, "(", t.connectedClients.GetItems(), ")", ": ")
+	ServerPrintf("%v (%v):  ", t.name, t.connectedClients.GetItems())
 	for _, child := range t.children {
-		fmt.Print(child.name, " ")
+		ServerPrintf("%v ", child.name)
 	}
-	fmt.Println()
+	ServerPrintln()
 
 	for _, child := range t.children {
 		child.PrintTopics()

@@ -147,7 +147,7 @@ func (ll *LinkedList[T]) RemoveDuplicates() {
 				ll.tail = ll.tail.prev
 				ll.tail.next = nil
 			default:
-				node.delete_node()
+				node.deleteNode()
 			}
 			ll.Size--
 		}
@@ -224,7 +224,7 @@ func (ll *LinkedList[T]) Delete(val T) error {
 	for i := 0; i < ll.Size; i++ {
 		if node.val == val {
 			ll.Size--
-			node.delete_node()
+			node.deleteNode()
 			return nil
 		}
 		node = node.next
@@ -280,7 +280,7 @@ func (node *Node[T]) Prev() *Node[T] {
 	return node.prev
 }
 
-func (node *Node[T]) delete_node() {
+func (node *Node[T]) deleteNode() {
 	// Note prev CANNOT be nil, as we cannot be called on the head
 	// We can't rely on that because we can't delete ourselves if we're
 	// the head or tail because we won't be garbage collected.

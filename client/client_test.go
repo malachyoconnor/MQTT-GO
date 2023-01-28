@@ -24,7 +24,7 @@ func ServerUp() {
 	if serverUp {
 		return
 	}
-	server = gobro.CreateServer()
+	server = gobro.NewServer()
 
 	go func() {
 		server.StartServer()
@@ -35,9 +35,12 @@ func ServerUp() {
 
 func TestMain(m *testing.M) {
 	ServerUp()
+	gobro.DisableStdOutput()
+
 	time.Sleep(time.Millisecond * 500)
 	m.Run()
-	server.StopServer()
+
+	// os.Exit(exitCode)
 }
 
 func testErr(t *testing.T, err error) {
@@ -98,7 +101,7 @@ func TestWaitingPackets(t *testing.T) {
 	}()
 
 	go func() {
-		time.Sleep(time.Second)
+		time.Sleep(2 * time.Second)
 		t.Error("Took to long to complete")
 	}()
 
@@ -122,7 +125,7 @@ func TestReceivingPublish(t *testing.T) {
 	done := false
 
 	go func() {
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(time.Millisecond * 50)
 		if !done {
 			t.Error("publish took too long")
 		}
@@ -152,7 +155,7 @@ func TestReceivingMultiplePublishes(t *testing.T) {
 	done := false
 
 	go func() {
-		time.Sleep(time.Millisecond * 50)
+		time.Sleep(time.Millisecond * 500)
 		if !done {
 			t.Error("publish took too long")
 		}

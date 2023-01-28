@@ -1,8 +1,6 @@
 package gobro
 
 import (
-	"fmt"
-
 	"MQTT-GO/gobro/clients"
 )
 
@@ -37,7 +35,7 @@ func (MessageSender) ListenAndSend(server *Server) {
 			_, err := (*clientMsg.ClientConnection).Write(packet)
 			ticket.TicketCompleted()
 			if err != nil {
-				fmt.Println("Failed to send packet to", client, "- Error:", err)
+				clients.ServerPrintln("Failed to send packet to", client, "- Error:", err)
 			}
 		}()
 

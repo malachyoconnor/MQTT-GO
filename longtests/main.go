@@ -24,7 +24,7 @@ func main() {
 	case *doSubscribes:
 		continualSubscribe()
 	case *runServer:
-		server := gobro.CreateServer()
+		server := gobro.NewServer()
 		server.StartServer()
 	}
 }

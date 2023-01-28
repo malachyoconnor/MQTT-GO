@@ -71,3 +71,20 @@ func generateClientID() ClientID {
 
 	return ClientID(username)
 }
+
+var (
+	VerboseOutput = true
+)
+
+func ServerPrintln(args ...any) {
+	if VerboseOutput {
+		fmt.Println(VerboseOutput)
+		fmt.Println(args...)
+	}
+}
+
+func ServerPrintf(format string, args ...any) {
+	if VerboseOutput {
+		fmt.Printf(format, args...)
+	}
+}

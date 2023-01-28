@@ -1,8 +1,6 @@
 package clients
 
 import (
-	"fmt"
-
 	"MQTT-GO/structures"
 )
 
@@ -14,11 +12,11 @@ type Topic struct {
 type TopicToClient map[Topic]*structures.LinkedList[ClientID]
 
 func (topicToClient *TopicToClient) Print() {
-	fmt.Print("Topic to client map: ")
+	ServerPrintf("Topic to client map: ")
 	for t := range *topicToClient {
-		fmt.Print(t, ": ")
+		ServerPrintf("%v : ", t)
 		(*topicToClient)[t].PrintItems()
-		fmt.Println()
+		ServerPrintln()
 	}
 }
 

@@ -55,7 +55,7 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	(*connectedClient) = string(clientID)
 
 	if err != nil {
-		fmt.Println("Error decoding clientID")
+		ServerPrintln("Error decoding clientID")
 		return
 	}
 
@@ -66,7 +66,7 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 			break
 		}
 		if err != nil {
-			fmt.Println("Error while reading", err)
+			ServerPrintln("Error while reading", err)
 			break
 		}
 
@@ -94,7 +94,7 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 
 	connectPacket, err := packets.DecodeConnect(packet)
 	if err != nil {
-		fmt.Println("Error during initial connect", err)
+		ServerPrintln("Error during initial connect", err)
 		return &Client{}, err
 	}
 

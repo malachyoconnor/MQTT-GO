@@ -1,5 +1,5 @@
-go test ./gobro/ -cover
-go test ./structures/ -cover
-go test ./packets/ -cover
-go test ./client/ -cover
+go test ./gobro/ -race -cover
+go test ./structures/ -race -cover
+go test ./packets/ -race -cover
+go test ./client/ -race -cover
 

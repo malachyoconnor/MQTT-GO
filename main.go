@@ -47,7 +47,7 @@ func main() {
 	switch args[numFlags] {
 	case "gobro":
 		{
-			server := gobro.CreateServer()
+			server := gobro.NewServer()
 			server.StartServer()
 		}
 	case "client":

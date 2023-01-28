@@ -29,7 +29,8 @@ type Server struct {
 	logFile        *os.File
 }
 
-func CreateServer() Server {
+func NewServer() Server {
+
 	clientTable := clients.CreateClientTable()
 	topicClientMap := clients.CreateTopicMap()
 	inputChan := make(chan clients.ClientMessage)
@@ -63,20 +64,20 @@ func (server *Server) StartServer() {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
 	log.Println("--Server starting--")
 	// Listen for TCP connections
-	fmt.Println("Listening for TCP connections")
-	fmt.Printf("Listening on %v\n", getServerIpAndPort())
+	clients.ServerPrintln("Listening for TCP connections")
+	clients.ServerPrintf("Listening on %v\n", getServerIpAndPort())
 
 	listener, err := network.NewListener(ConnectionType)
 	if err != nil {
 		log.Print(err)
-		fmt.Println("FATAL:", err)
+		clients.ServerPrintln("FATAL:", err)
 		return
 	}
 	err = listener.Listen(*ServerIP, *ServerPort)
 
 	if err != nil {
 		log.Println("- Error while trying to listen for TCP connections:", err)
-		fmt.Println("Error while trying to listen for TCP connections:", err)
+		clients.ServerPrintln("Error while trying to listen for TCP connections:", err)
 		return
 	}
 	defer listener.Close()
@@ -96,7 +97,7 @@ var (
 )
 
 func AcceptConnections(listener network.Listener, server *Server) {
-	fmt.Println("Connected clients:", connectedClients)
+	clients.ServerPrintln("Connected clients:", connectedClients)
 	waitingToPrint := sync.Mutex{}
 	lastPrintTime := time.Now()
 	for {
@@ -106,7 +107,7 @@ func AcceptConnections(listener network.Listener, server *Server) {
 			return
 		}
 
-		fmt.Println("Accepted a connection")
+		clients.ServerPrintln("Accepted a connection")
 		// // Set a keep alive period because there isn't a foolproof way of checking if the connection
 		// // suddenly closes - we want to wait for DISCONNECT messages or timeout.
 		// err = connection.(*net.TCPConn).SetKeepAlivePeriod(5 * time.Second)
@@ -135,7 +136,7 @@ func AcceptConnections(listener network.Listener, server *Server) {
 		go func() {
 
 			time.Sleep(time.Millisecond * 200)
-			if !(time.Since(lastPrintTime) > time.Second) {
+			if time.Since(lastPrintTime) < time.Millisecond*500 {
 				return
 			}
 			// Prevent output writing overtop of itself
@@ -143,7 +144,7 @@ func AcceptConnections(listener network.Listener, server *Server) {
 				return
 			}
 			lastPrintTime = time.Now()
-			fmt.Print("Connected clients: ")
+			clients.ServerPrintf("Connected clients: ")
 			structures.PrintArray(connectedClients, "")
 			waitingToPrint.Unlock()
 		}()
@@ -188,4 +189,12 @@ func cleanupAndExit(server *Server) {
 
 func getServerIpAndPort() string {
 	return fmt.Sprint(*ServerIP, ":", *ServerPort)
+}
+
+func DisableStdOutput() {
+	clients.VerboseOutput = false
+}
+
+func EnableStdOutput() {
+	clients.VerboseOutput = true
 }

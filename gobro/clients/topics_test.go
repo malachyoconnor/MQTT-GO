@@ -1,7 +1,6 @@
 package clients
 
 import (
-	"fmt"
 	"testing"
 
 	"golang.org/x/exp/slices"
@@ -158,7 +157,7 @@ func TestHashWildcard(t *testing.T) {
 
 	cLL, _ := topicStore.GetMatchingClients("x/y/z")
 	clientArr := cLL.GetItems()
-	fmt.Println(clientArr)
+	ServerPrintln(clientArr)
 	if !slices.Contains(clientArr, "abc") || !slices.Contains(clientArr, "xyz") ||
 		len(clientArr) != 2 {
 		t.Error("Didn't find correct clients")
