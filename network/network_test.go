@@ -48,3 +48,19 @@ func TestUDPnetwork(t *testing.T) {
 	fmt.Println(buffer)
 
 }
+
+func TestVarIntEncodeDecode(t *testing.T) {
+
+	for i := uint64(0); i < 1<<62; i++ {
+		res, _ := network.EncodeVarInt(i)
+
+		if x := network.DecodeVarInt(res); x != i {
+
+			fmt.Printf("correct: %v. our value: %v", i, x)
+
+			t.Errorf("Doesnt decode correctly")
+		}
+
+	}
+
+}
