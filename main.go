@@ -64,7 +64,7 @@ func main() {
 	case "quic":
 		{
 			fmt.Println("Running QUIC test")
-			network.RunTest()
+			network.RunQuic()
 		}
 
 	default:

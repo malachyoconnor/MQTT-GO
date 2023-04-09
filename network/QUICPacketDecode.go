@@ -31,12 +31,13 @@ func decodeLongHeaderPacket(toDecode []byte) (LongHeaderPacket, error) {
 	longHeader.SourceConnectionIDLength = toDecode[offset]
 	offset += 1
 	longHeader.SourceConnectionID = toDecode[offset : offset+longHeader.SourceConnectionIDLength]
+	offset += longHeader.SourceConnectionIDLength
 
 	// TODO: Implement the other packet types
-
 	switch longHeader.PacketType {
 	case LH_INITIAL:
 		{
+			fmt.Printf("Header Payload: %08b", toDecode[offset:offset+5])
 			initialPacket, err := decodeInitialPacket(&longHeader, toDecode[offset:])
 			if err != nil {
 				return nil, err
@@ -57,7 +58,11 @@ func decodeInitialPacket(lh_packet *LongHeader, remainingHeader []byte) (*Initia
 
 	//TODO Remove this:
 	if offset != 1 {
-		panic("Token length not equal to 1!!")
+
+		fmt.Printf("\n %08b\n", remainingHeader[0:3])
+
+		fmt.Println("Token length:", tokenLength, "token offset:", offset)
+		panic("Token offset not equal to 1!!")
 	}
 
 	if err != nil {
@@ -84,12 +89,12 @@ func decodeInitialPacket(lh_packet *LongHeader, remainingHeader []byte) (*Initia
 
 	fmt.Printf("Supposed packet number: %08b \n", remainingHeader[offset:offset+uint64(packetNumberLength)])
 
-	encodedPacketNumber := BytesToUint32(remainingHeader[offset : offset+uint64(packetNumberLength)]...)
-	result.PacketNumber = uint32(decodePacketNumber(0, int(encodedPacketNumber), int(packetNumberLength)))
+	// encodedPacketNumber := BytesToUint32(remainingHeader[offset : offset+uint64(packetNumberLength)]...)
+	result.PacketNumber = decodePacketNumber(lh_packet.DestinationConnectionID)
 
 	result.PacketPayload = remainingHeader[offset+uint64(packetNumberLength):]
 
-	fmt.Printf("%08b \n", result.PacketPayload[0:2])
+	fmt.Printf("Result packet payload: %08b \n", result.PacketPayload[0:2])
 
 	return &result, nil
 

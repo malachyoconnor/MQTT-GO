@@ -6,3 +6,5 @@ require (
 	github.com/google/go-cmp v0.5.9
 	golang.org/x/exp v0.0.0-20230105202349-8879d0199aa3
 )
+
+require golang.org/x/crypto v0.8.0 // indirect
