@@ -1,2 +1,4 @@
 *.prof
 logs.txt
+*.crt
+*.key
