@@ -9,6 +9,7 @@ import (
 
 	"MQTT-GO/client"
 	"MQTT-GO/gobro"
+	"MQTT-GO/network"
 	"MQTT-GO/stresstests"
 )
 
@@ -58,6 +59,12 @@ func main() {
 	case "stresstest":
 		{
 			stresstests.ConnectAndPublish(200)
+		}
+
+	case "quic":
+		{
+			fmt.Println("Running QUIC test")
+			network.RunTest()
 		}
 
 	default:

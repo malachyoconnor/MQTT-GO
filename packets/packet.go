@@ -2,22 +2,32 @@ package packets
 
 const (
 	RESERVED byte = iota
-	CONNECT
-	CONNACK
-	PUBLISH
+	CONNECT       // Done
+	CONNACK       // Done
+	PUBLISH       // Done
 	PUBACK
 	PUBREC
 	PUBREL
 	PUBCOMP
-	SUBSCRIBE
-	SUBACK
-	UNSUBSCRIBE
-	UNSUBACK
-	PINGREQ
+	SUBSCRIBE   // Done
+	SUBACK      // Done
+	UNSUBSCRIBE // Done
+	UNSUBACK    //Done
+	PINGREQ     // Done
 	PINGRESP
-	DISCONNECT
-	AUTH = 15
+	DISCONNECT // Done
+	AUTH       = 15
 )
+
+// CONNECT
+// CONNACK
+// SUBSCRIBE
+// PUBLISH
+// PINGREQ
+// DISCONNECT
+// SUBACK
+// UNSUBACK
+// UNSUBSCRIBE
 
 func PacketTypeName(packetType byte) string {
 	if packetType > 15 {
