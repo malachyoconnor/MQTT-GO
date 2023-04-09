@@ -5,26 +5,6 @@ import (
 	"fmt"
 )
 
-// TODO: Make this return
-// func decodePacket(toDecode []byte) {
-// 	if len(toDecode) == 0 {
-// 		//TODO return an error
-// 	}
-
-// 	if toDecode[0]&(1<<7) == 1 {
-// 		decodeLongHeaderPacket(toDecode)
-// 	}
-// }
-
-// func decodeInitialPacket(toDecode []byte) (*InitialPacket, error) {
-// 	resultPacket := &InitialPacket{}
-
-// 	if toDecode[0] == 0 || toDecode[1] == 0 || toDecode[2] == 1 {
-// 		return nil, errors.New("Not an InitialPacket")
-// 	}
-
-// }
-
 func decodeLongHeaderPacket(toDecode []byte) (LongHeaderPacket, error) {
 
 	longHeader := LongHeader{}
@@ -49,8 +29,8 @@ func decodeLongHeaderPacket(toDecode []byte) (LongHeaderPacket, error) {
 	longHeader.DestinationConnectionID = toDecode[offset : offset+longHeader.DestinationConnectionIDLength]
 	offset += longHeader.DestinationConnectionIDLength
 	longHeader.SourceConnectionIDLength = toDecode[offset]
-	longHeader.SourceConnectionID = toDecode[offset+1 : offset+1+longHeader.SourceConnectionIDLength]
-	offset = offset + 1 + longHeader.SourceConnectionIDLength
+	offset += 1
+	longHeader.SourceConnectionID = toDecode[offset : offset+longHeader.SourceConnectionIDLength]
 
 	// TODO: Implement the other packet types
 
@@ -85,7 +65,7 @@ func decodeInitialPacket(lh_packet *LongHeader, remainingHeader []byte) (*Initia
 	}
 
 	if tokenLength != 0 {
-		result.Token = remainingHeader[offset:tokenLength]
+		result.Token = remainingHeader[offset : offset+tokenLength]
 		offset += tokenLength
 	} else {
 		result.Token = []byte{0}

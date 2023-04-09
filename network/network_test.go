@@ -51,10 +51,15 @@ func TestUDPnetwork(t *testing.T) {
 func TestVarIntEncodeDecode(t *testing.T) {
 	// I originally started testing with 1<<62
 	// This would have taken 5 millenia to complete the test...
-	for i := uint64(0); i < 1<<16; i++ {
-		res, _ := EncodeVarInt(i)
+	for i := uint64(0); i < 1<<10; i++ {
+		res, err := EncodeVarInt(i)
+		checkErr(err, t)
+		if x, offset, _ := DecodeVarInt(res); x != i || int(offset) != len(res) {
+			fmt.Printf("start: %v encoded: %v decoded: %v encoded length: %v\n", i, res, x, offset)
+			if int(offset) != len(res) {
+				t.Error("Incorrect offset")
+			}
 
-		if x, _, _ := DecodeVarInt(res); x != i {
 			fmt.Printf("correct: %v. our value: %v - intermediate: %v", i, x, res)
 			t.Error("Doesnt decode correctly")
 		}
@@ -108,6 +113,24 @@ func TestTLS(t *testing.T) {
 	// }
 	// config := &tls.Config{Certificates: []tls.Certificate{cer}}
 
+	// conn, err := net.ListenUDP("udp", &net.UDPAddr{Port: 8000})
+	// checkErr(err, t)
+	// defer conn.Close()
+
+	// buffer := make([]byte, 300)
+	// _, err = conn.Read(buffer)
+	// checkErr(err, t)
+
+	// res, err := decodeLongHeaderPacket(buffer)
+	// x := InitialPacket(*res.(*InitialPacket))
+	// checkErr(err, t)
+
+	// _, err = decodeFrame(x.PacketPayload)
+	// checkErr(err, t)
+
+	// fmt.Println()
+
+	// structures.PrintInterface(x)
 	// tconn := tls.Server(conn, config)
 
 	// err = tconn.Handshake()

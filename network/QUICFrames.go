@@ -1,10 +1,35 @@
 package network
 
-type PING struct {
+const (
+	PADDING byte = iota
+	PING
+	ACK
+	RESET_STREAM
+	STOP_SENDING
+	CRYPTO
+	NEW_TOKEN
+	STREAM
+	MAX_DATA
+	MAX_STREAM_DATA
+	MAX_STREAMS
+	DATA_BLOCKED
+	STREAM_DATA_BLOCKED
+	STREAMS_BLOCKED
+	NEW_CONNECTION_ID
+	RETIRE_CONNECTION_ID
+	PATH_CHALLENGE
+	PATH_RESPONSE
+	CONNECTION_CLOSE
+	HANDSHAKE_DONE
+)
+
+type Frame interface{}
+
+type PINGFrame struct {
 	frameType uint64 // var-length int - should be set to 1
 }
 
-type ACK struct {
+type ACKFrame struct {
 	frameType           uint64     // Should be set to 2 or 3
 	largestAcknowledged uint64     // Variable length int
 	ackDelay            uint64     // Variable length int
@@ -19,33 +44,33 @@ type ACKRange struct {
 	ackRangeLength uint64 // Var length int
 }
 
-type RESET_STREAM struct {
+type RESET_STREAMFrame struct {
 	frameType                    uint64 // var length. Should be set to 4
 	streamID                     uint64 // var length
 	applicationProtocolErrorCode uint64 // var length
 	finalSize                    uint64 // var length
 }
 
-type STOP_SENDING struct {
+type STOP_SENDINGFrame struct {
 	frameType                    uint64 // var length. Should be set to 5
 	streamID                     uint64 // var length
 	applicationProtocolErrorCode uint64 // var length
 }
 
-type CRYPTO struct {
+type CRYPTOFrame struct {
 	frameType  uint64 // var length. Should be set to 6
 	offset     uint64 // var length
 	length     uint64 // var length
 	cryptoData []byte // Who knows how long
 }
 
-type NEW_TOKEN struct {
+type NEW_TOKENFrame struct {
 	frameType   uint64 // var length. should be set to 7
 	tokenLength uint64 // var length
 	token       []byte // Who knows how long
 }
 
-type STREAM struct {
+type STREAMFrame struct {
 	// frameType takes the form 0b0001XXX. The three low-order bits determine
 	// the fields present in the frame.
 	// Bit 4 says if there is an offset field present
@@ -57,13 +82,13 @@ type STREAM struct {
 }
 
 // Might not need
-type MAX_DATA struct {
+type MAX_DATAFrame struct {
 	frameType   uint64 // var length int. Set to 10
 	maximumData uint64 //var length
 }
 
 // Might not need
-type MAX_STREAM_DATA struct {
+type MAX_STREAM_DATAFrame struct {
 	frameType         uint64 // var length int. Set to 11
 	streamID          uint64 // var length
 	maximumStreamData uint64 // var length
@@ -71,12 +96,12 @@ type MAX_STREAM_DATA struct {
 
 // Not implementing max streams
 
-type DATA_BLOCKED struct {
+type DATA_BLOCKEDFrame struct {
 	frameType   uint64 // var length int. Set to 14
 	maximumData uint64 // var length
 }
 
-type CONNECTION_CLOSE struct {
+type CONNECTION_CLOSEFrame struct {
 	frameType          uint64 // var length. Set to 28 for signal error at the quic level. 29 for app level error
 	errorCode          uint64 // var length
 	errorframeType     byte   // Just set to 0
@@ -84,6 +109,6 @@ type CONNECTION_CLOSE struct {
 	reasonPhrase       []byte // Reason for the error - can be empty
 }
 
-type HANDSHAKE_DONE struct {
+type HANDSHAKE_DONEFrame struct {
 	frameType uint64 // var length. Set to 30
 }
