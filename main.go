@@ -63,8 +63,22 @@ func main() {
 
 	case "quic":
 		{
-			fmt.Println("Running QUIC test")
-			network.RunQuic()
+			fmt.Println("Serving")
+			x := network.QUICListener{}
+			x.Listen("127.0.0.1", 8000)
+		}
+
+	case "quicClient":
+		{
+			fmt.Println("Connecting")
+			x := network.QUICCon{}
+			go x.Connect("127.0.0.1", 8000)
+
+			time.Sleep(500 * time.Millisecond)
+			x.Write([]byte("Hello is this working?"))
+			time.Sleep(1000 * time.Millisecond)
+			x.Write([]byte("Hello is this working?"))
+			time.Sleep(1000 * time.Millisecond)
 		}
 
 	default:

@@ -27,6 +27,10 @@ func NewListener(networkID byte) (Listener, error) {
 		{
 			return &UDPListener{}, nil
 		}
+	case QUIC:
+		{
+			return &QUICListener{}, nil
+		}
 	}
 	return nil, fmt.Errorf("error: Supplied networkID %v is not defined", networkID)
 }
@@ -42,4 +46,9 @@ type UDPListener struct {
 	newClientBuffer chan string
 	numClientsToAdd atomic.Int32
 	localAddr       *net.UDPAddr
+}
+
+type QUICListener struct {
+	listener *net.Listener
+	handler  *quicServerHandler
 }

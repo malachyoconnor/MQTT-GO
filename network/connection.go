@@ -32,6 +32,10 @@ func NewCon(networkID byte) (Con, error) {
 		{
 			return &UDPCon{}, nil
 		}
+	case QUIC:
+		{
+			return &QUICCon{}, nil
+		}
 	}
 	return nil, fmt.Errorf("error: Supplied networkID %v is not defined", networkID)
 }
@@ -54,4 +58,14 @@ type UDPCon struct {
 	connectionType byte
 
 	serverConnectionDeleter func()
+}
+
+const (
+	QUIC_SERVER_CONNECTION byte = 1
+	QUIC_CLIENT_CONNECTIOn byte = 2
+)
+
+type QUICCon struct {
+	connection net.Conn
+	handler    *quicClientHandler
 }

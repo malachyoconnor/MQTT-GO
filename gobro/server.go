@@ -63,8 +63,8 @@ func (server *Server) StartServer() {
 	// Sets the log to storefile & line numbers
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
 	log.Println("--Server starting--")
-	// Listen for TCP connections
-	clients.ServerPrintln("Listening for TCP connections")
+	// Listen for connections
+	clients.ServerPrintln("Listening for connections via", []string{"TCP", "QUIC", "UDP"}[ConnectionType])
 	clients.ServerPrintf("Listening on %v\n", getServerIpAndPort())
 
 	listener, err := network.NewListener(ConnectionType)

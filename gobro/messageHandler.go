@@ -1,6 +1,7 @@
 package gobro
 
 import (
+	"fmt"
 	"log"
 
 	"MQTT-GO/gobro/clients"
@@ -74,7 +75,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
-		clients.ServerPrintln("Received request to publish:", string(packet.Payload.RawApplicationMessage), "to topic:", string(packet.VariableLengthHeader.(*packets.PublishVariableHeader).TopicFilter))
+		fmt.Println("Received request to publish:", string(packet.Payload.RawApplicationMessage), "to topic:", string(packet.VariableLengthHeader.(*packets.PublishVariableHeader).TopicFilter))
 
 		varHeader := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
 		topic := clients.Topic{
