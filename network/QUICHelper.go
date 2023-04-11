@@ -1,11 +1,7 @@
 package network
 
 import (
-	"crypto/sha256"
 	"errors"
-	"fmt"
-
-	"golang.org/x/crypto/hkdf"
 )
 
 func DecodeVarInt(data []byte) (uint64, uint64, error) {
@@ -88,17 +84,4 @@ func BytesToUint32(bitsToExtract ...byte) (result uint32) {
 		result += uint32(bitsToExtract[i]) << (i * 8)
 	}
 	return result
-}
-
-func decodePacketNumber(client_dst_connection_id []byte) uint32 {
-
-	initial_salt := []byte{56, 118, 44, 247, 245, 89, 52, 179, 77, 23, 154, 230, 164, 200, 12, 173, 204, 187, 127, 10}
-	hash := sha256.New
-	inital_secret := hkdf.Extract(hash, client_dst_connection_id, initial_salt)
-
-	client_initial_secret := hkdf.Expand(hash, inital_secret, []byte("client in"))
-	server_initial_secret := hkdf.Expand(hash, inital_secret, []byte("server in"))
-
-	fmt.Println(client_initial_secret, server_initial_secret)
-	return 0
 }
