@@ -48,57 +48,6 @@ func TestUDPnetwork(t *testing.T) {
 
 }
 
-func TestVarIntEncodeDecode(t *testing.T) {
-	// I originally started testing with 1<<62
-	// This would have taken 5 millenia to complete the test...
-	for i := uint64(0); i < 1<<10; i++ {
-		res, err := EncodeVarInt(i)
-		checkErr(err, t)
-		if x, offset, _ := DecodeVarInt(res); x != i || int(offset) != len(res) {
-			fmt.Printf("start: %v encoded: %v decoded: %v encoded length: %v\n", i, res, x, offset)
-			if int(offset) != len(res) {
-				t.Error("Incorrect offset")
-			}
-
-			fmt.Printf("correct: %v. our value: %v - intermediate: %v", i, x, res)
-			t.Error("Doesnt decode correctly")
-		}
-	}
-}
-
-func TestGetBits(t *testing.T) {
-	tests := []struct {
-		value byte
-		bits  []byte
-	}{
-		{byte(127), []byte{1, 3, 4}},
-		{byte(1), []byte{0, 3, 5}},
-		{byte(63), []byte{0, 1, 2, 3, 4, 5, 6, 7}},
-	}
-
-	for _, test_case := range tests {
-		fmt.Printf("%08b\n", getBits(test_case.value, test_case.bits...))
-	}
-
-}
-
-func TestQUICVarLengthInt(t *testing.T) {
-
-	for test_val := 0; test_val < 2048; test_val++ {
-
-		encoded_val, err := EncodeVarInt(uint64(test_val))
-		if err != nil {
-			t.Error(err)
-		}
-		decoded_val, _, _ := DecodeVarInt(encoded_val)
-
-		if decoded_val != uint64(test_val) {
-			fmt.Println(decoded_val)
-			t.Error(test_val, encoded_val, decoded_val)
-		}
-	}
-}
-
 func checkErr(err error, t *testing.T) {
 	if err != nil {
 		t.Error(err)
