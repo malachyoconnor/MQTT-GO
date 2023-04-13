@@ -3,7 +3,6 @@ package gobro
 import (
 	"bytes"
 	"log"
-	"time"
 
 	"MQTT-GO/gobro/clients"
 	"MQTT-GO/packets"
@@ -82,20 +81,8 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 			TopicFilter: varHeader.TopicFilter,
 			Qos:         packet.ControlHeader.Flags & 6,
 		}
-
 		msgToPublish := bytes.NewBuffer(packet.Payload.RawApplicationMessage).String()
-
-		structures.Print("Receved request to publish")
-		time.Sleep(500 * time.Millisecond)
-		structures.Print("WTF IS GOING ON???")
-		structures.Print(msgToPublish)
-		structures.Print(" to topic:")
-		structures.Print(topic.TopicFilter, "\n")
-
-		// structures.Printf("Received request to publish: %s to topic: %s", msgToPublish, topicToPublish)
-
-		// structures.Println("Received request to publish:", msgToPublish, "to topic:", topicToPublish)
-
+		structures.Println("Request to publish:", msgToPublish, "to topic:", topic.TopicFilter)
 		// Adds to the packets to send
 		handlePublish(topicClientMap, topic, clientMessage, server.clientTable, &packetsToSend)
 

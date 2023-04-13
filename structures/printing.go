@@ -3,7 +3,6 @@ package structures
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 )
 
@@ -16,15 +15,22 @@ func center(s string, w int) string {
 	return fmt.Sprintf("%[1]*s", -w, fmt.Sprintf("%[1]*s", (w+len(s))/2, s))
 }
 
-func PrintCentrally(toPrint ...string) {
-	stringBuilder := strings.Builder{}
-	stringBuilder.WriteString("  --")
-	for _, str := range toPrint {
-		stringBuilder.WriteString(str)
-	}
-	stringBuilder.WriteString("--")
-	Println(stringBuilder.String())
+func PrintCentrally(toPrint ...any) {
+	// stringBuilder := strings.Builder{}
+	// stringBuilder.WriteString("  --")
+	// for _, str := range toPrint {
+	// 	stringBuilder.WriteString(str)
+	// }
+	// stringBuilder.WriteString("--")
+	// Println(stringBuilder.String())
+	Print("--")
+	_, err := Print(toPrint...)
 
+	if err != nil {
+		panic(err)
+	}
+
+	Print("--")
 	// Println(center(stringBuilder.String(), 100))
 }
 
