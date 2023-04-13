@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"MQTT-GO/packets"
+	"MQTT-GO/structures"
 )
 
 var (
@@ -27,13 +28,13 @@ func StartClient() {
 	err := client.SetClientConnection(*ip, *port)
 
 	if err != nil {
-		fmt.Println(err)
+		structures.Println(err)
 		return
 	}
 
 	err = client.SendConnect()
 	if err != nil {
-		fmt.Println(err)
+		structures.Println(err)
 		return
 	}
 
@@ -41,7 +42,7 @@ func StartClient() {
 	// a packet identifier to listen on.
 	go client.ListenForPackets()
 
-	fmt.Println("Connected to broker on port", *port)
+	structures.Println("Connected to broker on port", *port)
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -58,6 +59,8 @@ func StartClient() {
 		case "publish":
 			{
 				combinedWords := strings.Join(words[2:], " ")
+				structures.Println(combinedWords, words[1])
+				structures.Println("List of words:", words)
 
 				err := client.SendPublish([]byte(combinedWords), words[1])
 				if err != nil {

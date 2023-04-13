@@ -1,9 +1,9 @@
 package packets
 
 import (
+	"MQTT-GO/structures"
 	"errors"
 	"fmt"
-	"strings"
 )
 
 var (
@@ -54,19 +54,13 @@ var errMalformedUTFString = errors.New("error: malformed UTF string")
 // Returns the decoded string, the total length of this section
 // including the two bytes encoding the length, and a potential error.
 func DecodeUTFString(toFetch []byte) (string, int, error) {
-	var stringBuilder strings.Builder
-
 	stringLen := CombineMsbLsb(toFetch[0], toFetch[1])
 	if !(0 <= stringLen && stringLen <= 65535) || (stringLen > len(toFetch)-2) {
 		return "", 0, errMalformedUTFString
 	}
 
-	_, err := stringBuilder.Write(toFetch[2 : 2+stringLen])
-	if err != nil {
-		return "", 0, err
-	}
+	return string(toFetch[2 : 2+stringLen]), 2 + stringLen, nil
 
-	return stringBuilder.String(), 2 + stringLen, nil
 }
 
 // Returns (MSB, LSB)
@@ -144,7 +138,7 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 		result, err = DecodePublish(packet)
 
 	case PINGREQ:
-		fmt.Println("Ping")
+		structures.Println("Ping")
 		result, err = DecodePing(packet)
 
 	case DISCONNECT:
@@ -160,7 +154,7 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 		result, err = DecodeUnsubscribe(packet)
 
 	default:
-		fmt.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
+		structures.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
 		return nil, 0, errPacketNotDefined
 	}
 
@@ -176,7 +170,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	defer func() {
 		r := recover()
 		if r != nil {
-			fmt.Println("Recovered from", r)
+			structures.Println("Recovered from", r)
 		}
 	}()
 	resultPacket := &Packet{}

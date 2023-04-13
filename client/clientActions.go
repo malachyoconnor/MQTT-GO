@@ -3,7 +3,6 @@ package client
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"time"
 
 	"MQTT-GO/packets"
@@ -40,7 +39,7 @@ func (client *Client) SendConnect() error {
 	}
 	reader := bufio.NewReader(client.BrokerConnection)
 	result, err := packets.ReadPacketFromConnection(reader)
-	fmt.Println(result, "Read connack")
+	structures.Println(result, "Read connack")
 	if err != nil {
 		return err
 	}
@@ -55,7 +54,7 @@ func (client *Client) SendConnect() error {
 		client.ClientID = generateRandomClientID()
 		err := client.SetClientConnection(*ip, *port)
 		if err != nil {
-			fmt.Println("Error while setting client connection")
+			structures.Println("Error while setting client connection")
 			return err
 		}
 		return client.SendConnect()
@@ -92,7 +91,7 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 
 	// Check the qos level to see if we should expect a response - if not then exit
 	if controlHeader.Flags&6 == 0 {
-		fmt.Println(controlHeader.Flags)
+		structures.Println(controlHeader.Flags)
 		return nil
 	}
 

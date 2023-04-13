@@ -2,9 +2,9 @@ package client
 
 import (
 	"bufio"
-	"fmt"
 
 	"MQTT-GO/packets"
+	"MQTT-GO/structures"
 )
 
 func (client *Client) ListenForPackets() {
@@ -12,13 +12,13 @@ func (client *Client) ListenForPackets() {
 	for {
 		packet, err := packets.ReadPacketFromConnection(reader)
 		if err != nil {
-			fmt.Println(err)
+			structures.Println(err)
 			return
 			// cleanupAndExit(client)
 		}
 
 		packetType := packets.GetPacketType(packet)
-		fmt.Println("Received", packets.PacketTypeName(packetType))
+		structures.Println("Received", packets.PacketTypeName(packetType))
 
 		switch packetType {
 		case packets.SUBACK, packets.CONNACK, packets.PUBACK, packets.UNSUBACK:
@@ -35,18 +35,19 @@ func (client *Client) ListenForPackets() {
 
 		case packets.PUBLISH:
 			{
+				structures.Println("READ A PUBLISH")
 				result, _, _ := packets.DecodePacket(packet)
 				// If we fill the buffer - form a queue
 				if len(client.ReceivedPackets) == WaitingPacketBufferSize {
 					go func() { client.ReceivedPackets <- result }()
 				}
 				client.ReceivedPackets <- result
-				fmt.Println("Received request to publish", string(result.Payload.RawApplicationMessage))
+				structures.Println("Received request to publish", string(result.Payload.RawApplicationMessage))
 			}
 
 		default:
 			{
-				fmt.Println(packet, "Read some packet of type", packets.PacketTypeName(packetType))
+				structures.Println(packet, "Read some packet of type", packets.PacketTypeName(packetType))
 			}
 		}
 

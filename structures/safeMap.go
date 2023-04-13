@@ -50,6 +50,8 @@ func CreateSafeMap[Key comparable, Value any]() *SafeMap[Key, Value] {
 }
 
 func (table *SafeMap[Key, Value]) Values() []Value {
+	table.tableLock.RLock()
+	defer table.tableLock.RUnlock()
 	values := make([]Value, len(table.clientTable))
 	i := 0
 	for _, val := range table.clientTable {

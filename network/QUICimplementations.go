@@ -1,9 +1,11 @@
 package network
 
 import (
+	"MQTT-GO/structures"
 	"crypto/tls"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/goburrow/quic"
 	"github.com/goburrow/quic/transport"
@@ -43,6 +45,7 @@ func (conn *QUICCon) Connect(ip string, port int) error {
 	}
 
 	for conn.handler.mainStream == nil {
+		structures.Println("Spinning")
 	}
 	conn.connection = conn.handler.mainStream
 
@@ -51,6 +54,7 @@ func (conn *QUICCon) Connect(ip string, port int) error {
 
 func (conn *QUICCon) Write(toWrite []byte) (n int, err error) {
 	for conn.handler.mainStream == nil {
+		structures.Println("Spinning")
 	}
 	return conn.handler.mainStream.Write(toWrite)
 }
@@ -60,6 +64,7 @@ func (conn *QUICCon) Read(buffer []byte) (n int, err error) {
 }
 
 func (conn *QUICCon) Close() error {
+	conn.connection.Close()
 	return conn.handler.client.Close()
 }
 
@@ -75,12 +80,13 @@ func (quicListener *QUICListener) Listen(ip string, port int) error {
 	if err != nil {
 		return err
 	}
+	config.Params.MaxIdleTimeout = time.Hour
 	config.TLS = &tls.Config{}
 	config.TLS.Certificates = []tls.Certificate{cert}
 	server := quic.NewServer(config)
 
 	handler := &quicServerHandler{
-		waitingConnections:  make(chan *quic.Stream, 20),
+		waitingConnections:  make(chan *StreamWrapper, 100),
 		acceptedConnections: make([]*quic.Conn, 100),
 		connectionAccepted:  make(map[net.Addr]bool),
 		quicServer:          server,
@@ -92,7 +98,7 @@ func (quicListener *QUICListener) Listen(ip string, port int) error {
 }
 
 func (quicListener *QUICListener) Close() error {
-	return nil
+	return quicListener.handler.quicServer.Close()
 }
 
 func (quicListener *QUICListener) Accept() (net.Conn, error) {

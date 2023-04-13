@@ -3,6 +3,7 @@ package client
 import (
 	"MQTT-GO/network"
 	"MQTT-GO/packets"
+	"MQTT-GO/structures"
 	"log"
 	"os"
 	"os/signal"
@@ -10,7 +11,7 @@ import (
 
 var (
 	WaitingPacketBufferSize = 100
-	ConnectionType          = network.TCP
+	ConnectionType          = network.QUIC
 )
 
 type Client struct {
@@ -71,9 +72,16 @@ func listenForExit(client *Client) {
 
 func cleanupAndExit(client *Client) {
 	if client != nil {
-		client.SendDisconnect()
+		structures.Println("Sending DISCONNECT")
+		err := client.SendDisconnect()
+		if err != nil {
+			structures.Println("Error while disconnecting:", err)
+		}
 		if client.BrokerConnection != nil {
-			client.BrokerConnection.Close()
+			err = client.BrokerConnection.Close()
+			if err != nil {
+				structures.Println("Error while closing connection:", err)
+			}
 			log.Println("\nConnection closed, goodbye")
 		}
 	} else {

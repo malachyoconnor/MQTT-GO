@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"sync"
 
 	"MQTT-GO/structures"
@@ -77,7 +76,7 @@ func (wp *WaitingAcks) GetOrWait(packetIdentifier int) *[]byte {
 	for {
 		storedPacket := wp.getItem(packetIdentifier)
 		if storedPacket == nil {
-			fmt.Println()
+			structures.Println()
 			wp.waitCondition.Wait()
 		} else {
 			wp.waitCondition.L.Unlock()

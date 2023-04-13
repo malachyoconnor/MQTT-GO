@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"MQTT-GO/packets"
@@ -28,7 +29,7 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet [
 	return clientMessage
 }
 
-func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
+func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string, connectedClientMutex *sync.Mutex) {
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
 		log.Printf("- Error handling connect from %v: %v\n", newClient.NetworkConnection.RemoteAddr(), err)
@@ -43,7 +44,9 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 				(*connection).Close()
 			}
 		}
+		connectedClientMutex.Lock()
 		*connectedClient = ""
+		connectedClientMutex.Unlock()
 		return
 	}
 
@@ -52,7 +55,9 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	defer handleDisconnect(*newClient, clientTable, topicToClient, connectedClient)
 
 	clientID := newClient.ClientIdentifier
+	connectedClientMutex.Lock()
 	(*connectedClient) = string(clientID)
+	connectedClientMutex.Unlock()
 
 	if err != nil {
 		ServerPrintln("Error decoding clientID")

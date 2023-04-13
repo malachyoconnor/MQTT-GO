@@ -2,3 +2,4 @@
 logs.txt
 *.crt
 *.key
+MQTT-GO.exe

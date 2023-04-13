@@ -163,7 +163,7 @@ func TestReceivingMultiplePublishes(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		<-client1.ReceivedPackets
-		fmt.Println("Got", i)
+		structures.Println("Got", i)
 	}
 	done = true
 }

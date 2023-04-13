@@ -11,17 +11,19 @@ import (
 	"MQTT-GO/gobro"
 	"MQTT-GO/network"
 	"MQTT-GO/stresstests"
+	"MQTT-GO/structures"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 
 func main() {
-	numFlags := permuteArgs()
+	permuteArgs()
 	flag.Parse()
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Err while creating cpu profile:", err)
+			fmt.Println("Attempting to save to:", *cpuprofile)
 			return
 		}
 		err = pprof.StartCPUProfile(f)
@@ -45,7 +47,11 @@ func main() {
 		return
 	}
 
-	switch args[numFlags] {
+	connectionType := network.TCP
+	client.ConnectionType = connectionType
+	gobro.ConnectionType = connectionType
+
+	switch args[len(args)-1] {
 	case "gobro":
 		{
 			server := gobro.NewServer()
@@ -83,7 +89,7 @@ func main() {
 
 	default:
 		{
-			fmt.Println("Malformed input, exiting")
+			structures.Println("Malformed input, exiting")
 		}
 
 	}
@@ -91,14 +97,10 @@ func main() {
 }
 
 // I want to be able to put non-options before the flags - to do this we permute the os.args
-func permuteArgs() (numFlags int) {
-	args := os.Args[1:]
+func permuteArgs() {
 
-	for i := range args {
-		if args[i][0] == '-' {
-			args[i], args[numFlags] = args[numFlags], args[i]
-			numFlags++
-		}
+	for i := 1; i < len(os.Args)-1; i++ {
+		os.Args[i], os.Args[i+1] = os.Args[i+1], os.Args[i]
 	}
-	return numFlags
+
 }

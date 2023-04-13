@@ -4,8 +4,8 @@ import (
 	"MQTT-GO/client"
 	"MQTT-GO/gobro"
 	"MQTT-GO/packets"
+	"MQTT-GO/structures"
 	"flag"
-	"fmt"
 	"os"
 	"time"
 )
@@ -18,7 +18,7 @@ var (
 )
 
 func main() {
-	fmt.Println("Starting")
+	structures.Println("Starting")
 	flag.Parse()
 	switch {
 	case *doSubscribes:
@@ -37,7 +37,7 @@ func continualSubscribe() {
 	client := client.CreateClient()
 	err := client.SetClientConnection(*ip, *port)
 	if err != nil {
-		fmt.Println(err)
+		structures.Println(err)
 		return
 	}
 
@@ -45,21 +45,21 @@ func continualSubscribe() {
 	go client.ListenForPackets()
 
 	if err != nil {
-		fmt.Println(err)
+		structures.Println(err)
 		return
 	}
 
 	err = client.SendSubscribe(packets.TopicWithQoS{Topic: "continual"})
 	if err != nil {
-		fmt.Println(err)
+		structures.Println(err)
 		return
 	}
 
 	message := []byte("This is my test message")
-	fmt.Println("Starting the test")
+	structures.Println("Starting the test")
 	go func() {
 		time.Sleep((3600*hoursToTest + 100) * time.Second)
-		fmt.Println("We waited too long!! Exiting")
+		structures.Println("We waited too long!! Exiting")
 		os.Exit(0)
 	}()
 
@@ -67,10 +67,10 @@ func continualSubscribe() {
 		time.Sleep(time.Second)
 		err := client.SendPublish(append(message, byte(i)), "continual")
 		if err != nil {
-			fmt.Println(err)
+			structures.Println(err)
 		}
 	}
 
-	fmt.Println("Completed successfully")
+	structures.Println("Completed successfully")
 
 }

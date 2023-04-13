@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 func PrintInterface(i interface{}) {
 	s, _ := json.MarshalIndent(i, "", "\t")
-	fmt.Println(string(s))
+	Println(string(s))
 }
 
 func center(s string, w int) string {
@@ -17,11 +18,14 @@ func center(s string, w int) string {
 
 func PrintCentrally(toPrint ...string) {
 	stringBuilder := strings.Builder{}
+	stringBuilder.WriteString("  --")
 	for _, str := range toPrint {
 		stringBuilder.WriteString(str)
 	}
+	stringBuilder.WriteString("--")
+	Println(stringBuilder.String())
 
-	fmt.Println(center(stringBuilder.String(), 150))
+	// Println(center(stringBuilder.String(), 100))
 }
 
 func (ll *LinkedList[T]) PrintItems() {
@@ -46,4 +50,26 @@ func PrintArray[T comparable](arr []T, defaultValue T) {
 	}
 
 	fmt.Print("]\n")
+}
+
+var (
+	printingMutex = sync.Mutex{}
+)
+
+func Println(a ...any) (int, error) {
+	printingMutex.Lock()
+	defer printingMutex.Unlock()
+	return fmt.Println(a...)
+}
+
+func Printf(format string, a ...any) (int, error) {
+	printingMutex.Lock()
+	defer printingMutex.Unlock()
+	return fmt.Printf(format, a...)
+}
+
+func Print(a ...any) (int, error) {
+	printingMutex.Lock()
+	defer printingMutex.Unlock()
+	return fmt.Print(a...)
 }

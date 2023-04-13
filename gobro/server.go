@@ -18,7 +18,7 @@ var (
 	ServerIP          = flag.String("serverip", "localhost", "Address to host on")
 	ServerPort        = flag.Int("serverport", 8000, "Port to listen on")
 	ScheduledShutdown = flag.Float64("shutdown", 0.0, "Schedule a shutdown after a certain number of hours")
-	ConnectionType    = network.TCP
+	ConnectionType    = network.QUIC
 )
 
 type Server struct {
@@ -145,11 +145,13 @@ func AcceptConnections(listener network.Listener, server *Server) {
 			}
 			lastPrintTime = time.Now()
 			clients.ServerPrintf("Connected clients: ")
+			connectedClientsMutex.Lock()
 			structures.PrintArray(connectedClients, "")
+			connectedClientsMutex.Unlock()
 			waitingToPrint.Unlock()
 		}()
 
-		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable, server.topicClientMap, newArrayPos)
+		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable, server.topicClientMap, newArrayPos, &connectedClientsMutex)
 
 	}
 }

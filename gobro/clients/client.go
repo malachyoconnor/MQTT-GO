@@ -82,7 +82,6 @@ func ServerPrintln(args ...any) {
 		for _, arg := range args {
 			fmt.Print(arg, " ")
 		}
-		// fmt.Println(args...)
 	}
 }
 

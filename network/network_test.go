@@ -1,7 +1,7 @@
 package network
 
 import (
-	"fmt"
+	"MQTT-GO/structures"
 	"net"
 	"sync"
 	"testing"
@@ -41,10 +41,10 @@ func TestUDPnetwork(t *testing.T) {
 
 	buffer := make([]byte, 100)
 	conn.Read(buffer)
-	fmt.Println(buffer)
+	structures.Println(buffer)
 
 	conn2.Read(buffer)
-	fmt.Println(buffer)
+	structures.Println(buffer)
 
 }
 

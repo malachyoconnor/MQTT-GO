@@ -1,6 +1,7 @@
 package network
 
 import (
+	"MQTT-GO/structures"
 	"errors"
 	"fmt"
 	"log"
@@ -43,17 +44,17 @@ func (conn *UDPCon) Connect(ip string, port int) error {
 			buffer = buffer[:bytesRead]
 
 			if errors.Is(err, net.ErrClosed) {
-				fmt.Println("Connection closed, disconnecting")
+				structures.Println("Connection closed, disconnecting")
 				return
 			}
 
 			if receivedAddr.IP.String() != remoteAddr.IP.String() || receivedAddr.Port != remoteAddr.Port {
-				fmt.Println("Received a UDP message from someone else", buffer, receivedAddr.IP, receivedAddr.Port)
+				structures.Println("Received a UDP message from someone else", buffer, receivedAddr.IP, receivedAddr.Port)
 				log.Println("Received a UDP message from someone else", buffer, receivedAddr.IP, receivedAddr.Port)
 				continue
 			}
 			if err != nil {
-				fmt.Println("ERROR WHILE READING UDP:", err)
+				structures.Println("ERROR WHILE READING UDP:", err)
 				log.Println("ERROR WHILE READING UDP:", err)
 			}
 			conn.packetBuffer <- buffer
@@ -88,7 +89,7 @@ func (conn *UDPCon) Close() error {
 	// So we just send a disconnect and stop listening.
 
 	if conn.connectionType == UDP_CLIENT_CONNECTION {
-		fmt.Println("Closing a connection from:", conn.localAddr, "to", conn.remoteAddr)
+		structures.Println("Closing a connection from:", conn.localAddr, "to", conn.remoteAddr)
 		return (*conn.connection).Close()
 	}
 
@@ -103,7 +104,7 @@ func (conn *UDPCon) Close() error {
 func (conn *UDPCon) RemoteAddr() net.Addr {
 	remoteAddr, err := net.ResolveUDPAddr("udp", conn.remoteAddr)
 	if err != nil {
-		fmt.Println("Error while resolving UDP address:", err)
+		structures.Println("Error while resolving UDP address:", err)
 		return nil
 	}
 	return remoteAddr
@@ -153,11 +154,11 @@ func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPCon
 		buffer := make([]byte, 1024)
 		bytesRead, receivedAddr, err := connection.ReadFromUDP(buffer)
 		if errors.Is(err, net.ErrClosed) {
-			fmt.Println("Connection closed, ceasing to listen")
+			structures.Println("Connection closed, ceasing to listen")
 			return
 		}
 		if err != nil {
-			fmt.Println(err)
+			structures.Println(err)
 		}
 		buffer = buffer[:bytesRead]
 		address := fmt.Sprint(receivedAddr.IP.String(), ":", receivedAddr.Port)
@@ -175,7 +176,7 @@ func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPCon
 				continue
 			}
 
-			fmt.Println("Received a message from an unconnected address:", address, "message:", buffer)
+			structures.Println("Received a message from an unconnected address:", address, "message:", buffer)
 			continue
 		}
 		udpListener.openConnections[address] <- buffer

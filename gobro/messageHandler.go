@@ -1,8 +1,9 @@
 package gobro
 
 import (
-	"fmt"
+	"bytes"
 	"log"
+	"time"
 
 	"MQTT-GO/gobro/clients"
 	"MQTT-GO/packets"
@@ -75,13 +76,26 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
-		fmt.Println("Received request to publish:", string(packet.Payload.RawApplicationMessage), "to topic:", string(packet.VariableLengthHeader.(*packets.PublishVariableHeader).TopicFilter))
 
 		varHeader := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
 		topic := clients.Topic{
 			TopicFilter: varHeader.TopicFilter,
 			Qos:         packet.ControlHeader.Flags & 6,
 		}
+
+		msgToPublish := bytes.NewBuffer(packet.Payload.RawApplicationMessage).String()
+
+		structures.Print("Receved request to publish")
+		time.Sleep(500 * time.Millisecond)
+		structures.Print("WTF IS GOING ON???")
+		structures.Print(msgToPublish)
+		structures.Print(" to topic:")
+		structures.Print(topic.TopicFilter, "\n")
+
+		// structures.Printf("Received request to publish: %s to topic: %s", msgToPublish, topicToPublish)
+
+		// structures.Println("Received request to publish:", msgToPublish, "to topic:", topicToPublish)
+
 		// Adds to the packets to send
 		handlePublish(topicClientMap, topic, clientMessage, server.clientTable, &packetsToSend)
 
@@ -143,6 +157,7 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 	for offset < len(payload) {
 		topicFilter, utfStringLen, err := packets.DecodeUTFString(payload[offset:])
 		if err != nil {
+			structures.Println("Error decoding UTF string")
 			return nil, err
 		}
 
@@ -168,6 +183,8 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients
 		client.Topics = structures.CreateLinkedList[clients.Topic]()
 	}
 
+	topicClientMap.PrintTopics()
+
 	for _, newTopic := range newTopics {
 		client.AddTopic(newTopic)
 		err := topicClientMap.Put(newTopic.TopicFilter, client.ClientIdentifier)
@@ -191,6 +208,7 @@ func handleUnsubscribe(topics []string, topicToSubscribers *clients.TopicToSubsc
 
 func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
 	clientList, err := TCMap.GetMatchingClients(topic.TopicFilter)
+
 	if err != nil {
 		log.Printf("- Error while getting matching clients during a publish to '%v' by '%v': %v\n", topic.TopicFilter, *msgToForward.ClientID, err)
 		return
