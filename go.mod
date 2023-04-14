@@ -9,6 +9,7 @@ require (
 
 require (
 	github.com/goburrow/quic v0.0.8 // indirect
+	github.com/wayneashleyberry/terminal-dimensions v1.1.0 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 )

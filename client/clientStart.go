@@ -55,12 +55,14 @@ func StartClient() {
 			continue
 		}
 
+		for i, word := range words {
+			words[i] = strings.ReplaceAll(word, "\r", "")
+		}
+
 		switch words[0] {
 		case "publish":
 			{
 				combinedWords := strings.Join(words[2:], " ")
-				structures.Println(combinedWords, words[1])
-				structures.Println("List of words:", words)
 
 				err := client.SendPublish([]byte(combinedWords), words[1])
 				if err != nil {

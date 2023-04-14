@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	terminal "github.com/wayneashleyberry/terminal-dimensions"
 )
 
 func PrintInterface(i interface{}) {
@@ -12,20 +14,15 @@ func PrintInterface(i interface{}) {
 	Println(string(s))
 }
 
-func center(s string, w int) string {
-	return fmt.Sprintf("%[1]*s", -w, fmt.Sprintf("%[1]*s", (w+len(s))/2, s))
-}
-
-func PrintCentrally(toPrint ...string) {
-	stringBuilder := strings.Builder{}
-	stringBuilder.WriteString("  --")
-	for _, str := range toPrint {
-		stringBuilder.WriteString(str)
+func PrintCentrally(toPrint ...any) {
+	output := fmt.Sprint(toPrint...)
+	width, err := terminal.Width()
+	if err != nil {
+		fmt.Println("Error getting terminal width:", err)
 	}
-	stringBuilder.WriteString("--")
-	Println(stringBuilder.String())
 
-	// Println(center(stringBuilder.String(), 100))
+	padding := (int(width) - len(output)) / 2
+	Println(strings.Repeat(" ", padding) + output)
 }
 
 func (ll *LinkedList[T]) PrintItems() {
