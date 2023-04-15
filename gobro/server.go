@@ -64,8 +64,8 @@ func (server *Server) StartServer() {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
 	log.Println("--Server starting--")
 	// Listen for connections
-	clients.ServerPrintln("Listening for connections via", []string{"TCP", "QUIC", "UDP"}[ConnectionType])
-	clients.ServerPrintf("Listening on %v\n", getServerIpAndPort())
+	structures.Println("Listening for connections via", []string{"TCP", "QUIC", "UDP"}[ConnectionType])
+	structures.Printf("Listening on %v\n", getServerIpAndPort())
 
 	listener, err := network.NewListener(ConnectionType)
 	if err != nil {
@@ -84,7 +84,6 @@ func (server *Server) StartServer() {
 
 	msgSender := CreateMessageSender(server.outputChan)
 	go msgSender.ListenAndSend(server)
-
 	msgListener := CreateMessageHandler(server.inputChan, server.outputChan)
 	go msgListener.Listen(server)
 
@@ -108,8 +107,8 @@ func AcceptConnections(listener network.Listener, server *Server) {
 		}
 
 		clients.ServerPrintln("Accepted a connection")
-		// // Set a keep alive period because there isn't a foolproof way of checking if the connection
-		// // suddenly closes - we want to wait for DISCONNECT messages or timeout.
+		// Set a keep alive period because there isn't a foolproof way of checking if the connection
+		// suddenly closes - we want to wait for DISCONNECT messages or timeout.
 		// err = connection.(*net.TCPConn).SetKeepAlivePeriod(5 * time.Second)
 
 		if err != nil {

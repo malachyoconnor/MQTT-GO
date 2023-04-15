@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/goburrow/quic"
@@ -15,46 +16,44 @@ import (
 
 func (conn *QUICCon) Connect(ip string, port int) error {
 	config := transport.NewConfig()
-	cert, err := tls.LoadX509KeyPair("C:\\Users\\malac\\Desktop\\MQTT-GO\\network\\client.crt",
-		"C:\\Users\\malac\\Desktop\\MQTT-GO\\network\\client.key")
-	if err != nil {
-		panic(err)
-	}
+	config.Params.MaxIdleTimeout = time.Hour
+	cert, err := tls.LoadX509KeyPair("network/client.crt", "network/client.key")
+	structures.PANIC_ON_ERR(err)
 	config.TLS = &tls.Config{}
 	config.TLS.InsecureSkipVerify = true
 	config.TLS.Certificates = []tls.Certificate{cert}
 
 	client := quic.NewClient(config)
 	handler := &quicClientHandler{
-		toWrite: make(chan []byte, 100),
-		client:  client,
+		toWrite:            make(chan []byte, 100),
+		client:             client,
+		connectionAccepted: make(map[string]bool),
+		waitForConnection:  sync.NewCond(&sync.Mutex{}),
 	}
 	conn.handler = handler
 	client.SetHandler(handler)
 	address := ip + ":" + strconv.Itoa(port)
 	err = client.ListenAndServe(ip + ":")
-
-	if err != nil {
-		panic(err)
-	}
+	structures.PANIC_ON_ERR(err)
 	err = client.Connect(address)
-	go client.Serve()
+	go func() {
+		structures.PANIC_ON_ERR(client.Serve())
+	}()
+	structures.PANIC_ON_ERR(err)
 
-	if err != nil {
-		panic(err)
+	conn.handler.waitForConnection.L.Lock()
+	if conn.handler.mainStream == nil {
+		conn.handler.waitForConnection.Wait()
 	}
-
-	for conn.handler.mainStream == nil {
-		structures.Println("Spinning")
-	}
+	conn.handler.waitForConnection.L.Unlock()
 	conn.connection = conn.handler.mainStream
-
 	return nil
 }
 
 func (conn *QUICCon) Write(toWrite []byte) (n int, err error) {
 	for conn.handler.mainStream == nil {
-		structures.Println("Spinning")
+		// structures.Print("\rSpinning")
+		time.Sleep(time.Millisecond)
 	}
 	return conn.handler.mainStream.Write(toWrite)
 }
@@ -72,11 +71,14 @@ func (conn *QUICCon) RemoteAddr() net.Addr {
 	return conn.handler.mainStream.RemoteAddr()
 }
 
+func (conn *QUICCon) LocalAddr() net.Addr {
+	return conn.handler.mainStream.LocalAddr()
+}
+
 // Next the listening methods
 func (quicListener *QUICListener) Listen(ip string, port int) error {
 	config := transport.NewConfig()
-	cert, err := tls.LoadX509KeyPair("C:\\Users\\malac\\Desktop\\MQTT-GO\\network\\server.crt",
-		"C:\\Users\\malac\\Desktop\\MQTT-GO\\network\\server.key")
+	cert, err := tls.LoadX509KeyPair("network/server.crt", "network/server.key")
 	if err != nil {
 		return err
 	}
@@ -88,7 +90,7 @@ func (quicListener *QUICListener) Listen(ip string, port int) error {
 	handler := &quicServerHandler{
 		waitingConnections:  make(chan *StreamWrapper, 100),
 		acceptedConnections: make([]*quic.Conn, 100),
-		connectionAccepted:  make(map[net.Addr]bool),
+		connectionAccepted:  make(map[string]bool),
 		quicServer:          server,
 	}
 	server.SetHandler(handler)

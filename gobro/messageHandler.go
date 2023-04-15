@@ -1,9 +1,7 @@
 package gobro
 
 import (
-	"bytes"
 	"log"
-	"time"
 
 	"MQTT-GO/gobro/clients"
 	"MQTT-GO/packets"
@@ -47,6 +45,8 @@ func (msgH *MessageHandler) Listen(server *Server) {
 		if packetType != packets.CONNECT {
 			if !clientTable.Contains(clientID) {
 				log.Printf("Client '%v' not in the client table sent %v message, disconnecting.\n", clientID, packets.PacketTypeName(packetType))
+				structures.Printf("Client '%v' not in the client table sent %v message, disconnecting.\n", clientID, packets.PacketTypeName(packetType))
+
 				// If the client hasn't already been disconnected by the client handler
 				if client != nil {
 					client.NetworkConnection.Close()
@@ -54,9 +54,7 @@ func (msgH *MessageHandler) Listen(server *Server) {
 				continue
 			}
 		}
-
 		go HandleMessage(packetType, packet, client, server, clientMessage, ticket)
-
 	}
 }
 
@@ -76,25 +74,13 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
-
 		varHeader := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
 		topic := clients.Topic{
 			TopicFilter: varHeader.TopicFilter,
 			Qos:         packet.ControlHeader.Flags & 6,
 		}
-
-		msgToPublish := bytes.NewBuffer(packet.Payload.RawApplicationMessage).String()
-
-		structures.Print("Receved request to publish")
-		time.Sleep(500 * time.Millisecond)
-		structures.Print("WTF IS GOING ON???")
-		structures.Print(msgToPublish)
-		structures.Print(" to topic:")
-		structures.Print(topic.TopicFilter, "\n")
-
-		// structures.Printf("Received request to publish: %s to topic: %s", msgToPublish, topicToPublish)
-
-		// structures.Println("Received request to publish:", msgToPublish, "to topic:", topicToPublish)
+		msgToPublish := string(packet.Payload.RawApplicationMessage)
+		structures.Println("Received request to publish:", msgToPublish, "to topic:", topic.TopicFilter)
 
 		// Adds to the packets to send
 		handlePublish(topicClientMap, topic, clientMessage, server.clientTable, &packetsToSend)
@@ -134,6 +120,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		// Close the client connection.
 		// Remove the packet from the client list
 		ticket.WaitOnTicket()
+
 		client.Disconnect(topicClientMap, clientTable)
 		ticket.TicketCompleted()
 		return

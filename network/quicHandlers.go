@@ -11,32 +11,39 @@ import (
 )
 
 type quicClientHandler struct {
-	toWrite    chan []byte
-	mainStream *StreamWrapper
-	client     *quic.Client
+	toWrite            chan []byte
+	mainStream         *StreamWrapper
+	client             *quic.Client
+	connectionAccepted map[string]bool
+	waitForConnection  *sync.Cond
 }
 
 func (handler *quicClientHandler) Serve(conn *quic.Conn, events []transport.Event) {
-
-	if len(handler.toWrite) != 0 {
-		conn.StreamWrite(0, <-handler.toWrite)
-	}
 
 	for _, e := range events {
 
 		switch e.Type {
 		case transport.EventConnOpen:
 			{
+				if handler.connectionAccepted[conn.RemoteAddr().String()] {
+					break
+				}
+				handler.connectionAccepted[conn.RemoteAddr().String()] = true
 				st, err := conn.Stream(e.Data)
 				if err != nil {
 					panic(err)
 				}
-
+				// Once we've opened the stream, tell the waiting readers/writers that
+				// they can access it
+				handler.waitForConnection.L.Lock()
 				handler.mainStream = &StreamWrapper{
 					readLock:  sync.Mutex{},
 					writeLock: sync.Mutex{},
 					stream:    st,
+					output:    false,
 				}
+				handler.waitForConnection.Broadcast()
+				handler.waitForConnection.L.Unlock()
 
 			}
 		}
@@ -46,7 +53,7 @@ func (handler *quicClientHandler) Serve(conn *quic.Conn, events []transport.Even
 type quicServerHandler struct {
 	waitingConnections  chan *StreamWrapper
 	acceptedConnections []*quic.Conn
-	connectionAccepted  map[net.Addr]bool
+	connectionAccepted  map[string]bool
 	quicServer          *quic.Server
 }
 
@@ -57,21 +64,29 @@ func (handler *quicServerHandler) Serve(conn *quic.Conn, events []transport.Even
 
 		case transport.EventStreamOpen:
 			{
+				if handler.connectionAccepted[conn.LocalAddr().String()] {
+					break
+				}
 				st, err := conn.Stream(e.Data)
 				if err != nil {
 					structures.Println("Error while connecting to stream:", err)
 					continue
 				}
-
+				handler.connectionAccepted[conn.LocalAddr().String()] = true
 				handler.waitingConnections <- &StreamWrapper{
 					readLock:  sync.Mutex{},
 					writeLock: sync.Mutex{},
 					stream:    st,
+					output:    false,
 				}
-				structures.Println("Added to the waiting connections")
 			}
-
+		case transport.EventConnClosed:
+			{
+				conn.Close()
+				structures.PrintCentrally("CONNECTION CLOSED")
+			}
 		}
+
 	}
 
 }
@@ -80,29 +95,35 @@ type StreamWrapper struct {
 	stream    *quic.Stream
 	readLock  sync.Mutex
 	writeLock sync.Mutex
+	output    bool
 }
 
 func (wrapper *StreamWrapper) Write(b []byte) (int, error) {
 	wrapper.writeLock.Lock()
-	structures.Println("Started writing!", b)
-	defer structures.Println("Finished writing!")
-
+	if wrapper.output {
+		structures.Println("Started writing!", b)
+		defer structures.Println("Finished writing!")
+	}
 	defer wrapper.writeLock.Unlock()
 	return wrapper.stream.Write(b)
 }
 
 func (wrapper *StreamWrapper) Read(b []byte) (int, error) {
 	wrapper.readLock.Lock()
-	structures.Println("Started Reading!")
-	defer structures.Println("Finished Reading!")
+	if wrapper.output {
+		structures.Println("Started Reading!")
+		defer structures.Println("Finished Reading!")
+	}
 	defer wrapper.readLock.Unlock()
 	return wrapper.stream.Read(b)
 }
 
 func (wrapper *StreamWrapper) Close() error {
 	wrapper.writeLock.Lock()
-	structures.Println("Started Closing!")
-	defer structures.Println("Finished Closing!")
+	if wrapper.output {
+		structures.Println("Started Closing!")
+		defer structures.Println("Finished Closing!")
+	}
 	defer wrapper.writeLock.Unlock()
 	wrapper.stream.CloseRead(0)
 	wrapper.stream.CloseWrite(0)
@@ -110,16 +131,10 @@ func (wrapper *StreamWrapper) Close() error {
 }
 
 func (wrapper *StreamWrapper) LocalAddr() net.Addr {
-	wrapper.readLock.Lock()
-	structures.Println("Started LocalAddressing!")
-	defer structures.Println("Finished LocalAddressing!")
-	defer wrapper.readLock.Unlock()
 	return wrapper.stream.LocalAddr()
 }
 
 func (wrapper *StreamWrapper) RemoteAddr() net.Addr {
-	wrapper.readLock.Lock()
-	defer wrapper.readLock.Unlock()
 	return wrapper.stream.RemoteAddr()
 }
 

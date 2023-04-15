@@ -31,6 +31,10 @@ func (conn *TCPCon) RemoteAddr() net.Addr {
 	return (*conn.connection).RemoteAddr()
 }
 
+func (conn *TCPCon) LocalAddr() net.Addr {
+	return (*conn.connection).LocalAddr()
+}
+
 // Next the listening methods
 
 func (tcpListener *TCPListener) Listen(ip string, port int) error {

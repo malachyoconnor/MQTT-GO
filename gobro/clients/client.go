@@ -78,9 +78,8 @@ var (
 
 func ServerPrintln(args ...any) {
 	if VerboseOutput {
-		// Println with the unpacked args bugs for some reason...
 		for _, arg := range args {
-			fmt.Print(arg, " ")
+			fmt.Println(arg, " ")
 		}
 	}
 }

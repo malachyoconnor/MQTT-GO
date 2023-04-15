@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,11 +34,13 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
 		log.Printf("- Error handling connect from %v: %v\n", newClient.NetworkConnection.RemoteAddr(), err)
+		structures.Printf("Error handling connect from %v: %v\n", newClient.NetworkConnection.RemoteAddr(), err)
 		if err.Error() == "error: Client already exists" {
 			connack := packets.CreateConnACK(false, 2)
 			_, err := (*connection).Write(connack)
 			if err != nil {
 				(*connection).Close()
+				structures.Println("Error while writing", err)
 			} else {
 				// Sleep for 50 millisconds while they digest this news that they're being disconnected before closing the connection
 				time.Sleep(time.Millisecond * 50)
@@ -71,7 +74,12 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 			break
 		}
 		if err != nil {
-			ServerPrintln("Error while reading", err)
+
+			if !strings.HasSuffix(err.Error(), "reset_stream") {
+				structures.Println("Error while reading", err)
+			} else {
+				structures.Println("Stream closed")
+			}
 			break
 		}
 

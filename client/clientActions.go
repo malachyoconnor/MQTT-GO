@@ -89,9 +89,7 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 		return err
 	}
 
-	// Check the qos level to see if we should expect a response - if not then exit
 	if controlHeader.Flags&6 == 0 {
-		structures.Println(controlHeader.Flags)
 		return nil
 	}
 

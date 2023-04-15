@@ -20,6 +20,7 @@ type Con interface {
 	Read(buffer []byte) (n int, err error)
 	Close() error
 	RemoteAddr() net.Addr
+	LocalAddr() net.Addr
 }
 
 func NewCon(networkID byte) (Con, error) {
