@@ -2,10 +2,12 @@ package client
 
 import (
 	"fmt"
+	"sync"
 )
 
 var (
-	clientNumber = 0
+	clientNumber     = 0
+	clientNumberLock = sync.Mutex{}
 )
 
 // FIXME:
@@ -13,6 +15,8 @@ var (
 // with multiple clients.
 // For now it's been replaced with a simple number.
 func generateRandomClientID() string {
+	clientNumberLock.Lock()
+	defer clientNumberLock.Unlock()
 	clientNumber += 1
 	return fmt.Sprint(clientNumber)
 

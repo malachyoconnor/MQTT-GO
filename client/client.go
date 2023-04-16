@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 )
 
 var (
@@ -31,6 +32,10 @@ func CreateClient() *Client {
 	}
 }
 
+// var (
+// 	connected = atomic.Int64{}
+// )
+
 func CreateAndConnectClient(ip string, port int) (*Client, error) {
 	client := CreateClient()
 	err := client.SetClientConnection(ip, port)
@@ -38,6 +43,7 @@ func CreateAndConnectClient(ip string, port int) (*Client, error) {
 		return nil, err
 	}
 	err = client.SendConnect()
+	// fmt.Println("\r CONNECTED OKAY", connected.Add(1))
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +83,9 @@ func cleanupAndExit(client *Client) {
 		if err != nil {
 			structures.Println("Error while disconnecting:", err)
 		}
+
 		if client.BrokerConnection != nil {
+			time.Sleep(time.Millisecond * 1000)
 			err = client.BrokerConnection.Close()
 			if err != nil {
 				structures.Println("Error while closing connection:", err)

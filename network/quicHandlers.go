@@ -8,6 +8,7 @@ import (
 
 	"github.com/goburrow/quic"
 	"github.com/goburrow/quic/transport"
+	"github.com/sasha-s/go-deadlock"
 )
 
 type quicClientHandler struct {
@@ -21,7 +22,6 @@ type quicClientHandler struct {
 func (handler *quicClientHandler) Serve(conn *quic.Conn, events []transport.Event) {
 
 	for _, e := range events {
-
 		switch e.Type {
 		case transport.EventConnOpen:
 			{
@@ -29,7 +29,12 @@ func (handler *quicClientHandler) Serve(conn *quic.Conn, events []transport.Even
 					break
 				}
 				handler.connectionAccepted[conn.RemoteAddr().String()] = true
-				st, err := conn.Stream(e.Data)
+				streamID, ok := conn.NewStream(true)
+				if !ok {
+					structures.Println("Error can't open stream")
+					return
+				}
+				st, err := conn.Stream(streamID)
 				if err != nil {
 					panic(err)
 				}
@@ -37,10 +42,11 @@ func (handler *quicClientHandler) Serve(conn *quic.Conn, events []transport.Even
 				// they can access it
 				handler.waitForConnection.L.Lock()
 				handler.mainStream = &StreamWrapper{
-					readLock:  sync.Mutex{},
-					writeLock: sync.Mutex{},
-					stream:    st,
-					output:    false,
+					readLock:   deadlock.Mutex{},
+					writeLock:  deadlock.Mutex{},
+					stream:     st,
+					output:     false,
+					connection: conn,
 				}
 				handler.waitForConnection.Broadcast()
 				handler.waitForConnection.L.Unlock()
@@ -52,8 +58,8 @@ func (handler *quicClientHandler) Serve(conn *quic.Conn, events []transport.Even
 
 type quicServerHandler struct {
 	waitingConnections  chan *StreamWrapper
-	acceptedConnections []*quic.Conn
-	connectionAccepted  map[string]bool
+	acceptedConnections []*StreamWrapper
+	connectionAccepted  *structures.SafeMap[string, bool]
 	quicServer          *quic.Server
 }
 
@@ -64,20 +70,22 @@ func (handler *quicServerHandler) Serve(conn *quic.Conn, events []transport.Even
 
 		case transport.EventStreamOpen:
 			{
-				if handler.connectionAccepted[conn.LocalAddr().String()] {
-					break
+
+				if handler.connectionAccepted.Get(conn.RemoteAddr().String()) {
+					continue
 				}
 				st, err := conn.Stream(e.Data)
 				if err != nil {
 					structures.Println("Error while connecting to stream:", err)
 					continue
 				}
-				handler.connectionAccepted[conn.LocalAddr().String()] = true
+				handler.connectionAccepted.Put(conn.RemoteAddr().String(), true)
 				handler.waitingConnections <- &StreamWrapper{
-					readLock:  sync.Mutex{},
-					writeLock: sync.Mutex{},
-					stream:    st,
-					output:    false,
+					connection: conn,
+					readLock:   deadlock.Mutex{},
+					writeLock:  deadlock.Mutex{},
+					stream:     st,
+					output:     false,
 				}
 			}
 		case transport.EventConnClosed:
@@ -92,10 +100,11 @@ func (handler *quicServerHandler) Serve(conn *quic.Conn, events []transport.Even
 }
 
 type StreamWrapper struct {
-	stream    *quic.Stream
-	readLock  sync.Mutex
-	writeLock sync.Mutex
-	output    bool
+	stream     *quic.Stream
+	readLock   deadlock.Mutex
+	writeLock  deadlock.Mutex
+	output     bool
+	connection *quic.Conn
 }
 
 func (wrapper *StreamWrapper) Write(b []byte) (int, error) {
@@ -105,8 +114,19 @@ func (wrapper *StreamWrapper) Write(b []byte) (int, error) {
 		defer structures.Println("Finished writing!")
 	}
 	defer wrapper.writeLock.Unlock()
-	return wrapper.stream.Write(b)
+
+	// wrapper.stream.SetWriteDeadline(time.Now().Add(time.Second * 5))
+	n, err := wrapper.stream.Write(b)
+
+	// for err != nil {
+	// 	structures.PrintCentrally(err)
+	// 	n, err = wrapper.stream.Write(b)
+	// }
+
+	return n, err
 }
+
+// TRY REPEATING THIS UNTIL IT DOESNT GIVE IO TIMEOUT
 
 func (wrapper *StreamWrapper) Read(b []byte) (int, error) {
 	wrapper.readLock.Lock()
@@ -115,19 +135,19 @@ func (wrapper *StreamWrapper) Read(b []byte) (int, error) {
 		defer structures.Println("Finished Reading!")
 	}
 	defer wrapper.readLock.Unlock()
+
 	return wrapper.stream.Read(b)
 }
 
 func (wrapper *StreamWrapper) Close() error {
 	wrapper.writeLock.Lock()
+	defer wrapper.writeLock.Unlock()
 	if wrapper.output {
 		structures.Println("Started Closing!")
 		defer structures.Println("Finished Closing!")
 	}
-	defer wrapper.writeLock.Unlock()
-	wrapper.stream.CloseRead(0)
-	wrapper.stream.CloseWrite(0)
-	return wrapper.stream.Close()
+	return wrapper.connection.Close()
+
 }
 
 func (wrapper *StreamWrapper) LocalAddr() net.Addr {
@@ -155,3 +175,40 @@ func (wrapper *StreamWrapper) SetWriteDeadline(t time.Time) error {
 	defer wrapper.readLock.Unlock()
 	return wrapper.stream.SetWriteDeadline(t)
 }
+
+// serverHandler := func(conn *Conn, events []transport.Event) {
+// 	// t.Logf("server events: cid=%x %v", conn.scid, events)
+// 	for _, e := range events {
+// 		switch e.Type {
+// 		case transport.EventStreamOpen:
+// 			st, err := conn.Stream(e.Data)
+// 			if err != nil {
+// 				t.Errorf("server stream %v: %v", e.Data, err)
+// 				conn.Close()
+// 				return
+// 			}
+// 			go recvFn(st)
+// 		}
+// 	}
+// }
+// clientHandler := func(conn *Conn, events []transport.Event) {
+// 	// t.Logf("client events: cid=%x %v", conn.scid, events)
+// 	for _, e := range events {
+// 		switch e.Type {
+// 		case transport.EventConnOpen:
+// 			id, ok := conn.NewStream(true)
+// 			if !ok {
+// 				t.Error("client newstream failed")
+// 				conn.Close()
+// 				return
+// 			}
+// 			st, err := conn.Stream(id)
+// 			if err != nil {
+// 				t.Errorf("client stream: %d %v", id, err)
+// 				conn.Close()
+// 				return
+// 			}
+// 			go sendFn(st)
+// 		}
+// 	}
+// }

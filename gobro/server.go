@@ -33,6 +33,7 @@ func NewServer() Server {
 
 	clientTable := clients.CreateClientTable()
 	topicClientMap := clients.CreateTopicMap()
+	// TODO: Should this be larger?
 	inputChan := make(chan clients.ClientMessage)
 	outputChan := make(chan clients.ClientMessage)
 
@@ -133,7 +134,6 @@ func AcceptConnections(listener network.Listener, server *Server) {
 		connectedClientsMutex.Unlock()
 
 		go func() {
-
 			time.Sleep(time.Millisecond * 200)
 			if time.Since(lastPrintTime) < time.Millisecond*500 {
 				return

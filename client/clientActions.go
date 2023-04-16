@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"errors"
+	"sync/atomic"
 	"time"
 
 	"MQTT-GO/packets"
@@ -13,6 +14,10 @@ import (
 
 var (
 	errConnectionClosed = errors.New("error: connection is closed")
+)
+
+var (
+	connected = atomic.Int64{}
 )
 
 func (client *Client) SendConnect() error {
@@ -39,6 +44,7 @@ func (client *Client) SendConnect() error {
 	}
 	reader := bufio.NewReader(client.BrokerConnection)
 	result, err := packets.ReadPacketFromConnection(reader)
+	structures.Println("\r CONNECTED OKAY", connected.Add(1))
 	structures.Println(result, "Read connack")
 	if err != nil {
 		return err

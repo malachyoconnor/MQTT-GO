@@ -17,6 +17,10 @@ import (
 func (conn *QUICCon) Connect(ip string, port int) error {
 	config := transport.NewConfig()
 	config.Params.MaxIdleTimeout = time.Hour
+	config.Params.InitialMaxStreamDataBidiLocal = 2
+	config.Params.InitialMaxStreamDataUni = 2
+	config.Params.InitialMaxStreamsUni = 2
+
 	cert, err := tls.LoadX509KeyPair("network/client.crt", "network/client.key")
 	structures.PANIC_ON_ERR(err)
 	config.TLS = &tls.Config{}
@@ -25,7 +29,7 @@ func (conn *QUICCon) Connect(ip string, port int) error {
 
 	client := quic.NewClient(config)
 	handler := &quicClientHandler{
-		toWrite:            make(chan []byte, 100),
+		toWrite:            make(chan []byte, 2000),
 		client:             client,
 		connectionAccepted: make(map[string]bool),
 		waitForConnection:  sync.NewCond(&sync.Mutex{}),
@@ -37,7 +41,7 @@ func (conn *QUICCon) Connect(ip string, port int) error {
 	structures.PANIC_ON_ERR(err)
 	err = client.Connect(address)
 	go func() {
-		structures.PANIC_ON_ERR(client.Serve())
+		client.Serve()
 	}()
 	structures.PANIC_ON_ERR(err)
 
@@ -59,12 +63,16 @@ func (conn *QUICCon) Write(toWrite []byte) (n int, err error) {
 }
 
 func (conn *QUICCon) Read(buffer []byte) (n int, err error) {
+	for conn.handler.mainStream == nil {
+		time.Sleep(time.Millisecond)
+	}
 	return conn.handler.mainStream.Read(buffer)
 }
 
 func (conn *QUICCon) Close() error {
-	conn.connection.Close()
-	return conn.handler.client.Close()
+	conn.handler.client.Close()
+	return conn.handler.mainStream.Close()
+	// return conn.connection.Close()
 }
 
 func (conn *QUICCon) RemoteAddr() net.Addr {
@@ -75,6 +83,11 @@ func (conn *QUICCon) LocalAddr() net.Addr {
 	return conn.handler.mainStream.LocalAddr()
 }
 
+var (
+// handlerCreated = false
+// handler        = &quicServerHandler{}
+)
+
 // Next the listening methods
 func (quicListener *QUICListener) Listen(ip string, port int) error {
 	config := transport.NewConfig()
@@ -82,15 +95,20 @@ func (quicListener *QUICListener) Listen(ip string, port int) error {
 	if err != nil {
 		return err
 	}
+	config.Params.InitialMaxStreamsUni = 2
+	config.Params.InitialMaxStreamDataBidiLocal = 2
+	config.Params.InitialMaxStreamDataUni = 2
 	config.Params.MaxIdleTimeout = time.Hour
+	config.Params.MaxAckDelay = time.Second
 	config.TLS = &tls.Config{}
 	config.TLS.Certificates = []tls.Certificate{cert}
 	server := quic.NewServer(config)
 
+	structures.PrintCentrally("MAKING NEW HANDLER")
 	handler := &quicServerHandler{
-		waitingConnections:  make(chan *StreamWrapper, 100),
-		acceptedConnections: make([]*quic.Conn, 100),
-		connectionAccepted:  make(map[string]bool),
+		waitingConnections:  make(chan *StreamWrapper, 2000),
+		acceptedConnections: make([]*StreamWrapper, 2000),
+		connectionAccepted:  structures.CreateSafeMap[string, bool](),
 		quicServer:          server,
 	}
 	server.SetHandler(handler)
@@ -100,9 +118,15 @@ func (quicListener *QUICListener) Listen(ip string, port int) error {
 }
 
 func (quicListener *QUICListener) Close() error {
+	for _, conn := range quicListener.handler.acceptedConnections {
+		structures.PANIC_ON_ERR(conn.Close())
+	}
+
 	return quicListener.handler.quicServer.Close()
 }
 
 func (quicListener *QUICListener) Accept() (net.Conn, error) {
-	return <-quicListener.handler.waitingConnections, nil
+	acceptedConnection := <-quicListener.handler.waitingConnections
+	quicListener.handler.acceptedConnections = append(quicListener.handler.acceptedConnections, acceptedConnection)
+	return acceptedConnection, nil
 }

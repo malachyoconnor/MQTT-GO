@@ -70,6 +70,7 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	reader := bufio.NewReader(*connection)
 	for {
 		packet, err := packets.ReadPacketFromConnection(reader)
+
 		if err == io.EOF || errors.Is(err, net.ErrClosed) {
 			break
 		}
@@ -88,7 +89,9 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 		packetPool <- toSend
 	}
 	log.Printf("+ Client %v connection closed\n", clientID)
+	connectedClientMutex.Lock()
 	*connectedClient = ""
+	connectedClientMutex.Unlock()
 
 }
 
@@ -131,11 +134,11 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 
 func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 	*connectedClient = ""
-	time.Sleep(2 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 
 	// If the client has already been disconnected elsewhere
 	// by a call to client.Disconnect
-	if !clientTable.Contains(client.ClientIdentifier) || client.NetworkConnection.Close() != nil {
+	if !clientTable.Contains(client.ClientIdentifier) || client.NetworkConnection == nil {
 		return
 	}
 

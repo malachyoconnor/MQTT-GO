@@ -120,7 +120,6 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		// Close the client connection.
 		// Remove the packet from the client list
 		ticket.WaitOnTicket()
-
 		client.Disconnect(topicClientMap, clientTable)
 		ticket.TicketCompleted()
 		return

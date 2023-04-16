@@ -9,19 +9,28 @@ import (
 	terminal "github.com/wayneashleyberry/terminal-dimensions"
 )
 
+var (
+	terminalWidth = getTerminalWidth()
+)
+
 func PrintInterface(i interface{}) {
 	s, _ := json.MarshalIndent(i, "", "\t")
 	Println(string(s))
 }
 
-func PrintCentrally(toPrint ...any) {
-	output := fmt.Sprint(toPrint...)
+func getTerminalWidth() uint {
 	width, err := terminal.Width()
 	if err != nil {
 		fmt.Println("Error getting terminal width:", err)
+		return 300
 	}
+	return width
+}
 
-	padding := (int(width) - len(output)) / 2
+func PrintCentrally(toPrint ...any) {
+	output := fmt.Sprint(toPrint...)
+
+	padding := (int(terminalWidth) - len(output)) / 2
 	Println(strings.Repeat(" ", padding) + output)
 }
 
