@@ -2,6 +2,7 @@ package client
 
 import (
 	"bufio"
+	"strings"
 
 	"MQTT-GO/packets"
 	"MQTT-GO/structures"
@@ -12,9 +13,12 @@ func (client *Client) ListenForPackets() {
 	for {
 		packet, err := packets.ReadPacketFromConnection(reader)
 		if err != nil {
-			structures.Println(err)
+			if strings.HasSuffix(err.Error(), "use of closed network connection") {
+				structures.PrintCentrally("Connection closed")
+				return
+			}
+			structures.Println("Error during reading:", err)
 			return
-			// cleanupAndExit(client)
 		}
 
 		packetType := packets.GetPacketType(packet)

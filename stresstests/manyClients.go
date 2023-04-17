@@ -16,7 +16,7 @@ func ConnectAndPublish(numClients int) {
 	}
 	// Stop the clients from printing to stdout
 	StoredStdout := os.Stdout
-	// os.Stdout = nil
+	os.Stdout = nil
 
 	fmt.Fprintln(StoredStdout, "\rNum clients:", numClients)
 
@@ -28,11 +28,9 @@ func ConnectAndPublish(numClients int) {
 	var numPublished atomic.Int32
 
 	for i := 0; i < numClients; i++ {
-		fmt.Fprint(StoredStdout, "\rClients created and connected:", i+1)
 
 		go func(clientNum int) {
 			newClient, err := client.CreateAndConnectClient("localhost", 8000)
-			numPublished.Add(1)
 			for err != nil {
 				structures.Println(err)
 				newClient, err = client.CreateAndConnectClient("localhost", 8000)
@@ -40,6 +38,7 @@ func ConnectAndPublish(numClients int) {
 
 			clients[clientNum] = *newClient
 			err = newClient.SendPublish([]byte("TEST"), "abc")
+			fmt.Fprint(StoredStdout, "\rClients created and published:", numPublished.Add(1))
 			structures.PANIC_ON_ERR(err)
 			// fmt.Fprint(storedStdout, "\rPublished:", numPublished.Load())
 			queue.Done()
@@ -51,15 +50,21 @@ func ConnectAndPublish(numClients int) {
 	fmt.Fprintln(StoredStdout, "CONNECTED ALL CLIENTS")
 
 	for _, client := range clients {
-		client.SendPublish([]byte("TEST"), "abc")
+		err := client.SendPublish([]byte("TEST"), "abc")
+		if err != nil {
+			structures.Println("Error while publishing", err)
+		}
 	}
 
 	fmt.Fprintln(StoredStdout, "PUBLISHED FROM ALL CLIENTS")
 
 	for _, client := range clients {
 		err := client.SendDisconnect()
+		if err != nil {
+			fmt.Fprintln(StoredStdout, "Error while disconnecting", err)
+		}
 		time.Sleep(time.Millisecond * 10)
-		client.BrokerConnection.Close()
+		err = client.BrokerConnection.Close()
 		if err != nil {
 			fmt.Fprintln(StoredStdout, "ERROR WHILE DISCONNECTING", err)
 		}

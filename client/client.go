@@ -32,10 +32,6 @@ func CreateClient() *Client {
 	}
 }
 
-// var (
-// 	connected = atomic.Int64{}
-// )
-
 func CreateAndConnectClient(ip string, port int) (*Client, error) {
 	client := CreateClient()
 	err := client.SetClientConnection(ip, port)

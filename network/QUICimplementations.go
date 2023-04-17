@@ -10,6 +10,7 @@ import (
 
 	"github.com/goburrow/quic"
 	"github.com/goburrow/quic/transport"
+	"github.com/sasha-s/go-deadlock"
 )
 
 // First we implement the connection methods
@@ -26,13 +27,13 @@ func (conn *QUICCon) Connect(ip string, port int) error {
 	config.TLS = &tls.Config{}
 	config.TLS.InsecureSkipVerify = true
 	config.TLS.Certificates = []tls.Certificate{cert}
-
 	client := quic.NewClient(config)
+
 	handler := &quicClientHandler{
 		toWrite:            make(chan []byte, 2000),
 		client:             client,
 		connectionAccepted: make(map[string]bool),
-		waitForConnection:  sync.NewCond(&sync.Mutex{}),
+		waitForConnection:  &deadlock.Cond{Cond: *sync.NewCond(&sync.Mutex{})},
 	}
 	conn.handler = handler
 	client.SetHandler(handler)
@@ -41,6 +42,7 @@ func (conn *QUICCon) Connect(ip string, port int) error {
 	structures.PANIC_ON_ERR(err)
 	err = client.Connect(address)
 	go func() {
+		defer client.Close()
 		client.Serve()
 	}()
 	structures.PANIC_ON_ERR(err)
@@ -64,15 +66,13 @@ func (conn *QUICCon) Write(toWrite []byte) (n int, err error) {
 
 func (conn *QUICCon) Read(buffer []byte) (n int, err error) {
 	for conn.handler.mainStream == nil {
-		time.Sleep(time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	return conn.handler.mainStream.Read(buffer)
 }
 
 func (conn *QUICCon) Close() error {
-	conn.handler.client.Close()
-	return conn.handler.mainStream.Close()
-	// return conn.connection.Close()
+	return conn.handler.client.Close()
 }
 
 func (conn *QUICCon) RemoteAddr() net.Addr {
@@ -107,13 +107,16 @@ func (quicListener *QUICListener) Listen(ip string, port int) error {
 	structures.PrintCentrally("MAKING NEW HANDLER")
 	handler := &quicServerHandler{
 		waitingConnections:  make(chan *StreamWrapper, 2000),
-		acceptedConnections: make([]*StreamWrapper, 2000),
-		connectionAccepted:  structures.CreateSafeMap[string, bool](),
+		acceptedConnections: make([]*StreamWrapper, 0),
+		connectionAccepted:  structures.CreateSafeMap[string, *StreamWrapper](),
 		quicServer:          server,
 	}
 	server.SetHandler(handler)
 	quicListener.handler = handler
-	go server.ListenAndServe(ip + ":" + strconv.Itoa(port))
+	go func() {
+		defer server.Close()
+		server.ListenAndServe(ip + ":" + strconv.Itoa(port))
+	}()
 	return nil
 }
 
@@ -125,6 +128,7 @@ func (quicListener *QUICListener) Close() error {
 	return quicListener.handler.quicServer.Close()
 }
 
+// This works!
 func (quicListener *QUICListener) Accept() (net.Conn, error) {
 	acceptedConnection := <-quicListener.handler.waitingConnections
 	quicListener.handler.acceptedConnections = append(quicListener.handler.acceptedConnections, acceptedConnection)

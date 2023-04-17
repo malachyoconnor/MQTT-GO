@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"MQTT-GO/packets"
@@ -29,6 +30,10 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet [
 	}
 	return clientMessage
 }
+
+var (
+	escaped = atomic.Int32{}
+)
 
 func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string, connectedClientMutex *sync.Mutex) {
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
@@ -75,7 +80,6 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 			break
 		}
 		if err != nil {
-
 			if !strings.HasSuffix(err.Error(), "reset_stream") {
 				structures.Println("Error while reading", err)
 			} else {
@@ -88,10 +92,14 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 		toSend := ClientMessage{ClientID: &clientID, Packet: packet, ClientConnection: connection}
 		packetPool <- toSend
 	}
-	log.Printf("+ Client %v connection closed\n", clientID)
-	connectedClientMutex.Lock()
-	*connectedClient = ""
-	connectedClientMutex.Unlock()
+
+	defer func() {
+		log.Printf("+ Client %v connection closed\n", clientID)
+		connectedClientMutex.Lock()
+		*connectedClient = ""
+		connectedClientMutex.Unlock()
+		structures.PrintCentrally("Escaped client handler", escaped.Add(1))
+	}()
 
 }
 

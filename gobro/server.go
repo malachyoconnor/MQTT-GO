@@ -87,7 +87,6 @@ func (server *Server) StartServer() {
 	go msgSender.ListenAndSend(server)
 	msgListener := CreateMessageHandler(server.inputChan, server.outputChan)
 	go msgListener.Listen(server)
-
 	AcceptConnections(listener, server)
 }
 
@@ -98,6 +97,13 @@ var (
 
 func AcceptConnections(listener network.Listener, server *Server) {
 	clients.ServerPrintln("Connected clients:", connectedClients)
+	go func(connectedClients []string) {
+		for {
+			time.Sleep(time.Second * 5)
+			fmt.Println((connectedClients), "USERS")
+		}
+	}(connectedClients)
+
 	waitingToPrint := sync.Mutex{}
 	lastPrintTime := time.Now()
 	for {
@@ -151,7 +157,6 @@ func AcceptConnections(listener network.Listener, server *Server) {
 		}()
 
 		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable, server.topicClientMap, newArrayPos, &connectedClientsMutex)
-
 	}
 }
 

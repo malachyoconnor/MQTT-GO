@@ -49,6 +49,5 @@ type UDPListener struct {
 }
 
 type QUICListener struct {
-	listener *net.Listener
-	handler  *quicServerHandler
+	handler *quicServerHandler
 }

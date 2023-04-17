@@ -4,6 +4,7 @@ import (
 	"MQTT-GO/structures"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/goburrow/quic"
@@ -16,7 +17,7 @@ type quicClientHandler struct {
 	mainStream         *StreamWrapper
 	client             *quic.Client
 	connectionAccepted map[string]bool
-	waitForConnection  *sync.Cond
+	waitForConnection  *deadlock.Cond
 }
 
 func (handler *quicClientHandler) Serve(conn *quic.Conn, events []transport.Event) {
@@ -59,19 +60,25 @@ func (handler *quicClientHandler) Serve(conn *quic.Conn, events []transport.Even
 type quicServerHandler struct {
 	waitingConnections  chan *StreamWrapper
 	acceptedConnections []*StreamWrapper
-	connectionAccepted  *structures.SafeMap[string, bool]
+	connectionAccepted  *structures.SafeMap[string, *StreamWrapper]
 	quicServer          *quic.Server
 }
 
-func (handler *quicServerHandler) Serve(conn *quic.Conn, events []transport.Event) {
+var (
+	closed atomic.Int32
+)
 
+func (handler *quicServerHandler) Serve(conn *quic.Conn, events []transport.Event) {
+	if handler.connectionAccepted.Contains(conn.RemoteAddr().String()) {
+		handler.connectionAccepted.Get(conn.RemoteAddr().String()).connectionLock.Lock()
+		defer handler.connectionAccepted.Get(conn.RemoteAddr().String()).connectionLock.Unlock()
+	}
 	for _, e := range events {
 		switch e.Type {
 
 		case transport.EventStreamOpen:
 			{
-
-				if handler.connectionAccepted.Get(conn.RemoteAddr().String()) {
+				if handler.connectionAccepted.Contains(conn.RemoteAddr().String()) {
 					continue
 				}
 				st, err := conn.Stream(e.Data)
@@ -79,19 +86,23 @@ func (handler *quicServerHandler) Serve(conn *quic.Conn, events []transport.Even
 					structures.Println("Error while connecting to stream:", err)
 					continue
 				}
-				handler.connectionAccepted.Put(conn.RemoteAddr().String(), true)
-				handler.waitingConnections <- &StreamWrapper{
+
+				streamWrapper := &StreamWrapper{
 					connection: conn,
 					readLock:   deadlock.Mutex{},
 					writeLock:  deadlock.Mutex{},
 					stream:     st,
 					output:     false,
 				}
+				handler.connectionAccepted.Put(conn.RemoteAddr().String(), streamWrapper)
+				handler.waitingConnections <- streamWrapper
 			}
 		case transport.EventConnClosed:
 			{
-				conn.Close()
 				structures.PrintCentrally("CONNECTION CLOSED")
+				handler.connectionAccepted.Delete(conn.RemoteAddr().String())
+				conn.Close()
+				structures.Println("Closed", closed.Add(1))
 			}
 		}
 
@@ -100,11 +111,12 @@ func (handler *quicServerHandler) Serve(conn *quic.Conn, events []transport.Even
 }
 
 type StreamWrapper struct {
-	stream     *quic.Stream
-	readLock   deadlock.Mutex
-	writeLock  deadlock.Mutex
-	output     bool
-	connection *quic.Conn
+	stream         *quic.Stream
+	readLock       deadlock.Mutex
+	writeLock      deadlock.Mutex
+	output         bool
+	connection     *quic.Conn
+	connectionLock sync.Mutex
 }
 
 func (wrapper *StreamWrapper) Write(b []byte) (int, error) {
@@ -114,19 +126,8 @@ func (wrapper *StreamWrapper) Write(b []byte) (int, error) {
 		defer structures.Println("Finished writing!")
 	}
 	defer wrapper.writeLock.Unlock()
-
-	// wrapper.stream.SetWriteDeadline(time.Now().Add(time.Second * 5))
-	n, err := wrapper.stream.Write(b)
-
-	// for err != nil {
-	// 	structures.PrintCentrally(err)
-	// 	n, err = wrapper.stream.Write(b)
-	// }
-
-	return n, err
+	return wrapper.stream.Write(b)
 }
-
-// TRY REPEATING THIS UNTIL IT DOESNT GIVE IO TIMEOUT
 
 func (wrapper *StreamWrapper) Read(b []byte) (int, error) {
 	wrapper.readLock.Lock()
@@ -146,8 +147,12 @@ func (wrapper *StreamWrapper) Close() error {
 		structures.Println("Started Closing!")
 		defer structures.Println("Finished Closing!")
 	}
+	wrapper.connectionLock.Lock()
+	defer wrapper.connectionLock.Unlock()
+	if wrapper.connection.ConnectionState().State == "closed" {
+		return nil
+	}
 	return wrapper.connection.Close()
-
 }
 
 func (wrapper *StreamWrapper) LocalAddr() net.Addr {
@@ -175,40 +180,3 @@ func (wrapper *StreamWrapper) SetWriteDeadline(t time.Time) error {
 	defer wrapper.readLock.Unlock()
 	return wrapper.stream.SetWriteDeadline(t)
 }
-
-// serverHandler := func(conn *Conn, events []transport.Event) {
-// 	// t.Logf("server events: cid=%x %v", conn.scid, events)
-// 	for _, e := range events {
-// 		switch e.Type {
-// 		case transport.EventStreamOpen:
-// 			st, err := conn.Stream(e.Data)
-// 			if err != nil {
-// 				t.Errorf("server stream %v: %v", e.Data, err)
-// 				conn.Close()
-// 				return
-// 			}
-// 			go recvFn(st)
-// 		}
-// 	}
-// }
-// clientHandler := func(conn *Conn, events []transport.Event) {
-// 	// t.Logf("client events: cid=%x %v", conn.scid, events)
-// 	for _, e := range events {
-// 		switch e.Type {
-// 		case transport.EventConnOpen:
-// 			id, ok := conn.NewStream(true)
-// 			if !ok {
-// 				t.Error("client newstream failed")
-// 				conn.Close()
-// 				return
-// 			}
-// 			st, err := conn.Stream(id)
-// 			if err != nil {
-// 				t.Errorf("client stream: %d %v", id, err)
-// 				conn.Close()
-// 				return
-// 			}
-// 			go sendFn(st)
-// 		}
-// 	}
-// }
