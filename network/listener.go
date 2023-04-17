@@ -5,6 +5,8 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+
+	"github.com/quic-go/quic-go"
 )
 
 type Listener interface {
@@ -49,5 +51,5 @@ type UDPListener struct {
 }
 
 type QUICListener struct {
-	handler *quicServerHandler
+	listener *quic.Listener
 }

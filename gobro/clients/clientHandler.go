@@ -9,7 +9,6 @@ import (
 	"net"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"MQTT-GO/packets"
@@ -30,10 +29,6 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet [
 	}
 	return clientMessage
 }
-
-var (
-	escaped = atomic.Int32{}
-)
 
 func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string, connectedClientMutex *sync.Mutex) {
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
@@ -67,6 +62,13 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	(*connectedClient) = string(clientID)
 	connectedClientMutex.Unlock()
 
+	defer func() {
+		log.Printf("+ Client %v connection closed\n", clientID)
+		connectedClientMutex.Lock()
+		*connectedClient = ""
+		connectedClientMutex.Unlock()
+	}()
+
 	if err != nil {
 		ServerPrintln("Error decoding clientID")
 		return
@@ -92,14 +94,6 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 		toSend := ClientMessage{ClientID: &clientID, Packet: packet, ClientConnection: connection}
 		packetPool <- toSend
 	}
-
-	defer func() {
-		log.Printf("+ Client %v connection closed\n", clientID)
-		connectedClientMutex.Lock()
-		*connectedClient = ""
-		connectedClientMutex.Unlock()
-		structures.PrintCentrally("Escaped client handler", escaped.Add(1))
-	}()
 
 }
 

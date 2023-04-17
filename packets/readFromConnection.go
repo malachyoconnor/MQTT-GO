@@ -1,19 +1,12 @@
 package packets
 
 import (
-	"MQTT-GO/structures"
 	"bufio"
 	"io"
-	"sync/atomic"
-)
-
-var (
-	called = atomic.Int32{}
 )
 
 func ReadPacketFromConnection(connectionReader *bufio.Reader) ([]byte, error) {
 
-	structures.Println("Reached here:", called.Add(1))
 	packetTypeAndFlags, err := connectionReader.Peek(1)
 
 	if err != nil && len(packetTypeAndFlags) == 0 {

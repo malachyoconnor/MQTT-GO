@@ -56,7 +56,6 @@ func (client *Client) Disconnect(topicClientMap *TopicToSubscribers, clientTable
 	clientTable.Delete(client.ClientIdentifier)
 	client.Topics.DeleteLinkedList()
 	client.NetworkConnection.Close()
-	fmt.Println("DISCONNECTED CLIENT")
 }
 
 var (

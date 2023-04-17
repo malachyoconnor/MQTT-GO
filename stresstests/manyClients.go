@@ -63,7 +63,7 @@ func ConnectAndPublish(numClients int) {
 		if err != nil {
 			fmt.Fprintln(StoredStdout, "Error while disconnecting", err)
 		}
-		time.Sleep(time.Millisecond * 10)
+		time.Sleep(time.Millisecond)
 		err = client.BrokerConnection.Close()
 		if err != nil {
 			fmt.Fprintln(StoredStdout, "ERROR WHILE DISCONNECTING", err)
