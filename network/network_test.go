@@ -47,9 +47,3 @@ func TestUDPnetwork(t *testing.T) {
 	structures.Println(buffer)
 
 }
-
-func checkErr(err error, t *testing.T) {
-	if err != nil {
-		t.Error(err)
-	}
-}

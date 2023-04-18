@@ -23,8 +23,13 @@ func (conn *QUICCon) Connect(ip string, port int) error {
 	config.InsecureSkipVerify = true
 	config.Certificates = []tls.Certificate{cert}
 
-	connection, err := quic.DialAddr(ip+":"+fmt.Sprint(port), config, nil)
+	quicConfig := &quic.Config{}
+	quicConfig.MaxIdleTimeout = time.Hour
+
+	connection, err := quic.DialAddr(ip+":"+fmt.Sprint(port), config, quicConfig)
+
 	if err != nil {
+		fmt.Println("ERROR WHILE DIALING")
 		return err
 	}
 
@@ -92,7 +97,10 @@ func (quicListener *QUICListener) Listen(ip string, port int) error {
 	config.Certificates = []tls.Certificate{cert}
 	config.InsecureSkipVerify = true
 
-	listener, err := quic.Listen(connection, config, nil)
+	quicConfig := &quic.Config{}
+	quicConfig.MaxIdleTimeout = time.Hour
+
+	listener, err := quic.Listen(connection, config, quicConfig)
 	quicListener.listener = &listener
 
 	if err != nil {

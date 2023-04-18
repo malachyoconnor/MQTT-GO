@@ -5,6 +5,7 @@ import (
 	"MQTT-GO/structures"
 	"fmt"
 	"os"
+	"os/signal"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,9 +19,10 @@ func ConnectAndPublish(numClients int) {
 	StoredStdout := os.Stdout
 	os.Stdout = nil
 
-	fmt.Fprintln(StoredStdout, "\rNum clients:", numClients)
+	go fmt.Fprintln(StoredStdout, "\rNum clients:", numClients)
 
 	clients := make([]client.Client, numClients)
+	go exitAll(clients)
 
 	queue := sync.WaitGroup{}
 	queue.Add(numClients)
@@ -30,10 +32,10 @@ func ConnectAndPublish(numClients int) {
 	for i := 0; i < numClients; i++ {
 
 		go func(clientNum int) {
-			newClient, err := client.CreateAndConnectClient("localhost", 8000)
+			newClient, err := client.CreateAndConnectClient("127.0.0.1", 8000)
 			for err != nil {
-				structures.Println(err)
-				newClient, err = client.CreateAndConnectClient("localhost", 8000)
+				fmt.Fprintln(StoredStdout, "Error while connecting:", err)
+				newClient, err = client.CreateAndConnectClient("127.0.0.1", 8000)
 			}
 
 			clients[clientNum] = *newClient
@@ -47,7 +49,7 @@ func ConnectAndPublish(numClients int) {
 		time.Sleep(time.Millisecond * 5)
 	}
 	queue.Wait()
-	fmt.Fprintln(StoredStdout, "CONNECTED ALL CLIENTS")
+	fmt.Fprintln(StoredStdout, "\nCONNECTED ALL CLIENTS")
 
 	for _, client := range clients {
 		err := client.SendPublish([]byte("TEST"), "abc")
@@ -72,4 +74,30 @@ func ConnectAndPublish(numClients int) {
 
 	fmt.Fprintln(StoredStdout, "DISCONNECTED ALL THE CLIENTS")
 
+}
+
+func exitAll(clients []client.Client) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	for range c {
+		queue := sync.WaitGroup{}
+		queue.Add(len(clients))
+		for _, c := range clients {
+			if c.BrokerConnection != nil {
+
+				go func(c client.Client) {
+					c.SendDisconnect()
+					time.Sleep(time.Millisecond * 3)
+					err := c.BrokerConnection.Close()
+					if err != nil {
+						structures.PrintCentrally("Error while closing", err)
+					}
+					queue.Done()
+				}(c)
+			}
+		}
+		queue.Wait()
+		os.Exit(0)
+	}
 }

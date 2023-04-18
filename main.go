@@ -39,9 +39,9 @@ func main() {
 			fmt.Println("STARTING PROFILING")
 			time.Sleep(30 * time.Second)
 			pprof.StopCPUProfile()
-			structures.PrintCentrally("FINISHED PROFILING")
-			structures.PrintCentrally("FINISHED PROFILING")
-			structures.PrintCentrally("FINISHED PROFILING")
+			for i := 0; i < 100; i++ {
+				structures.PrintCentrally("FINISHED PROFILING")
+			}
 		}()
 	}
 

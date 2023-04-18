@@ -34,7 +34,6 @@ func (conn *UDPCon) Connect(ip string, port int) error {
 	} else {
 		return err
 	}
-
 	conn.connectionType = UDP_CLIENT_CONNECTION
 
 	go func() {
@@ -162,25 +161,14 @@ func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPCon
 		}
 		buffer = buffer[:bytesRead]
 		address := fmt.Sprint(receivedAddr.IP.String(), ":", receivedAddr.Port)
-		udpListener.openConnectionsLock.RLock()
+		udpListener.openConnectionsLock.Lock()
 		if _, found := udpListener.openConnections[address]; !found {
-
-			if udpListener.numClientsToAdd.Load() > 0 {
-				udpListener.openConnectionsLock.RUnlock()
-				udpListener.openConnectionsLock.Lock()
-				udpListener.openConnections[address] = make(chan []byte, 512)
-				udpListener.openConnections[address] <- buffer
-				udpListener.openConnectionsLock.Unlock()
-				udpListener.newClientBuffer <- address
-				udpListener.numClientsToAdd.Add(-1)
-				continue
-			}
-
-			structures.Println("Received a message from an unconnected address:", address, "message:", buffer)
-			continue
+			udpListener.openConnections[address] = make(chan []byte, 512)
+			udpListener.openConnections[address] <- buffer
+			udpListener.newClientBuffer <- address
 		}
 		udpListener.openConnections[address] <- buffer
-		udpListener.openConnectionsLock.RUnlock()
+		udpListener.openConnectionsLock.Unlock()
 	}
 }
 
@@ -192,7 +180,6 @@ func (udpListener *UDPListener) Close() error {
 // and pushing them down the correct connection.
 
 func (udpListener *UDPListener) Accept() (net.Conn, error) {
-	udpListener.numClientsToAdd.Add(1)
 	newClientAddress := <-udpListener.newClientBuffer
 
 	udpListener.openConnectionsLock.RLock()
@@ -211,7 +198,6 @@ func (udpListener *UDPListener) Accept() (net.Conn, error) {
 			udpListener.openConnectionsLock.Unlock()
 		},
 	}
-
 	udpListener.openConnectionsLock.RUnlock()
 
 	return &newConnection, nil

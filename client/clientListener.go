@@ -16,6 +16,10 @@ func (client *Client) ListenForPackets() {
 			if strings.HasSuffix(err.Error(), "use of closed network connection") {
 				structures.PrintCentrally("Connection closed")
 				return
+				// Quic returns bye message on closing
+			}
+			if strings.HasSuffix(err.Error(), "bye") {
+				return
 			}
 			structures.Println("Error during reading:", err)
 			return

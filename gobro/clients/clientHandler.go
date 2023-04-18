@@ -136,7 +136,6 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 
 func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 	*connectedClient = ""
-	time.Sleep(100 * time.Millisecond)
 
 	// If the client has already been disconnected elsewhere
 	// by a call to client.Disconnect

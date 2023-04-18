@@ -13,7 +13,7 @@ import (
 var (
 	doSubscribes = flag.Bool("continualSubscribe", false, "Continually subscribe")
 	runServer    = flag.Bool("runServer", false, "Start a server")
-	ip           = flag.String("testip", "localhost", "Ip")
+	ip           = flag.String("testip", "127.0.0.1", "Ip")
 	port         = flag.Int("testport", 8000, "Port")
 )
 

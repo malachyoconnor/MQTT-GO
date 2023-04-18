@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	port = flag.Int("port", 8000, "Get the port the server is being run on")
-	ip   = flag.String("ip", "localhost", "Get the ip the server is being run on")
+	port = flag.Int("port", 8000, "Set the port the server is being run on")
+	ip   = flag.String("ip", "127.0.0.1", "Set the ip the server is being run on")
 )
 
 // We want to listen on the command line for inputs

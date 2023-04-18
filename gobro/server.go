@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ServerIP          = flag.String("serverip", "localhost", "Address to host on")
+	ServerIP          = flag.String("serverip", "127.0.0.1", "Address to host on")
 	ServerPort        = flag.Int("serverport", 8000, "Port to listen on")
 	ScheduledShutdown = flag.Float64("shutdown", 0.0, "Schedule a shutdown after a certain number of hours")
 	ConnectionType    = network.QUIC
