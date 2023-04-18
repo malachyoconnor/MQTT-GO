@@ -114,15 +114,15 @@ func (conn *UDPCon) LocalAddr() net.Addr {
 }
 
 func (conn *UDPCon) SetDeadline(t time.Time) error {
-	return nil
+	return conn.connection.SetDeadline(t)
 }
 
 func (conn *UDPCon) SetReadDeadline(t time.Time) error {
-	return nil
+	return conn.connection.SetReadDeadline(t)
 }
 
 func (conn *UDPCon) SetWriteDeadline(t time.Time) error {
-	return nil
+	return conn.connection.SetWriteDeadline(t)
 }
 
 // Next the listening methods

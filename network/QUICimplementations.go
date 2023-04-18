@@ -61,23 +61,23 @@ func (conn *QUICCon) Close() error {
 }
 
 func (conn *QUICCon) RemoteAddr() net.Addr {
-	return nil
+	return (*conn.connection).RemoteAddr()
 }
 
 func (conn *QUICCon) LocalAddr() net.Addr {
-	return nil
+	return (*conn.connection).LocalAddr()
 }
 
 func (conn *QUICCon) SetDeadline(t time.Time) error {
-	return nil
+	return (*conn.stream).SetDeadline(t)
 }
 
 func (conn *QUICCon) SetReadDeadline(t time.Time) error {
-	return nil
+	return (*conn.stream).SetReadDeadline(t)
 }
 
 func (conn *QUICCon) SetWriteDeadline(t time.Time) error {
-	return nil
+	return (*conn.stream).SetWriteDeadline(t)
 }
 
 func (quicListener *QUICListener) Listen(ip string, port int) error {
