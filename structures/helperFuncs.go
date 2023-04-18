@@ -27,9 +27,3 @@ func Min[T constraints.Ordered](ls ...T) T {
 	}
 	return currentMin
 }
-
-func PANIC_ON_ERR(err error) {
-	if err != nil {
-		panic(err)
-	}
-}

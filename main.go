@@ -14,7 +14,10 @@ import (
 	"MQTT-GO/structures"
 )
 
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+var (
+	cpuprofile = flag.String("cpuprofile", "", "Profile code, and write that profile to a file")
+	protocol   = flag.String("protocol", "TCP", "Select the transport protocol to use")
+)
 
 func main() {
 	permuteArgs()
@@ -36,7 +39,9 @@ func main() {
 			fmt.Println("STARTING PROFILING")
 			time.Sleep(30 * time.Second)
 			pprof.StopCPUProfile()
-			fmt.Println("FINISHED PROFILING")
+			for i := 0; i < 100; i++ {
+				structures.PrintCentrally("FINISHED PROFILING")
+			}
 		}()
 	}
 
@@ -47,7 +52,12 @@ func main() {
 		return
 	}
 
-	connectionType := network.TCP
+	connectionType, ok := map[string]byte{"TCP": 0, "QUIC": 1, "UDP": 2}[*protocol]
+	if !ok {
+		structures.Println("Malformed input, exiting")
+		return
+	}
+
 	client.ConnectionType = connectionType
 	gobro.ConnectionType = connectionType
 
@@ -64,7 +74,8 @@ func main() {
 
 	case "stresstest":
 		{
-			stresstests.ConnectAndPublish(200)
+			// stresstests.ManyClientsConnect(1000)
+			stresstests.ManyClientsPublish(250)
 		}
 
 	case "quic":

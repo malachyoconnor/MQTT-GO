@@ -3,7 +3,14 @@ package structures
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
+
+	terminal "github.com/wayneashleyberry/terminal-dimensions"
+)
+
+var (
+	terminalWidth = getTerminalWidth()
 )
 
 func PrintInterface(i interface{}) {
@@ -11,27 +18,20 @@ func PrintInterface(i interface{}) {
 	Println(string(s))
 }
 
-func center(s string, w int) string {
-	return fmt.Sprintf("%[1]*s", -w, fmt.Sprintf("%[1]*s", (w+len(s))/2, s))
+func getTerminalWidth() uint {
+	width, err := terminal.Width()
+	if err != nil {
+		fmt.Println("Error getting terminal width:", err)
+		return 300
+	}
+	return width
 }
 
 func PrintCentrally(toPrint ...any) {
-	// stringBuilder := strings.Builder{}
-	// stringBuilder.WriteString("  --")
-	// for _, str := range toPrint {
-	// 	stringBuilder.WriteString(str)
-	// }
-	// stringBuilder.WriteString("--")
-	// Println(stringBuilder.String())
-	Print("--")
-	_, err := Print(toPrint...)
+	output := fmt.Sprint(toPrint...)
 
-	if err != nil {
-		panic(err)
-	}
-
-	Print("--")
-	// Println(center(stringBuilder.String(), 100))
+	padding := (int(terminalWidth) - len(output)) / 2
+	Println(strings.Repeat(" ", padding) + output)
 }
 
 func (ll *LinkedList[T]) PrintItems() {

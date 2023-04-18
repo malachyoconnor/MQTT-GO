@@ -1,7 +1,6 @@
 package gobro
 
 import (
-	"bytes"
 	"log"
 
 	"MQTT-GO/gobro/clients"
@@ -46,6 +45,8 @@ func (msgH *MessageHandler) Listen(server *Server) {
 		if packetType != packets.CONNECT {
 			if !clientTable.Contains(clientID) {
 				log.Printf("Client '%v' not in the client table sent %v message, disconnecting.\n", clientID, packets.PacketTypeName(packetType))
+				structures.Printf("Client '%v' not in the client table sent %v message, disconnecting.\n", clientID, packets.PacketTypeName(packetType))
+
 				// If the client hasn't already been disconnected by the client handler
 				if client != nil {
 					client.NetworkConnection.Close()
@@ -53,9 +54,7 @@ func (msgH *MessageHandler) Listen(server *Server) {
 				continue
 			}
 		}
-
 		go HandleMessage(packetType, packet, client, server, clientMessage, ticket)
-
 	}
 }
 
@@ -75,14 +74,14 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
-
 		varHeader := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
 		topic := clients.Topic{
 			TopicFilter: varHeader.TopicFilter,
 			Qos:         packet.ControlHeader.Flags & 6,
 		}
-		msgToPublish := bytes.NewBuffer(packet.Payload.RawApplicationMessage).String()
-		structures.Println("Request to publish:", msgToPublish, "to topic:", topic.TopicFilter)
+		msgToPublish := string(packet.Payload.RawApplicationMessage)
+		structures.Println("Received request to publish:", msgToPublish, "to topic:", topic.TopicFilter)
+
 		// Adds to the packets to send
 		handlePublish(topicClientMap, topic, clientMessage, server.clientTable, &packetsToSend)
 

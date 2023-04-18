@@ -6,6 +6,7 @@ import (
 )
 
 func ReadPacketFromConnection(connectionReader *bufio.Reader) ([]byte, error) {
+
 	packetTypeAndFlags, err := connectionReader.Peek(1)
 
 	if err != nil && len(packetTypeAndFlags) == 0 {
@@ -15,7 +16,10 @@ func ReadPacketFromConnection(connectionReader *bufio.Reader) ([]byte, error) {
 	var header []byte
 
 	for i := 0; i < 4; i++ {
-		h, _ := connectionReader.Peek(2 + i)
+		h, err := connectionReader.Peek(2 + i)
+		if err != nil {
+			return nil, err
+		}
 		// Read until we've reached the end of the var length int
 		if h[i+1]&128 == 0 {
 			header = h

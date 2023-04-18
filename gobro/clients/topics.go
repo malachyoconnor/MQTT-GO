@@ -29,7 +29,7 @@ func CreateTopicMap() *TopicToSubscribers {
 func (topicMap *TopicToSubscribers) PrintTopics() {
 	for _, topic := range topicMap.topLevelMap.Values() {
 		topic.PrintTopics()
-		ServerPrintln()
+		structures.Println()
 	}
 }
 

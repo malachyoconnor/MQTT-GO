@@ -3,6 +3,9 @@ package network
 import (
 	"fmt"
 	"net"
+	"sync"
+
+	"github.com/quic-go/quic-go"
 )
 
 const (
@@ -20,6 +23,7 @@ type Con interface {
 	Read(buffer []byte) (n int, err error)
 	Close() error
 	RemoteAddr() net.Addr
+	LocalAddr() net.Addr
 }
 
 func NewCon(networkID byte) (Con, error) {
@@ -34,7 +38,10 @@ func NewCon(networkID byte) (Con, error) {
 		}
 	case QUIC:
 		{
-			return &QUICCon{}, nil
+			return &QUICCon{
+				streamReadLock:  &sync.Mutex{},
+				streamWriteLock: &sync.Mutex{},
+			}, nil
 		}
 	}
 	return nil, fmt.Errorf("error: Supplied networkID %v is not defined", networkID)
@@ -66,6 +73,8 @@ const (
 )
 
 type QUICCon struct {
-	connection net.Conn
-	handler    *quicClientHandler
+	connection      *quic.Connection
+	stream          *quic.Stream
+	streamReadLock  *sync.Mutex
+	streamWriteLock *sync.Mutex
 }

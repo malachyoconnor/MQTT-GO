@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"net"
 	"sync"
-	"sync/atomic"
+
+	"github.com/quic-go/quic-go"
 )
 
 type Listener interface {
@@ -44,11 +45,9 @@ type UDPListener struct {
 	// If Accept() is called, then the listener pushes the new clients to a newClientBuffer
 	// these then get picked up by Accept.
 	newClientBuffer chan string
-	numClientsToAdd atomic.Int32
 	localAddr       *net.UDPAddr
 }
 
 type QUICListener struct {
-	listener *net.Listener
-	handler  *quicServerHandler
+	listener *quic.Listener
 }

@@ -5,16 +5,14 @@ import (
 	"MQTT-GO/structures"
 	"fmt"
 	"os"
-	"os/signal"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-func ManyClientsConnect(numClients int) {
-	if numClients <= 0 {
-		numClients = 100
-	}
+// ManyClientsPublish starts a number of clients, and publishes a message from each of them
+// This is used to test the performance of the server
+func ManyClientsPublish(numClients int) {
 	// Stop the clients from printing to stdout
 	StoredStdout := os.Stdout
 	os.Stdout = nil
@@ -51,11 +49,16 @@ func ManyClientsConnect(numClients int) {
 	queue.Wait()
 	fmt.Fprintln(StoredStdout, "\nCONNECTED ALL CLIENTS")
 
-	for _, client := range clients {
-		err := client.SendPublish([]byte("TEST"), "abc")
-		if err != nil {
-			structures.Println("Error while publishing", err)
-		}
+	for _, c := range clients {
+
+		go func(c client.Client) {
+			for i := 0; i < 1000; i++ {
+				err := c.SendPublish([]byte("TEST"), "abc")
+				if err != nil {
+					structures.Println("Error while publishing", err)
+				}
+			}
+		}(c)
 	}
 
 	fmt.Fprintln(StoredStdout, "PUBLISHED FROM ALL CLIENTS")
@@ -74,30 +77,4 @@ func ManyClientsConnect(numClients int) {
 
 	fmt.Fprintln(StoredStdout, "DISCONNECTED ALL THE CLIENTS")
 
-}
-
-func exitAll(clients []client.Client) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-
-	for range c {
-		queue := sync.WaitGroup{}
-		queue.Add(len(clients))
-		for _, c := range clients {
-			if c.BrokerConnection != nil {
-
-				go func(c client.Client) {
-					c.SendDisconnect()
-					time.Sleep(time.Millisecond * 3)
-					err := c.BrokerConnection.Close()
-					if err != nil {
-						structures.PrintCentrally("Error while closing", err)
-					}
-					queue.Done()
-				}(c)
-			}
-		}
-		queue.Wait()
-		os.Exit(0)
-	}
 }

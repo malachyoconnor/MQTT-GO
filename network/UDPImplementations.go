@@ -34,7 +34,6 @@ func (conn *UDPCon) Connect(ip string, port int) error {
 	} else {
 		return err
 	}
-
 	conn.connectionType = UDP_CLIENT_CONNECTION
 
 	go func() {
@@ -87,8 +86,8 @@ func (conn *UDPCon) Read(buffer []byte) (n int, err error) {
 func (conn *UDPCon) Close() error {
 	// We don't want to close the connection on the other end
 	// So we just send a disconnect and stop listening.
-
 	if conn.connectionType == UDP_CLIENT_CONNECTION {
+		close(conn.packetBuffer)
 		structures.Println("Closing a connection from:", conn.localAddr, "to", conn.remoteAddr)
 		return (*conn.connection).Close()
 	}
@@ -96,6 +95,7 @@ func (conn *UDPCon) Close() error {
 	if conn.connectionType == UDP_SERVER_CONNECTION {
 		conn.serverConnectionDeleter()
 		close(conn.packetBuffer)
+		conn.connected = false
 	}
 	return nil
 
@@ -115,15 +115,15 @@ func (conn *UDPCon) LocalAddr() net.Addr {
 }
 
 func (conn *UDPCon) SetDeadline(t time.Time) error {
-	return nil
+	return conn.connection.SetDeadline(t)
 }
 
 func (conn *UDPCon) SetReadDeadline(t time.Time) error {
-	return nil
+	return conn.connection.SetReadDeadline(t)
 }
 
 func (conn *UDPCon) SetWriteDeadline(t time.Time) error {
-	return nil
+	return conn.connection.SetWriteDeadline(t)
 }
 
 // Next the listening methods
@@ -162,25 +162,14 @@ func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPCon
 		}
 		buffer = buffer[:bytesRead]
 		address := fmt.Sprint(receivedAddr.IP.String(), ":", receivedAddr.Port)
-		udpListener.openConnectionsLock.RLock()
+		udpListener.openConnectionsLock.Lock()
 		if _, found := udpListener.openConnections[address]; !found {
-
-			if udpListener.numClientsToAdd.Load() > 0 {
-				udpListener.openConnectionsLock.RUnlock()
-				udpListener.openConnectionsLock.Lock()
-				udpListener.openConnections[address] = make(chan []byte, 512)
-				udpListener.openConnections[address] <- buffer
-				udpListener.openConnectionsLock.Unlock()
-				udpListener.newClientBuffer <- address
-				udpListener.numClientsToAdd.Add(-1)
-				continue
-			}
-
-			structures.Println("Received a message from an unconnected address:", address, "message:", buffer)
-			continue
+			udpListener.openConnections[address] = make(chan []byte, 512)
+			udpListener.openConnections[address] <- buffer
+			udpListener.newClientBuffer <- address
 		}
 		udpListener.openConnections[address] <- buffer
-		udpListener.openConnectionsLock.RUnlock()
+		udpListener.openConnectionsLock.Unlock()
 	}
 }
 
@@ -192,7 +181,6 @@ func (udpListener *UDPListener) Close() error {
 // and pushing them down the correct connection.
 
 func (udpListener *UDPListener) Accept() (net.Conn, error) {
-	udpListener.numClientsToAdd.Add(1)
 	newClientAddress := <-udpListener.newClientBuffer
 
 	udpListener.openConnectionsLock.RLock()
@@ -211,7 +199,6 @@ func (udpListener *UDPListener) Accept() (net.Conn, error) {
 			udpListener.openConnectionsLock.Unlock()
 		},
 	}
-
 	udpListener.openConnectionsLock.RUnlock()
 
 	return &newConnection, nil

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,11 +34,13 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
 		log.Printf("- Error handling connect from %v: %v\n", newClient.NetworkConnection.RemoteAddr(), err)
+		structures.Printf("Error handling connect from %v: %v\n", newClient.NetworkConnection.RemoteAddr(), err)
 		if err.Error() == "error: Client already exists" {
 			connack := packets.CreateConnACK(false, 2)
 			_, err := (*connection).Write(connack)
 			if err != nil {
 				(*connection).Close()
+				structures.Println("Error while writing", err)
 			} else {
 				// Sleep for 50 millisconds while they digest this news that they're being disconnected before closing the connection
 				time.Sleep(time.Millisecond * 50)
@@ -59,6 +62,13 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	(*connectedClient) = string(clientID)
 	connectedClientMutex.Unlock()
 
+	defer func() {
+		log.Printf("+ Client %v connection closed\n", clientID)
+		connectedClientMutex.Lock()
+		*connectedClient = ""
+		connectedClientMutex.Unlock()
+	}()
+
 	if err != nil {
 		ServerPrintln("Error decoding clientID")
 		return
@@ -67,11 +77,16 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 	reader := bufio.NewReader(*connection)
 	for {
 		packet, err := packets.ReadPacketFromConnection(reader)
+
 		if err == io.EOF || errors.Is(err, net.ErrClosed) {
 			break
 		}
 		if err != nil {
-			ServerPrintln("Error while reading", err)
+			if !strings.HasSuffix(err.Error(), "reset_stream") {
+				structures.Println("Error while reading", err)
+			} else {
+				structures.Println("Stream closed")
+			}
 			break
 		}
 
@@ -79,8 +94,6 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 		toSend := ClientMessage{ClientID: &clientID, Packet: packet, ClientConnection: connection}
 		packetPool <- toSend
 	}
-	log.Printf("+ Client %v connection closed\n", clientID)
-	*connectedClient = ""
 
 }
 
@@ -123,11 +136,10 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 
 func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
 	*connectedClient = ""
-	time.Sleep(2 * time.Second)
 
 	// If the client has already been disconnected elsewhere
 	// by a call to client.Disconnect
-	if !clientTable.Contains(client.ClientIdentifier) || client.NetworkConnection.Close() != nil {
+	if !clientTable.Contains(client.ClientIdentifier) || client.NetworkConnection == nil {
 		return
 	}
 

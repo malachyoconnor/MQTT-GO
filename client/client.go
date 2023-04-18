@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 )
 
 var (
@@ -77,7 +78,9 @@ func cleanupAndExit(client *Client) {
 		if err != nil {
 			structures.Println("Error while disconnecting:", err)
 		}
+
 		if client.BrokerConnection != nil {
+			time.Sleep(time.Millisecond * 1000)
 			err = client.BrokerConnection.Close()
 			if err != nil {
 				structures.Println("Error while closing connection:", err)

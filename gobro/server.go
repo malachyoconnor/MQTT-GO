@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ServerIP          = flag.String("serverip", "localhost", "Address to host on")
+	ServerIP          = flag.String("serverip", "127.0.0.1", "Address to host on")
 	ServerPort        = flag.Int("serverport", 8000, "Port to listen on")
 	ScheduledShutdown = flag.Float64("shutdown", 0.0, "Schedule a shutdown after a certain number of hours")
 	ConnectionType    = network.QUIC
@@ -33,6 +33,7 @@ func NewServer() Server {
 
 	clientTable := clients.CreateClientTable()
 	topicClientMap := clients.CreateTopicMap()
+	// TODO: Should this be larger?
 	inputChan := make(chan clients.ClientMessage)
 	outputChan := make(chan clients.ClientMessage)
 
@@ -64,8 +65,8 @@ func (server *Server) StartServer() {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
 	log.Println("--Server starting--")
 	// Listen for connections
-	clients.ServerPrintln("Listening for connections via", []string{"TCP", "QUIC", "UDP"}[ConnectionType])
-	clients.ServerPrintf("Listening on %v\n", getServerIpAndPort())
+	structures.Println("Listening for connections via", []string{"TCP", "QUIC", "UDP"}[ConnectionType])
+	structures.Printf("Listening on %v\n", getServerIpAndPort())
 
 	listener, err := network.NewListener(ConnectionType)
 	if err != nil {
@@ -84,10 +85,8 @@ func (server *Server) StartServer() {
 
 	msgSender := CreateMessageSender(server.outputChan)
 	go msgSender.ListenAndSend(server)
-
 	msgListener := CreateMessageHandler(server.inputChan, server.outputChan)
 	go msgListener.Listen(server)
-
 	AcceptConnections(listener, server)
 }
 
@@ -98,6 +97,13 @@ var (
 
 func AcceptConnections(listener network.Listener, server *Server) {
 	clients.ServerPrintln("Connected clients:", connectedClients)
+	go func(connectedClients []string) {
+		for {
+			time.Sleep(time.Second * 5)
+			fmt.Println((connectedClients), "USERS")
+		}
+	}(connectedClients)
+
 	waitingToPrint := sync.Mutex{}
 	lastPrintTime := time.Now()
 	for {
@@ -108,8 +114,8 @@ func AcceptConnections(listener network.Listener, server *Server) {
 		}
 
 		clients.ServerPrintln("Accepted a connection")
-		// // Set a keep alive period because there isn't a foolproof way of checking if the connection
-		// // suddenly closes - we want to wait for DISCONNECT messages or timeout.
+		// Set a keep alive period because there isn't a foolproof way of checking if the connection
+		// suddenly closes - we want to wait for DISCONNECT messages or timeout.
 		// err = connection.(*net.TCPConn).SetKeepAlivePeriod(5 * time.Second)
 
 		if err != nil {
@@ -134,7 +140,6 @@ func AcceptConnections(listener network.Listener, server *Server) {
 		connectedClientsMutex.Unlock()
 
 		go func() {
-
 			time.Sleep(time.Millisecond * 200)
 			if time.Since(lastPrintTime) < time.Millisecond*500 {
 				return
@@ -152,7 +157,6 @@ func AcceptConnections(listener network.Listener, server *Server) {
 		}()
 
 		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable, server.topicClientMap, newArrayPos, &connectedClientsMutex)
-
 	}
 }
 
