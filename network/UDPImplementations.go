@@ -86,8 +86,8 @@ func (conn *UDPCon) Read(buffer []byte) (n int, err error) {
 func (conn *UDPCon) Close() error {
 	// We don't want to close the connection on the other end
 	// So we just send a disconnect and stop listening.
-
 	if conn.connectionType == UDP_CLIENT_CONNECTION {
+		close(conn.packetBuffer)
 		structures.Println("Closing a connection from:", conn.localAddr, "to", conn.remoteAddr)
 		return (*conn.connection).Close()
 	}
@@ -95,6 +95,7 @@ func (conn *UDPCon) Close() error {
 	if conn.connectionType == UDP_SERVER_CONNECTION {
 		conn.serverConnectionDeleter()
 		close(conn.packetBuffer)
+		conn.connected = false
 	}
 	return nil
 

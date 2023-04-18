@@ -74,7 +74,8 @@ func main() {
 
 	case "stresstest":
 		{
-			stresstests.ConnectAndPublish(1000)
+			// stresstests.ManyClientsConnect(1000)
+			stresstests.ManyClientsPublish(250)
 		}
 
 	case "quic":
