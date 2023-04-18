@@ -1,7 +1,6 @@
 package network
 
 import (
-	"MQTT-GO/structures"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -17,7 +16,9 @@ import (
 func (conn *QUICCon) Connect(ip string, port int) error {
 
 	cert, err := tls.LoadX509KeyPair("network/client.crt", "network/client.key")
-	structures.PANIC_ON_ERR(err)
+	if err != nil {
+		return err
+	}
 	config := &tls.Config{}
 	config.NextProtos = []string{"UDP"}
 	config.InsecureSkipVerify = true
@@ -90,7 +91,10 @@ func (quicListener *QUICListener) Listen(ip string, port int) error {
 		return err
 	}
 	cert, err := tls.LoadX509KeyPair("network/server.crt", "network/server.key")
-	structures.PANIC_ON_ERR(err)
+
+	if err != nil {
+		return err
+	}
 
 	config := &tls.Config{}
 	config.NextProtos = []string{"UDP"}
