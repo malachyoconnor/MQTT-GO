@@ -43,6 +43,8 @@ func StartClient(ip string, port int) {
 	for {
 		fmt.Print("-> ")
 		text, _ := reader.ReadString('\n')
+		// Windows uses \r\n - we need to get them out of there
+		text = strings.ReplaceAll(text, "\r\n", "\n")
 		text = strings.ReplaceAll(text, "\n", "")
 		words := strings.Split(text, " ")
 

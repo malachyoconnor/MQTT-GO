@@ -48,8 +48,9 @@ func ManyClientsPublish(numClients int, ip string, port int) {
 			clients[clientNum] = *newClient
 			err = newClient.SendPublish([]byte("TEST"), "abc")
 			fmt.Fprint(StoredStdout, "\rClients created and published:", numPublished.Add(1))
-			structures.PANIC_ON_ERR(err)
-			// fmt.Fprint(storedStdout, "\rPublished:", numPublished.Load())
+			if err != nil {
+				fmt.Fprintln(StoredStdout, "Error during publish", err)
+			}
 			queue.Done()
 		}(i)
 
