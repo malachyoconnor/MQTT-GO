@@ -15,8 +15,6 @@ import (
 )
 
 var (
-	ServerIP          = flag.String("serverip", "127.0.0.1", "Address to host on")
-	ServerPort        = flag.Int("serverport", 8000, "Port to listen on")
 	ScheduledShutdown = flag.Float64("shutdown", 0.0, "Schedule a shutdown after a certain number of hours")
 	ConnectionType    = network.QUIC
 )
@@ -49,7 +47,7 @@ func (server *Server) StopServer() {
 	cleanupAndExit(server)
 }
 
-func (server *Server) StartServer() {
+func (server *Server) StartServer(ip string, port int) {
 	flag.Parse()
 	file, err := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	server.logFile = file
@@ -66,7 +64,7 @@ func (server *Server) StartServer() {
 	log.Println("--Server starting--")
 	// Listen for connections
 	structures.Println("Listening for connections via", []string{"TCP", "QUIC", "UDP"}[ConnectionType])
-	structures.Printf("Listening on %v\n", getServerIpAndPort())
+	structures.Printf("Listening on %v\n", ip+":"+fmt.Sprint(port))
 
 	listener, err := network.NewListener(ConnectionType)
 	if err != nil {
@@ -74,7 +72,7 @@ func (server *Server) StartServer() {
 		clients.ServerPrintln("FATAL:", err)
 		return
 	}
-	err = listener.Listen(*ServerIP, *ServerPort)
+	err = listener.Listen(ip, port)
 
 	if err != nil {
 		log.Println("- Error while trying to listen for TCP connections:", err)
@@ -114,15 +112,6 @@ func AcceptConnections(listener network.Listener, server *Server) {
 		}
 
 		clients.ServerPrintln("Accepted a connection")
-		// Set a keep alive period because there isn't a foolproof way of checking if the connection
-		// suddenly closes - we want to wait for DISCONNECT messages or timeout.
-		// err = connection.(*net.TCPConn).SetKeepAlivePeriod(5 * time.Second)
-
-		if err != nil {
-			log.Println("- Error while setting a keep alive period:", err)
-			return
-		}
-
 		var newArrayPos *string
 		connectedClientsMutex.Lock()
 		for i, val := range connectedClients {
@@ -191,10 +180,6 @@ func cleanupAndExit(server *Server) {
 		server.logFile.Close()
 	}
 	os.Exit(0)
-}
-
-func getServerIpAndPort() string {
-	return fmt.Sprint(*ServerIP, ":", *ServerPort)
 }
 
 func DisableStdOutput() {

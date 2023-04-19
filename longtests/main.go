@@ -25,7 +25,7 @@ func main() {
 		continualSubscribe()
 	case *runServer:
 		server := gobro.NewServer()
-		server.StartServer()
+		server.StartServer("localhost", 8000)
 	}
 }
 
@@ -41,7 +41,7 @@ func continualSubscribe() {
 		return
 	}
 
-	err = client.SendConnect()
+	err = client.SendConnect("localhost", 8000)
 	go client.ListenForPackets()
 
 	if err != nil {

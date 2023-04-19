@@ -38,7 +38,7 @@ func CreateAndConnectClient(ip string, port int) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = client.SendConnect()
+	err = client.SendConnect(ip, port)
 	if err != nil {
 		return nil, err
 	}

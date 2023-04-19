@@ -17,6 +17,8 @@ import (
 var (
 	cpuprofile = flag.String("cpuprofile", "", "Profile code, and write that profile to a file")
 	protocol   = flag.String("protocol", "TCP", "Select the transport protocol to use")
+	PORT       = flag.Int("port", 8000, "Select the port to use")
+	IP         = flag.String("ip", "127.0.0.1", "Select the ip to use")
 )
 
 func main() {
@@ -37,7 +39,7 @@ func main() {
 
 		go func() {
 			fmt.Println("STARTING PROFILING")
-			time.Sleep(30 * time.Second)
+			time.Sleep(5 * time.Second)
 			pprof.StopCPUProfile()
 			for i := 0; i < 100; i++ {
 				structures.PrintCentrally("FINISHED PROFILING")
@@ -65,17 +67,17 @@ func main() {
 	case "gobro":
 		{
 			server := gobro.NewServer()
-			server.StartServer()
+			server.StartServer(*IP, *PORT)
 		}
 	case "client":
 		{
-			client.StartClient()
+			client.StartClient(*IP, *PORT)
 		}
 
 	case "stresstest":
 		{
-			// stresstests.ManyClientsConnect(1000)
-			stresstests.ManyClientsPublish(250)
+			// stresstests.ManyClientsConnect(1000, *IP, *PORT)
+			stresstests.ManyClientsPublish(250, *IP, *PORT)
 		}
 
 	case "quic":

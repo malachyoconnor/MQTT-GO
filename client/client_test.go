@@ -27,7 +27,7 @@ func ServerUp() {
 	server = gobro.NewServer()
 
 	go func() {
-		server.StartServer()
+		server.StartServer("localhost", 8000)
 	}()
 	serverUp = true
 	time.Sleep(time.Millisecond * 100)

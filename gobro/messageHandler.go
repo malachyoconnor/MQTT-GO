@@ -80,7 +80,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 			Qos:         packet.ControlHeader.Flags & 6,
 		}
 		msgToPublish := string(packet.Payload.RawApplicationMessage)
-		structures.Println("Received request to publish:", msgToPublish, "to topic:", topic.TopicFilter)
+		go structures.Println("Received request to publish:", msgToPublish, "to topic:", topic.TopicFilter)
 
 		// Adds to the packets to send
 		handlePublish(topicClientMap, topic, clientMessage, server.clientTable, &packetsToSend)
@@ -120,7 +120,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		// Close the client connection.
 		// Remove the packet from the client list
 		ticket.WaitOnTicket()
-		client.Disconnect(topicClientMap, clientTable)
+		go client.Disconnect(topicClientMap, clientTable)
 		ticket.TicketCompleted()
 		return
 	}

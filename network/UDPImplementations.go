@@ -149,7 +149,19 @@ func (udpListener *UDPListener) Listen(ip string, port int) error {
 	return err
 }
 
+type udpMessage struct {
+	buffer []byte
+	addr   *net.UDPAddr
+}
+
 func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPConn) {
+
+	readMessageBufferEven := make(chan *udpMessage, 100)
+	readMessageBufferOdd := make(chan *udpMessage, 100)
+
+	go handleReadMessage(readMessageBufferEven, udpListener)
+	go handleReadMessage(readMessageBufferOdd, udpListener)
+
 	for {
 		buffer := make([]byte, 1024)
 		bytesRead, receivedAddr, err := connection.ReadFromUDP(buffer)
@@ -160,7 +172,21 @@ func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPCon
 		if err != nil {
 			structures.Println(err)
 		}
-		buffer = buffer[:bytesRead]
+
+		if receivedAddr.IP[0]%2 == 0 {
+			readMessageBufferEven <- &udpMessage{buffer: buffer[:bytesRead], addr: receivedAddr}
+		} else {
+			readMessageBufferOdd <- &udpMessage{buffer: buffer[:bytesRead], addr: receivedAddr}
+		}
+	}
+}
+
+func handleReadMessage(readMessageBuffer chan *udpMessage, udpListener *UDPListener) {
+	for {
+		udpMsg := <-readMessageBuffer
+		buffer := udpMsg.buffer
+		receivedAddr := udpMsg.addr
+
 		address := fmt.Sprint(receivedAddr.IP.String(), ":", receivedAddr.Port)
 		udpListener.openConnectionsLock.Lock()
 		if _, found := udpListener.openConnections[address]; !found {

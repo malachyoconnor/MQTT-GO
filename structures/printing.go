@@ -28,10 +28,11 @@ func getTerminalWidth() uint {
 }
 
 func PrintCentrally(toPrint ...any) {
-	output := fmt.Sprint(toPrint...)
-
-	padding := (int(terminalWidth) - len(output)) / 2
-	Println(strings.Repeat(" ", padding) + output)
+	go func() {
+		output := fmt.Sprint(toPrint...)
+		padding := (int(terminalWidth) - len(output)) / 2
+		Println(strings.Repeat(" ", padding) + output)
+	}()
 }
 
 func (ll *LinkedList[T]) PrintItems() {

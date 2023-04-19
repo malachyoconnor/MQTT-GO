@@ -12,27 +12,22 @@ import (
 	"MQTT-GO/structures"
 )
 
-var (
-	port = flag.Int("port", 8000, "Set the port the server is being run on")
-	ip   = flag.String("ip", "127.0.0.1", "Set the ip the server is being run on")
-)
-
 // We want to listen on the command line for inputs
 // E.g. Subscribe, publish, disconnect etc.
 // Then send values to the server
-func StartClient() {
+func StartClient(ip string, port int) {
 	flag.Parse()
 
 	client := CreateClient()
 	listenForExit(client)
-	err := client.SetClientConnection(*ip, *port)
+	err := client.SetClientConnection(ip, port)
 
 	if err != nil {
 		structures.Println(err)
 		return
 	}
 
-	err = client.SendConnect()
+	err = client.SendConnect(ip, port)
 	if err != nil {
 		structures.Println(err)
 		return
@@ -42,7 +37,7 @@ func StartClient() {
 	// a packet identifier to listen on.
 	go client.ListenForPackets()
 
-	structures.Println("Connected to broker on port", *port)
+	structures.Println("Connected to broker on port", port)
 
 	reader := bufio.NewReader(os.Stdin)
 	for {

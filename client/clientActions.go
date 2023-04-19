@@ -15,13 +15,13 @@ var (
 	errConnectionClosed = errors.New("error: connection is closed")
 )
 
-func (client *Client) SendConnect() error {
+func (client *Client) SendConnect(ip string, port int) error {
 	if client.BrokerConnection == nil {
 		return errors.New("error: Client does not have a broker connection")
 	}
 
 	controlHeader := packets.ControlHeader{Type: packets.CONNECT, Flags: 0}
-	varHeader := packets.ConnectVariableHeader{}
+	varHeader := packets.ConnectVariableHeader{KeepAlive: 3600}
 	payload := packets.PacketPayload{}
 	payload.ClientID = client.ClientID
 
@@ -53,12 +53,12 @@ func (client *Client) SendConnect() error {
 		// If the clientID already exists then we wait
 		time.Sleep(time.Millisecond)
 		client.ClientID = generateRandomClientID()
-		err := client.SetClientConnection(*ip, *port)
+		err := client.SetClientConnection(ip, port)
 		if err != nil {
 			structures.Println("Error while setting client connection")
 			return err
 		}
-		return client.SendConnect()
+		return client.SendConnect(ip, port)
 	}
 
 	return nil

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func ManyClientsConnect(numClients int) {
+func ManyClientsConnect(numClients int, ip string, port int) {
 	if numClients <= 0 {
 		numClients = 100
 	}
@@ -20,6 +20,14 @@ func ManyClientsConnect(numClients int) {
 	os.Stdout = nil
 
 	go fmt.Fprintln(StoredStdout, "\rNum clients:", numClients)
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		for range c {
+			fmt.Fprintln(StoredStdout, "Interrupted")
+			os.Exit(1)
+		}
+	}()
 
 	clients := make([]client.Client, numClients)
 	go exitAll(clients)
@@ -32,10 +40,10 @@ func ManyClientsConnect(numClients int) {
 	for i := 0; i < numClients; i++ {
 
 		go func(clientNum int) {
-			newClient, err := client.CreateAndConnectClient("127.0.0.1", 8000)
-			for err != nil {
+			newClient, err := client.CreateAndConnectClient(ip, port)
+			if err != nil {
 				fmt.Fprintln(StoredStdout, "Error while connecting:", err)
-				newClient, err = client.CreateAndConnectClient("127.0.0.1", 8000)
+				return
 			}
 
 			clients[clientNum] = *newClient
@@ -60,16 +68,19 @@ func ManyClientsConnect(numClients int) {
 
 	fmt.Fprintln(StoredStdout, "PUBLISHED FROM ALL CLIENTS")
 
-	for _, client := range clients {
-		err := client.SendDisconnect()
-		if err != nil {
-			fmt.Fprintln(StoredStdout, "Error while disconnecting", err)
-		}
-		time.Sleep(time.Millisecond)
-		err = client.BrokerConnection.Close()
-		if err != nil {
-			fmt.Fprintln(StoredStdout, "ERROR WHILE DISCONNECTING", err)
-		}
+	for _, c := range clients {
+		go func(client client.Client) {
+
+			err := client.SendDisconnect()
+			if err != nil {
+				fmt.Fprintln(StoredStdout, "Error while disconnecting", err)
+			}
+			time.Sleep(time.Millisecond)
+			err = client.BrokerConnection.Close()
+			if err != nil {
+				fmt.Fprintln(StoredStdout, "ERROR WHILE DISCONNECTING", err)
+			}
+		}(c)
 	}
 
 	fmt.Fprintln(StoredStdout, "DISCONNECTED ALL THE CLIENTS")

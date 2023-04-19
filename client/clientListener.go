@@ -50,7 +50,7 @@ func (client *Client) ListenForPackets() {
 					go func() { client.ReceivedPackets <- result }()
 				}
 				client.ReceivedPackets <- result
-				structures.Println("Received request to publish", string(result.Payload.RawApplicationMessage))
+				go structures.Println("Received request to publish", string(result.Payload.RawApplicationMessage))
 			}
 
 		default:
