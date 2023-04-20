@@ -1,3 +1,4 @@
+// Package stresstests contains functions that stress test the broker.
 package stresstests
 
 import (
@@ -11,20 +12,22 @@ import (
 	"time"
 )
 
+// ManyClientsConnect creates a large number of clients and connects them to the broker.
+// It then sends a publish message from each client, and disconnects them.
 func ManyClientsConnect(numClients int, ip string, port int) {
 	if numClients <= 0 {
 		numClients = 100
 	}
 	// Stop the clients from printing to stdout
-	StoredStdout := os.Stdout
+	storedStdout := os.Stdout
 	os.Stdout = nil
 
-	go fmt.Fprintln(StoredStdout, "\rNum clients:", numClients)
+	go fmt.Fprintln(storedStdout, "\rNum clients:", numClients)
 	go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt)
 		for range c {
-			fmt.Fprintln(StoredStdout, "Interrupted")
+			fmt.Fprintln(storedStdout, "Interrupted")
 			os.Exit(1)
 		}
 	}()
@@ -38,19 +41,18 @@ func ManyClientsConnect(numClients int, ip string, port int) {
 	var numPublished atomic.Int32
 
 	for i := 0; i < numClients; i++ {
-
 		go func(clientNum int) {
 			newClient, err := client.CreateAndConnectClient(ip, port)
 			if err != nil {
-				fmt.Fprintln(StoredStdout, "Error while connecting:", err)
+				fmt.Fprintln(storedStdout, "Error while connecting:", err)
 				return
 			}
 
 			clients[clientNum] = *newClient
 			err = newClient.SendPublish([]byte("TEST"), "abc")
-			fmt.Fprint(StoredStdout, "\rClients created and published:", numPublished.Add(1))
+			fmt.Fprint(storedStdout, "\rClients created and published:", numPublished.Add(1))
 			if err != nil {
-				fmt.Fprintln(StoredStdout, "Error during publish", err)
+				fmt.Fprintln(storedStdout, "Error during publish", err)
 			}
 			queue.Done()
 		}(i)
@@ -58,7 +60,7 @@ func ManyClientsConnect(numClients int, ip string, port int) {
 		time.Sleep(time.Millisecond * 5)
 	}
 	queue.Wait()
-	fmt.Fprintln(StoredStdout, "\nCONNECTED ALL CLIENTS")
+	fmt.Fprintln(storedStdout, "\nCONNECTED ALL CLIENTS")
 
 	for _, client := range clients {
 		err := client.SendPublish([]byte("TEST"), "abc")
@@ -67,24 +69,23 @@ func ManyClientsConnect(numClients int, ip string, port int) {
 		}
 	}
 
-	fmt.Fprintln(StoredStdout, "PUBLISHED FROM ALL CLIENTS")
+	fmt.Fprintln(storedStdout, "PUBLISHED FROM ALL CLIENTS")
 
-	for _, c := range clients {
+	for _, openClient := range clients {
 		go func(client client.Client) {
-
 			err := client.SendDisconnect()
 			if err != nil {
-				fmt.Fprintln(StoredStdout, "Error while disconnecting", err)
+				fmt.Fprintln(storedStdout, "Error while disconnecting", err)
 			}
 			time.Sleep(time.Millisecond)
 			err = client.BrokerConnection.Close()
 			if err != nil {
-				fmt.Fprintln(StoredStdout, "ERROR WHILE DISCONNECTING", err)
+				fmt.Fprintln(storedStdout, "ERROR WHILE DISCONNECTING", err)
 			}
-		}(c)
+		}(openClient)
 	}
 
-	fmt.Fprintln(StoredStdout, "DISCONNECTED ALL THE CLIENTS")
+	fmt.Fprintln(storedStdout, "DISCONNECTED ALL THE CLIENTS")
 
 }
 
@@ -95,18 +96,21 @@ func exitAll(clients []client.Client) {
 	for range c {
 		queue := sync.WaitGroup{}
 		queue.Add(len(clients))
-		for _, c := range clients {
-			if c.BrokerConnection != nil {
-
+		for _, openClient := range clients {
+			if openClient.BrokerConnection != nil {
 				go func(c client.Client) {
-					c.SendDisconnect()
+					err := c.SendDisconnect()
+					if err != nil {
+						structures.PrintCentrally("Error while disconnecting", err)
+						return
+					}
 					time.Sleep(time.Millisecond * 3)
-					err := c.BrokerConnection.Close()
+					err = c.BrokerConnection.Close()
 					if err != nil {
 						structures.PrintCentrally("Error while closing", err)
 					}
 					queue.Done()
-				}(c)
+				}(openClient)
 			}
 		}
 		queue.Wait()

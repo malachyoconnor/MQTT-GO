@@ -1,36 +1,31 @@
+// Package packets does all of the work of creating, encoding and decoding MQTT packets.
+// It also contains the structs for the packets.
 package packets
 
+// This stores the MQTT packet types and the associated IDs
+// Its passed in the control header of the packet
 const (
 	RESERVED byte = iota
-	CONNECT       // Done
-	CONNACK       // Done
-	PUBLISH       // Done
+	CONNECT
+	CONNACK
+	PUBLISH
 	PUBACK
 	PUBREC
 	PUBREL
 	PUBCOMP
-	SUBSCRIBE   // Done
-	SUBACK      // Done
-	UNSUBSCRIBE // Done
-	UNSUBACK    //Done
-	PINGREQ     // Done
+	SUBSCRIBE
+	SUBACK
+	UNSUBSCRIBE
+	UNSUBACK
+	PINGREQ
 	PINGRESP
-	DISCONNECT // Done
-	AUTH       = 15
+	DISCONNECT
+	AUTH = 15
 )
 
-// CONNECT
-// CONNACK
-// SUBSCRIBE
-// PUBLISH
-// PINGREQ
-// DISCONNECT
-// SUBACK
-// UNSUBACK
-// UNSUBSCRIBE
-
+// PacketTypeName returns the name of a given packet type as a string
 func PacketTypeName(packetType byte) string {
-	if packetType > 15 {
+	if packetType > AUTH {
 		return "UNDEFINED"
 	}
 	return []string{
@@ -44,7 +39,8 @@ func isValidControlType(controlType byte) bool {
 	return ((RESERVED < controlType) && (controlType <= AUTH))
 }
 
-// Why is this not pointers to the items????
+// Packet is the main struct for an MQTT packet
+// It consists of a ControlHeader, a VariableLengthHeader and a Payload
 type Packet struct {
 	ControlHeader *ControlHeader
 	// VariableLengthHeader is an INTERFACE so it contains a pointer to the struct anyway.
@@ -53,6 +49,8 @@ type Packet struct {
 	Payload              *PacketPayload
 }
 
+// VariableLengthHeader is an interface for the variable length header of a packet
+// There are multiple types of variable length header, so we use an interface
 type VariableLengthHeader interface {
 	SafetyFunc()
 }
@@ -60,35 +58,38 @@ type VariableLengthHeader interface {
 // This ensures we only pass around POINTERS to our variable header structs
 // Otherwise we could be passing the structs itself and not realise it
 func (*PublishVariableHeader) SafetyFunc() {
-	//Safety func to ensure passing pointers to variable headers - remove once finished development
+	// Safety func to ensure passing pointers to variable headers - remove once finished development
 }
 func (*ConnectVariableHeader) SafetyFunc() {
-	//Safety func to ensure passing pointers to variable headers - remove once finished development
+	// Safety func to ensure passing pointers to variable headers - remove once finished development
 }
 func (*SubscribeVariableHeader) SafetyFunc() {
-	//Safety func to ensure passing pointers to variable headers - remove once finished development
+	// Safety func to ensure passing pointers to variable headers - remove once finished development
 }
 func (*ConnackVariableHeader) SafetyFunc() {
-	//Safety func to ensure passing pointers to variable headers - remove once finished development
+	// Safety func to ensure passing pointers to variable headers - remove once finished development
 }
 func (*SubackVariableHeader) SafetyFunc() {
-	//Safety func to ensure passing pointers to variable headers - remove once finished development
+	// Safety func to ensure passing pointers to variable headers - remove once finished development
 }
 func (*UnsubscribeVariableHeader) SafetyFunc() {
-	//Safety func to ensure passing pointers to variable headers - remove once finished development
+	// Safety func to ensure passing pointers to variable headers - remove once finished development
 }
 
+// ControlHeader is the header of the packet that contains the packet type and flags
 type ControlHeader struct {
 	RemainingLength int
 	Type            byte
 	Flags           byte
 }
 
+// PublishVariableHeader is the variable header for a publish packet
 type PublishVariableHeader struct {
 	TopicFilter      string
 	PacketIdentifier int
 }
 
+// ConnectVariableHeader is the variable header for a connect packet
 type ConnectVariableHeader struct {
 	ProtocolName  string
 	KeepAlive     int
@@ -122,6 +123,7 @@ type SubscribeVariableHeader struct {
 	PacketIdentifier int
 }
 
+// PacketPayload is the type used for all payloads of packets
 type PacketPayload struct {
 	ClientID              string
 	WillTopic             string

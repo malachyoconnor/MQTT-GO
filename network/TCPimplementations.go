@@ -7,6 +7,7 @@ import (
 
 // First we implement the connection methods
 
+// Connect implements the Connect function for TCP connections.
 func (conn *TCPCon) Connect(ip string, port int) error {
 	connection, err := net.Dial("tcp", fmt.Sprint(ip, ":", port))
 	if err == nil {
@@ -15,28 +16,34 @@ func (conn *TCPCon) Connect(ip string, port int) error {
 	return err
 }
 
+// Write writes to the TCP connection associated with the TCPCon.
 func (conn *TCPCon) Write(toWrite []byte) (n int, err error) {
 	return (*conn.connection).Write(toWrite)
 }
 
+// Read reads from the TCP connection associated with the TCPCon.
 func (conn *TCPCon) Read(buffer []byte) (n int, err error) {
 	return (*conn.connection).Read(buffer)
 }
 
+// Close closes the TCP connection associated with the TCPCon.
 func (conn *TCPCon) Close() error {
 	return (*conn.connection).Close()
 }
 
+// RemoteAddr returns the remote address of the TCP connection associated with the TCPCon.
 func (conn *TCPCon) RemoteAddr() net.Addr {
 	return (*conn.connection).RemoteAddr()
 }
 
+// LocalAddr returns the local address of the TCP connection associated with the TCPCon.
 func (conn *TCPCon) LocalAddr() net.Addr {
 	return (*conn.connection).LocalAddr()
 }
 
 // Next the listening methods
 
+// Listen implements the Listen function for TCP connections.
 func (tcpListener *TCPListener) Listen(ip string, port int) error {
 	listener, err := net.Listen("tcp", fmt.Sprint(ip, ":", port))
 	if err == nil {
@@ -45,10 +52,12 @@ func (tcpListener *TCPListener) Listen(ip string, port int) error {
 	return err
 }
 
+// Close closes the TCP listener.
 func (tcpListener *TCPListener) Close() error {
 	return (*tcpListener.listener).Close()
 }
 
+// Accept accepts a TCP connection from the TCP listener.
 func (tcpListener *TCPListener) Accept() (net.Conn, error) {
 	return (*tcpListener.listener).Accept()
 }

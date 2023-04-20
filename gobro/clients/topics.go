@@ -13,8 +13,8 @@ type TopicToSubscribers struct {
 	topLevelMap *structures.SafeMap[string, *topic]
 }
 
-func (topicToSubs TopicToSubscribers) DeleteAll() {
-	for _, topic := range topicToSubs.topLevelMap.Values() {
+func (topicMap TopicToSubscribers) DeleteAll() {
+	for _, topic := range topicMap.topLevelMap.Values() {
 		topic.deleteSelf()
 	}
 }
@@ -67,8 +67,8 @@ func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
 func (topicMap *TopicToSubscribers) Put(topicName string, clientID ClientID) error {
 	clientLL, err := topicMap.get(topicName)
 	if err != nil {
-		if err == ErrTopicDoesntExist {
-			err := topicMap.AddTopic(topicName)
+		if errors.Is(err, ErrTopicDoesntExist) {
+			err = topicMap.AddTopic(topicName)
 			if err != nil {
 				return err
 			}
@@ -123,45 +123,45 @@ func (topicMap *TopicToSubscribers) Unsubscribe(clientID ClientID, topicNames ..
 
 // Delete() deletes a topic from the topic map - it can return an ErrTopicDoesntExist error
 // or nil
-func (t *TopicToSubscribers) Delete(topicName string) error {
+func (topicMap *TopicToSubscribers) Delete(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 
-	if !t.topLevelMap.Contains(topicSections[0]) {
+	if !topicMap.topLevelMap.Contains(topicSections[0]) {
 		return ErrTopicDoesntExist
 	}
 
 	if len(topicSections) == 1 {
-		t.topLevelMap.Delete(topicSections[0])
+		topicMap.topLevelMap.Delete(topicSections[0])
 		return nil
 	}
 
-	val := t.topLevelMap.Get(topicSections[0])
+	val := topicMap.topLevelMap.Get(topicSections[0])
 	return val.DeleteTopic(topicSections[1:])
 }
 
 var ErrTopicAlreadyExists = errors.New("error: Trying to add client that already exists")
 
-func (topicClientStore *TopicToSubscribers) AddTopic(topicName string) error {
+func (topicMap *TopicToSubscribers) AddTopic(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 	// If this is just a top level topic like sensors/ as opposed to sensors/c02sensors/...
 	if len(topicSections) == 1 {
-		if topicClientStore.topLevelMap.Contains(topicSections[0]) {
+		if topicMap.topLevelMap.Contains(topicSections[0]) {
 			return ErrTopicAlreadyExists
 		}
-		topicClientStore.topLevelMap.Put(topicSections[0], makeBaseTopic(topicSections[0]))
+		topicMap.topLevelMap.Put(topicSections[0], makeBaseTopic(topicSections[0]))
 		return nil
 	}
 
-	if topicClientStore.topLevelMap.Contains(topicSections[0]) {
-		topLevelTopic := topicClientStore.topLevelMap.Get(topicSections[0])
+	if topicMap.topLevelMap.Contains(topicSections[0]) {
+		topLevelTopic := topicMap.topLevelMap.Get(topicSections[0])
 		return topLevelTopic.AddTopic(topicSections[1:])
 	}
 	baseTopic := makeBaseTopic(topicSections[0])
-	topicClientStore.topLevelMap.Put(topicSections[0], baseTopic)
+	topicMap.topLevelMap.Put(topicSections[0], baseTopic)
 	return baseTopic.AddTopic(topicSections[1:])
 }
 
-func (topicToClient *TopicToSubscribers) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {
+func (topicMap *TopicToSubscribers) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {
 	if topicName == "" {
 		return nil, errors.New("error: Cannot search for empty topic")
 	}
@@ -179,7 +179,7 @@ func (topicToClient *TopicToSubscribers) GetMatchingClients(topicName string) (*
 		}
 	}
 
-	topLevelMap := topicToClient.topLevelMap
+	topLevelMap := topicMap.topLevelMap
 	topLevelTopic := topLevelMap.Get(topicSections[0])
 	if topLevelTopic == nil {
 		return nil, ErrTopicDoesntExist
@@ -199,10 +199,10 @@ func (topicToClient *TopicToSubscribers) GetMatchingClients(topicName string) (*
 }
 
 // err can be ErrTopicDoesntExist or nil
-func (topicToClient *TopicToSubscribers) get(topicName string) (*structures.LinkedList[ClientID], error) {
+func (topicMap *TopicToSubscribers) get(topicName string) (*structures.LinkedList[ClientID], error) {
 	topicSections := strings.Split(topicName, "/")
 
-	topLevelTopic := topicToClient.topLevelMap.Get(topicSections[0])
+	topLevelTopic := topicMap.topLevelMap.Get(topicSections[0])
 	if topLevelTopic == nil {
 		return nil, ErrTopicDoesntExist
 	}
@@ -250,7 +250,6 @@ var ErrTopicDoesntExist = errors.New("error: Topic doesn't exist")
 
 func (t *topic) DeleteTopic(topicSections []string) error {
 	if len(topicSections) == 1 {
-
 		for i, child := range t.children {
 			if child.name == topicSections[0] {
 				child.deleteSelf()

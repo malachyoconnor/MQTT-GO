@@ -15,12 +15,17 @@ import (
 	"MQTT-GO/structures"
 )
 
+// ClientMessage is a struct that stores a client's ID, a connection to the client,
+// and the packet to handle.
+// This is used to pass information from the server to the message handler.
+// Likewise, it is used to pass information from the message handler to the message sender.
 type ClientMessage struct {
 	ClientID         *ClientID
 	ClientConnection *net.Conn
 	Packet           []byte
 }
 
+// CreateClientMessage creates a new ClientMessage with the given ID, connection, and packet
 func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet []byte) ClientMessage {
 	clientMessage := ClientMessage{
 		ClientID:         &clientID,
@@ -30,19 +35,25 @@ func CreateClientMessage(clientID ClientID, clientConnection *net.Conn, packet [
 	return clientMessage
 }
 
-func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string, connectedClientMutex *sync.Mutex) {
+// ClientHandler is a function that handles a client's connection.
+// It handles the initial connect, and then listens for all packets from that client,
+// and passes them to the message handler.
+func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage,
+	clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers,
+	connectedClient *string, connectedClientMutex *sync.Mutex) {
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
 		log.Printf("- Error handling connect from %v: %v\n", newClient.NetworkConnection.RemoteAddr(), err)
 		structures.Printf("Error handling connect from %v: %v\n", newClient.NetworkConnection.RemoteAddr(), err)
 		if err.Error() == "error: Client already exists" {
 			connack := packets.CreateConnACK(false, 2)
-			_, err := (*connection).Write(connack)
+			_, err = (*connection).Write(connack)
 			if err != nil {
 				(*connection).Close()
 				structures.Println("Error while writing", err)
 			} else {
-				// Sleep for 50 millisconds while they digest this news that they're being disconnected before closing the connection
+				// Sleep for 50 millisconds while they digest this news that they're
+				// being disconnected before closing the connection
 				time.Sleep(time.Millisecond * 50)
 				(*connection).Close()
 			}
@@ -69,16 +80,11 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 		connectedClientMutex.Unlock()
 	}()
 
-	if err != nil {
-		ServerPrintln("Error decoding clientID")
-		return
-	}
-
 	reader := bufio.NewReader(*connection)
 	for {
 		packet, err := packets.ReadPacketFromConnection(reader)
 
-		if err == io.EOF || errors.Is(err, net.ErrClosed) {
+		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 			break
 		}
 		if err != nil {
@@ -99,7 +105,8 @@ func ClientHandler(connection *net.Conn, packetPool chan<- ClientMessage, client
 
 // handleInitialConnect decodes the packet to find a ClientID - if none exists
 // we create one and then push the connect to be handled by message Handler
-func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[ClientID, *Client], packetPool chan<- ClientMessage) (*Client, error) {
+func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[ClientID, *Client],
+	packetPool chan<- ClientMessage) (*Client, error) {
 	buffer := make([]byte, 300)
 	packetLen, err := (*connection).Read(buffer)
 
@@ -134,7 +141,8 @@ func handleInitialConnect(connection *net.Conn, clientTable *structures.SafeMap[
 	return newClient, nil
 }
 
-func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers, connectedClient *string) {
+func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client],
+	topicToClient *TopicToSubscribers, connectedClient *string) {
 	*connectedClient = ""
 
 	// If the client has already been disconnected elsewhere

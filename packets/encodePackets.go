@@ -2,6 +2,7 @@ package packets
 
 import "errors"
 
+// CombineEncodedPacketSections combines the control header, var header and paload into a single byte array
 func CombineEncodedPacketSections(controlHeader []byte, varLengthHeader []byte, payload []byte) []byte {
 	resultPacket := make([]byte, 0, len(controlHeader)+len(varLengthHeader)+len(payload))
 	resultPacket = append(resultPacket, controlHeader...)
@@ -10,14 +11,17 @@ func CombineEncodedPacketSections(controlHeader []byte, varLengthHeader []byte, 
 	return resultPacket
 }
 
+// EncodeFixedHeader encodes the fixed header of a packet as a byte array
 func EncodeFixedHeader(fixedHeader ControlHeader) []byte {
-	result := make([]byte, 1)
+	encodedInt := EncodeVarLengthInt(fixedHeader.RemainingLength)
+	result := make([]byte, 1+len(encodedInt))
 	result[0] = (fixedHeader.Type << 4) | (fixedHeader.Flags)
-	result = append(result, EncodeVarLengthInt(fixedHeader.RemainingLength)...)
+	copy(result[1:], encodedInt)
 
 	return result
 }
 
+// EncodeConnect encodes a connect packet into a byte array
 func EncodeConnect(packet *Packet) ([]byte, error) {
 	if packet.ControlHeader.Type != CONNECT {
 		panic("Tried to create a connect packet from a non-connect packet")
@@ -25,10 +29,14 @@ func EncodeConnect(packet *Packet) ([]byte, error) {
 
 	// The control header is added last because only at the end can we know the
 	// value of the remaining length field.
-	varLengthHeader := packet.VariableLengthHeader.(*ConnectVariableHeader)
+	varLengthHeader, ok := packet.VariableLengthHeader.(*ConnectVariableHeader)
+	if !ok {
+		return nil, errors.New("error: Variable length header is not of type ConnectVariableHeader")
+	}
 
 	// TODO: Random choice of 30 here - could be improved with some looking into, same for the Payload.
-	resultVarHeader := make([]byte, 0, 30)
+	const preallocatedVarHeaderSize = 30
+	resultVarHeader := make([]byte, 0, preallocatedVarHeaderSize)
 	protocolNameArr, _, _ := EncodeUTFString("MQTT")
 
 	// Version 3.1.1 has a protocol version of 4
@@ -40,7 +48,7 @@ func EncodeConnect(packet *Packet) ([]byte, error) {
 	resultVarHeader = append(resultVarHeader, protocol, connectFlags, keepAliveMsb, keepAliveLsb)
 
 	payload := packet.Payload
-	resultPayload := make([]byte, 0, 30)
+	resultPayload := make([]byte, 0, 200)
 	// Client Identifier
 	clientIdentifier, _, err := EncodeUTFString(payload.ClientID)
 	if err != nil {
@@ -84,13 +92,17 @@ func EncodeConnect(packet *Packet) ([]byte, error) {
 	return CombineEncodedPacketSections(resultControlHeader, resultVarHeader, resultPayload), nil
 }
 
+// EncodePublish encodes a publish packet into a byte array
 func EncodePublish(packet *Packet) ([]byte, error) {
 	if packet.ControlHeader.Type != PUBLISH {
 		panic("Error create publish passed non-publish packet")
 	}
 
 	resultVarHeader := make([]byte, 0, 30)
-	varLenHeader := packet.VariableLengthHeader.(*PublishVariableHeader)
+	varLenHeader, ok := packet.VariableLengthHeader.(*PublishVariableHeader)
+	if !ok {
+		return nil, errors.New("error: Variable length header is not of type PublishVariableHeader")
+	}
 	topicName, _, err := EncodeUTFString(varLenHeader.TopicFilter)
 	resultVarHeader = append(resultVarHeader, topicName...)
 	if err != nil {
@@ -111,6 +123,7 @@ func EncodePublish(packet *Packet) ([]byte, error) {
 	return CombineEncodedPacketSections(resultControlHeader, resultVarHeader, resultPayload), nil
 }
 
+// EncodeSubscribe encodes a subscribe packet into a byte array
 func EncodeSubscribe(packet *Packet) ([]byte, error) {
 	if packet.ControlHeader.Type != SUBSCRIBE {
 		panic("Error create publish passed non-publish packet")
@@ -125,6 +138,7 @@ func EncodeSubscribe(packet *Packet) ([]byte, error) {
 	return CombineEncodedPacketSections(resultControlHeader, resultVarHeader, resultPayload), nil
 }
 
+// EncodeUnsubscribe encodes an unsubscribe packet into a byte array
 func EncodeUnsubscribe(packet *Packet) ([]byte, error) {
 	if packet.ControlHeader.Type != UNSUBSCRIBE {
 		panic("Error encode unsubscribe passed non-unsubscribe packet")
@@ -146,6 +160,7 @@ func EncodeUnsubscribe(packet *Packet) ([]byte, error) {
 	return CombineEncodedPacketSections(resultControlHeader, resultVarHeader, resultPayload), nil
 }
 
+// ConvertStringsToTopicsWithQos converts a list of strings to a list of TopicWithQoS
 func ConvertStringsToTopicsWithQos(topics ...string) []TopicWithQoS {
 	result := make([]TopicWithQoS, 0, len(topics))
 

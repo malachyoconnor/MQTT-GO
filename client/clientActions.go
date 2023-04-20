@@ -15,6 +15,7 @@ var (
 	errConnectionClosed = errors.New("error: connection is closed")
 )
 
+// SendConnect encodes a connect packet and sends it to the broker.
 func (client *Client) SendConnect(ip string, port int) error {
 	if client.BrokerConnection == nil {
 		return errors.New("error: Client does not have a broker connection")
@@ -67,6 +68,7 @@ func (client *Client) SendConnect(ip string, port int) error {
 // TODO: Handle readPacketFromConnection error properly
 // TODO: Check if everything you would need for a publish packet is present!
 
+// SendPublish encodes a publish packet and sends it to the broker.
 func (client *Client) SendPublish(applicationMessage []byte, topic string) error {
 	controlHeader := packets.ControlHeader{Type: packets.PUBLISH, Flags: 0}
 	varHeader := packets.PublishVariableHeader{}
@@ -105,6 +107,8 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 }
 
 // TODO: handle the return codes
+
+// SendSubscribe encodes a subscribe packet and sends it to the broker.
 func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 	controlHeader := packets.ControlHeader{Type: packets.SUBSCRIBE, Flags: 2}
 	varHeader := packets.SubscribeVariableHeader{}
@@ -147,6 +151,7 @@ func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 	return nil
 }
 
+// SendUnsubscribe encodes an unsubscribe packet and sends it to the broker.
 func (client *Client) SendUnsubscribe(topics ...string) error {
 	controlHeader := packets.ControlHeader{Type: packets.UNSUBSCRIBE}
 	varHeader := packets.UnsubscribeVariableHeader{}
@@ -176,6 +181,7 @@ func (client *Client) SendUnsubscribe(topics ...string) error {
 	return nil
 }
 
+// SendDisconnect encodes a disconnect packet and sends it to the broker.
 func (client *Client) SendDisconnect() error {
 	controlHeader := packets.ControlHeader{}
 	controlHeader.Flags = 0

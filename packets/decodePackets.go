@@ -40,7 +40,8 @@ func DecodeFixedHeader(packet []byte) (*ControlHeader, int, error) {
 	if fixedLength != (len(packet)-1)-(varLengthLen) {
 		// We still return the values, because we may not have the whole packet yet
 		// We may JUST be passing the fixed header
-		return resultHeader, 1 + varLengthLen, errors.New("error: packet length differs from the advertised fixed length in DecodeFixedHeader")
+		return resultHeader, 1 + varLengthLen,
+			errors.New("error: packet length differs from the advertised fixed length in DecodeFixedHeader")
 	}
 
 	return resultHeader, 1 + varLengthLen, nil
@@ -60,7 +61,6 @@ func DecodeUTFString(toFetch []byte) (string, int, error) {
 	}
 
 	return string(toFetch[2 : 2+stringLen]), 2 + stringLen, nil
-
 }
 
 // Returns (MSB, LSB)
@@ -70,6 +70,7 @@ func getMSBandLSB(toEncode int) (byte, byte) {
 	return msb, lsb
 }
 
+// EncodeUTFString takes a string and encodes it as defined by the MQTT standard.
 func EncodeUTFString(toEncode string) ([]byte, int, error) {
 	// If more than 16 bytes, 65535 = 2^16-1
 	if len(toEncode) > 65535 {
@@ -105,6 +106,8 @@ func FetchBytes(toFetch []byte) ([]byte, int, error) {
 
 var errPacketNotDefined = errors.New("error: Packet type not defined")
 
+// GetPacketType takes a packet and examines the first byte to determine
+// the packet type.
 func GetPacketType(packet []byte) byte {
 	return packet[0] >> 4
 }
@@ -124,34 +127,33 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 	var err error
 
 	switch packetType {
-
 	case CONNECT:
 		result, err = DecodeConnect(packet)
 
 	case CONNACK:
-		result, err = DecodeCONNACK(packet)
+		result, err = decodeCONNACK(packet)
 
 	case SUBSCRIBE:
-		result, err = DecodeSubscribe(packet)
+		result, err = decodeSubscribe(packet)
 
 	case PUBLISH:
-		result, err = DecodePublish(packet)
+		result, err = decodePublish(packet)
 
 	case PINGREQ:
 		structures.Println("Ping")
-		result, err = DecodePing(packet)
+		result, err = decodePing(packet)
 
 	case DISCONNECT:
-		result, err = DecodeDisconnect(packet)
+		result, err = decodeDisconnect(packet)
 
 	case SUBACK:
-		result, err = DecodeSuback(packet)
+		result, err = decodeSuback(packet)
 
 	case UNSUBACK:
-		result, err = DecodeUnsuback(packet)
+		result, err = decodeUnsuback(packet)
 
 	case UNSUBSCRIBE:
-		result, err = DecodeUnsubscribe(packet)
+		result, err = decodeUnsubscribe(packet)
 
 	default:
 		structures.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
@@ -164,8 +166,8 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 	return result, packetType, nil
 }
 
-// Should give us back a packet or throw an error
-// We'll pass a slice of the packet
+// DecodeConnect takes a byte array encoding a connect packet and returns
+// (*Packet, error)
 func DecodeConnect(packet []byte) (*Packet, error) {
 	defer func() {
 		r := recover()
@@ -181,8 +183,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	}
 
 	if fixedHeader.Type != 1 {
-		err := fmt.Errorf("error: Incorrect packet type. Given type %v to connect ", fixedHeader.Type)
-		return nil, err
+		return nil, fmt.Errorf("error: Incorrect packet type. Given type %v to connect ", fixedHeader.Type)
 	}
 
 	resultPacket.ControlHeader = fixedHeader
@@ -203,9 +204,9 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 
 	varHeader.ConnectFlags = flags
 
-	UsernameFlag := (flags>>7)&1 == 1
-	PasswordFlag := (flags>>6)&1 == 1
-	WillFlag := (flags>>2)&1 == 1
+	usernameFlag := (flags>>7)&1 == 1
+	passwordFlag := (flags>>6)&1 == 1
+	willFlag := (flags>>2)&1 == 1
 	// TODO: Think about these 3 flags
 	// WillRetainFlag := (flags>>5)&1 == 1
 	// WillQoS := (flags >> 3) & 3
@@ -227,7 +228,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	}
 	resultPayload.ClientID = clientID
 
-	if WillFlag {
+	if willFlag {
 		willTopic, addedOffset, err := DecodeUTFString(payloadDecode[offset:])
 		if err != nil {
 			return nil, err
@@ -244,7 +245,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 		resultPayload.WillMessage = willMessage
 	}
 
-	if UsernameFlag {
+	if usernameFlag {
 		username, addedOffset, err := DecodeUTFString(payloadDecode[offset:])
 		if err != nil {
 			return nil, err
@@ -253,7 +254,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 		resultPayload.Username = username
 	}
 
-	if PasswordFlag {
+	if passwordFlag {
 		password, _, err := FetchBytes(payloadDecode[offset:])
 		if err != nil {
 			return nil, err
@@ -266,7 +267,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
-func DecodeCONNACK(packet []byte) (*Packet, error) {
+func decodeCONNACK(packet []byte) (*Packet, error) {
 	header, offset, err := DecodeFixedHeader(packet)
 	if err != nil {
 		return nil, err
@@ -279,7 +280,7 @@ func DecodeCONNACK(packet []byte) (*Packet, error) {
 	return CombinePacketSections(header, &varHeader, nil), nil
 }
 
-func DecodeUnsubscribe(packet []byte) (*Packet, error) {
+func decodeUnsubscribe(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
 	resultPacket.ControlHeader = fixedHeader
@@ -291,7 +292,7 @@ func DecodeUnsubscribe(packet []byte) (*Packet, error) {
 	varHeader.PacketIdentifier = CombineMsbLsb(packet[offset], packet[offset+1])
 	resultPacket.VariableLengthHeader = &varHeader
 	offset += 2
-	topics := make([]string, 0, 3)
+	topics := make([]string, 0)
 
 	for offset < len(packet) {
 		topic, addedOffset, err := DecodeUTFString(packet[offset:])
@@ -310,7 +311,7 @@ func DecodeUnsubscribe(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
-func DecodeSubscribe(packet []byte) (*Packet, error) {
+func decodeSubscribe(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
@@ -339,10 +340,10 @@ func DecodeSubscribe(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
-func DecodeDisconnect(packet []byte) (*Packet, error) {
+func decodeDisconnect(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	resultPacket.ControlHeader = &ControlHeader{
-		Type:            14,
+		Type:            DISCONNECT,
 		RemainingLength: 0,
 		Flags:           0,
 	}
@@ -387,7 +388,7 @@ func DecodeVarLengthInt(toDecode []byte) (value int, length int, err error) {
 	return value, length, nil
 }
 
-func DecodePublish(packet []byte) (*Packet, error) {
+func decodePublish(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
@@ -428,7 +429,7 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
-func DecodePing(packet []byte) (*Packet, error) {
+func decodePing(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
@@ -443,7 +444,7 @@ func DecodePing(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
-func DecodeSuback(packetArr []byte) (*Packet, error) {
+func decodeSuback(packetArr []byte) (*Packet, error) {
 	fixedHeader, offset, err := DecodeFixedHeader(packetArr)
 	if err != nil {
 		return nil, err
@@ -463,7 +464,7 @@ func DecodeSuback(packetArr []byte) (*Packet, error) {
 	return &resultPacket, nil
 }
 
-func DecodeUnsuback(packetArr []byte) (*Packet, error) {
+func decodeUnsuback(packetArr []byte) (*Packet, error) {
 	fixedHeader, offset, err := DecodeFixedHeader(packetArr)
 	if err != nil {
 		return nil, err
@@ -480,11 +481,6 @@ func DecodeUnsuback(packetArr []byte) (*Packet, error) {
 		VariableLengthHeader: &variableHeader,
 	}
 	return &resultPacket, nil
-}
-
-func CreateByteInline(inputBinary []byte) byte {
-	res, _ := CreateByte(inputBinary)
-	return res
 }
 
 // CreateByte takes an array of 0s and 1s and returns the byte representation

@@ -13,6 +13,7 @@ var (
 	terminalWidth = getTerminalWidth()
 )
 
+// PrintInterface prints an interface in a nice format.
 func PrintInterface(i interface{}) {
 	s, _ := json.MarshalIndent(i, "", "\t")
 	Println(string(s))
@@ -27,6 +28,8 @@ func getTerminalWidth() uint {
 	return width
 }
 
+// PrintCentrally prints a string in the center of the terminal.
+// It uses the Println function so it is thread safe.
 func PrintCentrally(toPrint ...any) {
 	go func() {
 		output := fmt.Sprint(toPrint...)
@@ -35,6 +38,7 @@ func PrintCentrally(toPrint ...any) {
 	}()
 }
 
+// PrintItems prints the items in the linked list.
 func (ll *LinkedList[T]) PrintItems() {
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
@@ -47,6 +51,7 @@ func (ll *LinkedList[T]) PrintItems() {
 	fmt.Print("]")
 }
 
+// PrintArray prints an array in a nice format.
 func PrintArray[T comparable](arr []T, defaultValue T) {
 	fmt.Print("[ ")
 
@@ -63,18 +68,21 @@ var (
 	printingMutex = sync.Mutex{}
 )
 
+// Println is a thread safe version of fmt.Println.
 func Println(a ...any) (int, error) {
 	printingMutex.Lock()
 	defer printingMutex.Unlock()
 	return fmt.Println(a...)
 }
 
+// Printf is a thread safe version of fmt.Printf.
 func Printf(format string, a ...any) (int, error) {
 	printingMutex.Lock()
 	defer printingMutex.Unlock()
 	return fmt.Printf(format, a...)
 }
 
+// Print is a thread safe version of fmt.Print.
 func Print(a ...any) (int, error) {
 	printingMutex.Lock()
 	defer printingMutex.Unlock()

@@ -8,18 +8,25 @@ import (
 	"MQTT-GO/structures"
 )
 
+// MessageHandler is a struct that handles the messages that are sent to the server.
+// It has a channel for incoming packets, and a channel for outgoing packets.
 type MessageHandler struct {
 	AttachedInputChan  *chan clients.ClientMessage
 	AttachedOutputChan *chan clients.ClientMessage
 }
 
-func CreateMessageHandler(inputChanAddress *chan clients.ClientMessage, outputChanAddress *chan clients.ClientMessage) MessageHandler {
+// CreateMessageHandler creates a new message handler with a channel for incoming packets,
+// and a channel for outgoing packets.
+func CreateMessageHandler(inputChan *chan clients.ClientMessage,
+	outputChan *chan clients.ClientMessage) MessageHandler {
 	return MessageHandler{
-		AttachedInputChan:  inputChanAddress,
-		AttachedOutputChan: outputChanAddress,
+		AttachedInputChan:  inputChan,
+		AttachedOutputChan: outputChan,
 	}
 }
 
+// Listen listens for incoming packets, decodes them and then runs the HandleMessage function
+// in a separate goroutine.
 func (msgH *MessageHandler) Listen(server *Server) {
 	clientTable := server.clientTable
 
@@ -44,13 +51,13 @@ func (msgH *MessageHandler) Listen(server *Server) {
 		// General case for if the client doesn't exist if NOT a connect packet
 		if packetType != packets.CONNECT {
 			if !clientTable.Contains(clientID) {
-				log.Printf("Client '%v' not in the client table sent %v message, disconnecting.\n", clientID, packets.PacketTypeName(packetType))
-				structures.Printf("Client '%v' not in the client table sent %v message, disconnecting.\n", clientID, packets.PacketTypeName(packetType))
+				log.Printf("Client '%v' not in the client table sent %v message, disconnecting.\n",
+					clientID, packets.PacketTypeName(packetType))
+				structures.Printf("Client '%v' not in the client table sent %v message, disconnecting.\n",
+					clientID, packets.PacketTypeName(packetType))
 
 				// If the client hasn't already been disconnected by the client handler
-				if client != nil {
-					client.NetworkConnection.Close()
-				}
+				client.NetworkConnection.Close()
 				continue
 			}
 		}
@@ -58,7 +65,11 @@ func (msgH *MessageHandler) Listen(server *Server) {
 	}
 }
 
-func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Client, server *Server, clientMessage clients.ClientMessage, ticket structures.Ticket) {
+// HandleMessage handles the incoming packets by checking the packet type and then
+// running the appropriate function.
+// It also encodes the outgoing packets and sends them to the MessageSender.
+func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Client, server *Server,
+	clientMessage clients.ClientMessage, ticket structures.Ticket) {
 	clientTable := server.clientTable
 	clientID := *clientMessage.ClientID
 	clientConnection := *clientMessage.ClientConnection
@@ -74,7 +85,11 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
-		varHeader := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
+		varHeader, ok := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
+		if !ok {
+			log.Printf("Error during publish, from client '%v'\n", clientID)
+			return
+		}
 		topic := clients.Topic{
 			TopicFilter: varHeader.TopicFilter,
 			Qos:         packet.ControlHeader.Flags & 6,
@@ -133,7 +148,8 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 }
 
 // Decode topics and store them in subscription table.
-func handleSubscribe(topicClientMap *clients.TopicToSubscribers, client *clients.Client, packetPayload packets.PacketPayload) ([]clients.Topic, error) {
+func handleSubscribe(topicClientMap *clients.TopicToSubscribers,
+	client *clients.Client, packetPayload packets.PacketPayload) ([]clients.Topic, error) {
 	newTopics := make([]clients.Topic, 0)
 	payload := packetPayload.RawApplicationMessage
 	topicNumber, offset := 0, 0
@@ -192,11 +208,13 @@ func handleUnsubscribe(topics []string, topicToSubscribers *clients.TopicToSubsc
 	}
 }
 
-func handlePublish(TCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage, clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
-	clientList, err := TCMap.GetMatchingClients(topic.TopicFilter)
+func handlePublish(tCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage,
+	clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
+	clientList, err := tCMap.GetMatchingClients(topic.TopicFilter)
 
 	if err != nil {
-		log.Printf("- Error while getting matching clients during a publish to '%v' by '%v': %v\n", topic.TopicFilter, *msgToForward.ClientID, err)
+		log.Printf("- Error while getting matching clients during a publish to '%v' by '%v': %v\n",
+			topic.TopicFilter, *msgToForward.ClientID, err)
 		return
 	}
 	clientNode := clientList.Head()

@@ -8,6 +8,8 @@ import (
 	"MQTT-GO/structures"
 )
 
+// ListenForPackets continually reads packets from the broker connection, decodes them and takes appropriate action.
+// For packets that require an ACK, it adds them to the waitingAckStruct.
 func (client *Client) ListenForPackets() {
 	reader := bufio.NewReader(client.BrokerConnection)
 	for {
@@ -46,7 +48,7 @@ func (client *Client) ListenForPackets() {
 				structures.Println("READ A PUBLISH")
 				result, _, _ := packets.DecodePacket(packet)
 				// If we fill the buffer - form a queue
-				if len(client.ReceivedPackets) == WaitingPacketBufferSize {
+				if len(client.ReceivedPackets) == waitingPacketBufferSize {
 					go func() { client.ReceivedPackets <- result }()
 				}
 				client.ReceivedPackets <- result
@@ -58,6 +60,5 @@ func (client *Client) ListenForPackets() {
 				structures.Println(packet, "Read some packet of type", packets.PacketTypeName(packetType))
 			}
 		}
-
 	}
 }

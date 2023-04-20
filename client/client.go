@@ -1,3 +1,6 @@
+// Package client is the main package that is used to create a client and connect to a broker.
+// This can be run from the command line, or used as a utility to create MQTT clients
+// programatically.
 package client
 
 import (
@@ -11,10 +14,15 @@ import (
 )
 
 var (
-	WaitingPacketBufferSize = 100
-	ConnectionType          = network.QUIC
+	waitingPacketBufferSize = 100
+	// ConnectionType is the type of transport protocol that is used
+	// It is set by main.go, and can be either TCP, UDP or QUIC
+	ConnectionType = network.QUIC
 )
 
+// Client is the main struct that is used to create a client and connect to a broker.
+// It stores the ClientID, the connection to the broker, a buffer for incmoing packets,
+// and a list of packets that are waiting for an ACK.
 type Client struct {
 	ClientID         string
 	BrokerConnection network.Con
@@ -22,8 +30,9 @@ type Client struct {
 	waitingAckStruct *WaitingAcks
 }
 
+// CreateClient creates a new client with a random ClientID, and a buffer for incoming packets.
 func CreateClient() *Client {
-	messageChannel := make(chan *packets.Packet, WaitingPacketBufferSize)
+	messageChannel := make(chan *packets.Packet, waitingPacketBufferSize)
 	waitingPackets := CreateWaitingPacketList()
 	return &Client{
 		ReceivedPackets:  messageChannel,
@@ -32,6 +41,7 @@ func CreateClient() *Client {
 	}
 }
 
+// CreateAndConnectClient creates a new client, sends a connect packet to the broker, and starts listening for packets.
 func CreateAndConnectClient(ip string, port int) (*Client, error) {
 	client := CreateClient()
 	err := client.SetClientConnection(ip, port)
@@ -46,6 +56,7 @@ func CreateAndConnectClient(ip string, port int) (*Client, error) {
 	return client, nil
 }
 
+// SetClientConnection sets the connection to the broker.
 func (client *Client) SetClientConnection(ip string, port int) error {
 	connection, err := network.NewCon(ConnectionType)
 	if err != nil {
@@ -72,23 +83,24 @@ func listenForExit(client *Client) {
 }
 
 func cleanupAndExit(client *Client) {
-	if client != nil {
-		structures.Println("Sending DISCONNECT")
-		err := client.SendDisconnect()
-		if err != nil {
-			structures.Println("Error while disconnecting:", err)
-		}
-
-		if client.BrokerConnection != nil {
-			time.Sleep(time.Millisecond * 1000)
-			err = client.BrokerConnection.Close()
-			if err != nil {
-				structures.Println("Error while closing connection:", err)
-			}
-			log.Println("\nConnection closed, goodbye")
-		}
-	} else {
+	if client == nil {
 		log.Println("Client is already nil when we tried to exit")
+		os.Exit(0)
+	}
+
+	structures.Println("Sending DISCONNECT")
+	err := client.SendDisconnect()
+	if err != nil {
+		structures.Println("Error while disconnecting:", err)
+	}
+
+	if client.BrokerConnection != nil {
+		time.Sleep(time.Millisecond * 500)
+		err = client.BrokerConnection.Close()
+		if err != nil {
+			structures.Println("Error while closing connection:", err)
+		}
+		log.Println("\nConnection closed, goodbye")
 	}
 
 	os.Exit(0)

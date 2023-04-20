@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// LinkedList is a thread safe linked list implementation.
 type LinkedList[T comparable] struct {
 	head *Node[T]
 	tail *Node[T]
@@ -13,6 +14,7 @@ type LinkedList[T comparable] struct {
 	lock sync.RWMutex
 }
 
+// CreateLinkedList creates a new linked list.
 func CreateLinkedList[T comparable]() *LinkedList[T] {
 	result := LinkedList[T]{
 		head: nil,
@@ -22,6 +24,7 @@ func CreateLinkedList[T comparable]() *LinkedList[T] {
 	return &result
 }
 
+// GetItems returns a slice of the items in the linked list.
 func (ll *LinkedList[T]) GetItems() []T {
 	result := make([]T, 0, ll.Size)
 
@@ -33,6 +36,8 @@ func (ll *LinkedList[T]) GetItems() []T {
 	return result
 }
 
+// DeleteLinkedList deletes the linked list, setting all pointers to nil.
+// This is useful for garbage collection.
 func (ll *LinkedList[T]) DeleteLinkedList() {
 	if ll == nil {
 		return
@@ -45,6 +50,7 @@ func (ll *LinkedList[T]) DeleteLinkedList() {
 	}
 }
 
+// Concatenate takes two linked lists and returns a new linked list that is the concatenation of the two.
 // This concatenation is slow as we combine the two lists we DON'T copy them
 // If this is really slow then we can change that and just make sure we fix the lists when we're done
 // The point is that holding onto either of the other lists could be bad for concurrency - instead
@@ -82,6 +88,7 @@ func Concatenate[T comparable](llA *LinkedList[T], llB *LinkedList[T]) *LinkedLi
 	return result
 }
 
+// DeepCopy returns a deep copy of the linked list.
 func (ll *LinkedList[T]) DeepCopy() *LinkedList[T] {
 	result := CreateLinkedList[T]()
 	node := ll.head
@@ -92,6 +99,8 @@ func (ll *LinkedList[T]) DeepCopy() *LinkedList[T] {
 	return result
 }
 
+// CombineLinkedLists takes a variable number of linked lists and returns a new linked list that is the concatenation of all
+// the lists.
 func CombineLinkedLists[T comparable](lists ...*LinkedList[T]) *LinkedList[T] {
 	result := CreateLinkedList[T]()
 
@@ -108,12 +117,14 @@ func CombineLinkedLists[T comparable](lists ...*LinkedList[T]) *LinkedList[T] {
 	return result
 }
 
+// Head returns the head of the linked list.
 func (ll *LinkedList[T]) Head() *Node[T] {
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
 	return ll.head
 }
 
+// Contains returns true if the linked list contains the given value.
 func (ll *LinkedList[T]) Contains(val T) bool {
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
@@ -128,6 +139,7 @@ func (ll *LinkedList[T]) Contains(val T) bool {
 	return false
 }
 
+// RemoveDuplicates removes all duplicates from the linked list.
 func (ll *LinkedList[T]) RemoveDuplicates() {
 	existingItems := make(map[T]bool, ll.Size)
 
@@ -155,6 +167,7 @@ func (ll *LinkedList[T]) RemoveDuplicates() {
 	}
 }
 
+// Append appends a value to the end of the linked list.
 func (ll *LinkedList[T]) Append(val T) {
 	ll.lock.Lock()
 	defer ll.lock.Unlock()
@@ -181,8 +194,9 @@ func (ll *LinkedList[T]) Append(val T) {
 	}
 }
 
+// Delete deletes a value from the linked list.
 func (ll *LinkedList[T]) Delete(val T) error {
-	ErrValDoesntExist := errors.New(fmt.Sprint("error: Value", val, "not found in linked list"))
+	errValDoesntExist := errors.New(fmt.Sprint("error: Value", val, "not found in linked list"))
 
 	ll.lock.Lock()
 	defer ll.lock.Unlock()
@@ -200,7 +214,7 @@ func (ll *LinkedList[T]) Delete(val T) error {
 	// then we need to adjust the linked list's head/tail
 
 	if ll.head == nil {
-		return ErrValDoesntExist
+		return errValDoesntExist
 	}
 
 	// If we've only got one item in the list
@@ -230,16 +244,17 @@ func (ll *LinkedList[T]) Delete(val T) error {
 		node = node.next
 	}
 
-	return ErrValDoesntExist
+	return errValDoesntExist
 }
 
-func (ll *LinkedList[T]) Filter(f func(T) bool) *LinkedList[T] {
+// Filter returns a new linked list that contains only the items that match the filter.
+func (ll *LinkedList[T]) Filter(filter func(T) bool) *LinkedList[T] {
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
 	result := CreateLinkedList[T]()
 	node := ll.head
 	for node != nil {
-		if f(node.val) {
+		if filter(node.val) {
 			result.Append(node.val)
 		}
 		node = node.next
@@ -247,14 +262,15 @@ func (ll *LinkedList[T]) Filter(f func(T) bool) *LinkedList[T] {
 	return result
 }
 
+// FilterSingleItem returns a single item that matches the filter.
 // Note this returns a POINTER to the item - because it needed to be able to return nil if naught was found
-func (ll *LinkedList[T]) FilterSingleItem(f func(T) bool) *T {
+func (ll *LinkedList[T]) FilterSingleItem(filter func(T) bool) *T {
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
 
 	node := ll.head
 	for node != nil {
-		if f(node.val) {
+		if filter(node.val) {
 			return &node.val
 		}
 		node = node.next
@@ -262,20 +278,25 @@ func (ll *LinkedList[T]) FilterSingleItem(f func(T) bool) *T {
 	return nil
 }
 
+// Node is a node in a linked list. It contains a pointer to the next node and the previous node
+// as well as the value of the node.
 type Node[T comparable] struct {
 	prev *(Node[T])
 	next *(Node[T])
 	val  T
 }
 
+// Value returns the value of the node.
 func (node *Node[T]) Value() T {
 	return node.val
 }
 
+// Next returns the next node in the linked list.
 func (node *Node[T]) Next() *Node[T] {
 	return node.next
 }
 
+// Prev returns the previous node in the linked list.
 func (node *Node[T]) Prev() *Node[T] {
 	return node.prev
 }

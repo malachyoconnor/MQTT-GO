@@ -5,8 +5,11 @@ import (
 	"io"
 )
 
+// ReadPacketFromConnection takes a bufio.Reader and reads a packet from it
+// It peeks into the first byte waiting for data to arrive
+// Then it reads the first 4 bytes to get the length of the packet
+// before reading the entire packet.
 func ReadPacketFromConnection(connectionReader *bufio.Reader) ([]byte, error) {
-
 	packetTypeAndFlags, err := connectionReader.Peek(1)
 
 	if err != nil && len(packetTypeAndFlags) == 0 {

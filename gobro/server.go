@@ -1,3 +1,7 @@
+// Package gobro is the main package that is used to create a broker and listen for clients.
+// It can be run from the command line, or used as a utility to create MQTT brokers
+// programatically. It uses the clients package to store information about clients,
+// and the network package to handle the network connections.
 package gobro
 
 import (
@@ -15,10 +19,15 @@ import (
 )
 
 var (
-	ScheduledShutdown = flag.Float64("shutdown", 0.0, "Schedule a shutdown after a certain number of hours")
-	ConnectionType    = network.QUIC
+	scheduledShutdown = flag.Float64("shutdown", 0.0, "Schedule a shutdown after a certain number of hours")
+	// ConnectionType is the type of transport protocol that is used
+	// It is set by main.go, and can be either TCP, UDP or QUIC
+	ConnectionType = network.QUIC
 )
 
+// Server is the main struct that is used to create a broker and listen for clients.
+// It stores a map of clients, a map of topics to subscribers, a channel for incoming packets,
+// a channel for outgoing packets, and a log file.
 type Server struct {
 	clientTable    *structures.SafeMap[clients.ClientID, *clients.Client]
 	topicClientMap *clients.TopicToSubscribers
@@ -27,9 +36,9 @@ type Server struct {
 	logFile        *os.File
 }
 
+// NewServer creates a new server with a new client table, topic map, and channels for incoming and outgoing packets.
 func NewServer() Server {
-
-	clientTable := clients.CreateClientTable()
+	clientTable := structures.CreateSafeMap[clients.ClientID, *clients.Client]()
 	topicClientMap := clients.CreateTopicMap()
 	// TODO: Should this be larger?
 	inputChan := make(chan clients.ClientMessage)
@@ -43,10 +52,15 @@ func NewServer() Server {
 	}
 }
 
+// StopServer stops the server by closing the log file and exiting the program.
 func (server *Server) StopServer() {
 	cleanupAndExit(server)
 }
 
+// StartServer starts the server by listening for connections, and then listening for packets.
+// It also starts a goroutine to listen for a shutdown signal.
+// It runs the msgSender and msgListener functions in separate goroutines.
+// We run AcceptConnections in the main thread, because it blocks.
 func (server *Server) StartServer(ip string, port int) {
 	flag.Parse()
 	file, err := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
@@ -93,6 +107,7 @@ var (
 	connectedClientsMutex = sync.Mutex{}
 )
 
+// AcceptConnections accepts connections from clients, and then creates a new goroutine to handle the client.
 func AcceptConnections(listener network.Listener, server *Server) {
 	clients.ServerPrintln("Connected clients:", connectedClients)
 	go func(connectedClients []string) {
@@ -145,18 +160,18 @@ func AcceptConnections(listener network.Listener, server *Server) {
 			waitingToPrint.Unlock()
 		}()
 
-		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable, server.topicClientMap, newArrayPos, &connectedClientsMutex)
+		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable,
+			server.topicClientMap, newArrayPos, &connectedClientsMutex)
 	}
 }
 
 func scheduleShutdown(server *Server) {
-
-	if *ScheduledShutdown != 0 {
+	if *scheduledShutdown != 0 {
 		// Convert from microseconds to seconds to hours
-		time.Sleep(time.Duration(*ScheduledShutdown * 1000000000 * 3600))
+		const hourInNano = 1000000000 * 3600
+		time.Sleep(time.Duration(*scheduledShutdown * float64(hourInNano)))
 		server.StopServer()
 	}
-
 }
 
 func listenForExit(server *Server) {
@@ -182,10 +197,12 @@ func cleanupAndExit(server *Server) {
 	os.Exit(0)
 }
 
+// DisableStdOutput disables the output to stdout.
 func DisableStdOutput() {
 	clients.VerboseOutput = false
 }
 
+// EnableStdOutput enables the output to stdout.
 func EnableStdOutput() {
 	clients.VerboseOutput = true
 }

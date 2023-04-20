@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+// Connect implements the Connect function for UDP connections.
+// We first dial the address and port, and create a channel for the packet buffer.
+// We then start a goroutine that reads from the connection and puts the packets in the buffer.
 func (conn *UDPCon) Connect(ip string, port int) error {
 	if conn.connected {
 		return errors.New("error: Tried to re-open connection")
@@ -34,7 +37,7 @@ func (conn *UDPCon) Connect(ip string, port int) error {
 	} else {
 		return err
 	}
-	conn.connectionType = UDP_CLIENT_CONNECTION
+	conn.connectionType = UDPClientConnection
 
 	go func() {
 		for {
@@ -61,14 +64,14 @@ func (conn *UDPCon) Connect(ip string, port int) error {
 	}()
 	conn.connected = true
 
-	return err
+	return nil
 }
 
 func (conn *UDPCon) Write(toWrite []byte) (n int, err error) {
 	// If we're a client, we've created a singly connected connection.
 	// If we're a server, we've got a general purpose connection with which we can
 	// send to multiple addresses.
-	if conn.connectionType == UDP_SERVER_CONNECTION {
+	if conn.connectionType == UDPServerConnection {
 		return conn.connection.WriteToUDP(toWrite, conn.RemoteAddr().(*net.UDPAddr))
 	}
 	return conn.connection.Write(toWrite)
@@ -83,24 +86,26 @@ func (conn *UDPCon) Read(buffer []byte) (n int, err error) {
 	return copy(buffer, readData), nil
 }
 
+// Close closes the connection.
+// If we're a client, we stop listening and close the packet buffer.
 func (conn *UDPCon) Close() error {
 	// We don't want to close the connection on the other end
 	// So we just send a disconnect and stop listening.
-	if conn.connectionType == UDP_CLIENT_CONNECTION {
+	if conn.connectionType == UDPClientConnection {
 		close(conn.packetBuffer)
 		structures.Println("Closing a connection from:", conn.localAddr, "to", conn.remoteAddr)
-		return (*conn.connection).Close()
+		return conn.connection.Close()
 	}
 
-	if conn.connectionType == UDP_SERVER_CONNECTION {
+	if conn.connectionType == UDPServerConnection {
 		conn.serverConnectionDeleter()
 		close(conn.packetBuffer)
 		conn.connected = false
 	}
 	return nil
-
 }
 
+// RemoteAddr returns the remote address of the connection.
 func (conn *UDPCon) RemoteAddr() net.Addr {
 	remoteAddr, err := net.ResolveUDPAddr("udp", conn.remoteAddr)
 	if err != nil {
@@ -110,24 +115,31 @@ func (conn *UDPCon) RemoteAddr() net.Addr {
 	return remoteAddr
 }
 
+// LocalAddr returns the local address of the connection.
 func (conn *UDPCon) LocalAddr() net.Addr {
 	return conn.connection.LocalAddr()
 }
 
+// SetDeadline sets the deadline associated with the connection.
 func (conn *UDPCon) SetDeadline(t time.Time) error {
 	return conn.connection.SetDeadline(t)
 }
 
+// SetReadDeadline sets the deadline for future Read calls.
 func (conn *UDPCon) SetReadDeadline(t time.Time) error {
 	return conn.connection.SetReadDeadline(t)
 }
 
+// SetWriteDeadline sets the deadline for future Write calls.
 func (conn *UDPCon) SetWriteDeadline(t time.Time) error {
 	return conn.connection.SetWriteDeadline(t)
 }
 
 // Next the listening methods
 
+// Listen starts listening on the given port. We create and open connections map, and a new client buffer.
+// We then start a goroutine that listens for new connections, updates the open connections map
+// and puts them in the buffer.
 func (udpListener *UDPListener) Listen(ip string, port int) error {
 	if udpListener.listening {
 		return errors.New("error: Attempted to listen when already listening")
@@ -155,7 +167,6 @@ type udpMessage struct {
 }
 
 func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPConn) {
-
 	readMessageBufferEven := make(chan *udpMessage, 100)
 	readMessageBufferOdd := make(chan *udpMessage, 100)
 
@@ -199,6 +210,7 @@ func handleReadMessage(readMessageBuffer chan *udpMessage, udpListener *UDPListe
 	}
 }
 
+// Close closes the listener.
 func (udpListener *UDPListener) Close() error {
 	return udpListener.listener.Close()
 }
@@ -206,6 +218,7 @@ func (udpListener *UDPListener) Close() error {
 // Note that UDP is connectionless, so we need to create our own connections. That means listening for ALL UDP packets
 // and pushing them down the correct connection.
 
+// Accept waits connections from the newClientBuffer from the background listener, and returns a new connection.
 func (udpListener *UDPListener) Accept() (net.Conn, error) {
 	newClientAddress := <-udpListener.newClientBuffer
 
@@ -217,7 +230,7 @@ func (udpListener *UDPListener) Accept() (net.Conn, error) {
 		localAddr:      udpListener.listener.LocalAddr().String(),
 		connection:     udpListener.listener,
 		connected:      true,
-		connectionType: UDP_SERVER_CONNECTION,
+		connectionType: UDPServerConnection,
 		// We pass a function which can DELETE an open connection upon a disconnect.
 		serverConnectionDeleter: func() {
 			udpListener.openConnectionsLock.Lock()

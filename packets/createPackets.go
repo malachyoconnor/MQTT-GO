@@ -1,6 +1,7 @@
 package packets
 
-// VariableLengthHeader is an interface - so we don't pass a pointer
+// CombinePacketSections combines the control header, variable length header and payload into a single packet
+// Note: VariableLengthHeader is an interface - so we don't pass a pointer
 func CombinePacketSections(controlHeader *ControlHeader, varLengthHeader VariableLengthHeader, payload *PacketPayload) *Packet {
 	resultPacket := Packet{}
 	resultPacket.ControlHeader = controlHeader
@@ -9,6 +10,8 @@ func CombinePacketSections(controlHeader *ControlHeader, varLengthHeader Variabl
 	return &resultPacket
 }
 
+// EncodeVarLengthInt encodes an integer into a variable length byte array as per the
+// MQTT spec.
 func EncodeVarLengthInt(initialInt int) []byte {
 	result := make([]byte, 0)
 	// Replicates a do while loop
@@ -26,6 +29,7 @@ func EncodeVarLengthInt(initialInt int) []byte {
 	return result
 }
 
+// CreateConnACK creates a ConnACK packet
 func CreateConnACK(cleanSession bool, returnCode byte) []byte {
 	result := make([]byte, 4)
 	result[0] = CONNACK << 4
@@ -39,6 +43,7 @@ func CreateConnACK(cleanSession bool, returnCode byte) []byte {
 	return result
 }
 
+// CreateSubACK creates a SubACK packet
 func CreateSubACK(packetIdentifier int, returnCodes []byte) []byte {
 	result := make([]byte, 4+byte(len(returnCodes)))
 	result[0] = SUBACK << 4
@@ -55,6 +60,7 @@ func CreateSubACK(packetIdentifier int, returnCodes []byte) []byte {
 	return result
 }
 
+// CreateUnSuback creates an UnSuback packet
 func CreateUnSuback(packetIdentifier int) []byte {
 	result := make([]byte, 4)
 	result[0] = UNSUBACK << 4

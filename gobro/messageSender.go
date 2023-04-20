@@ -4,16 +4,21 @@ import (
 	"MQTT-GO/gobro/clients"
 )
 
+// MessageSender is a struct that handles outgoing packets from the broker.
 type MessageSender struct {
 	outputChan *chan clients.ClientMessage
 }
 
+// CreateMessageSender creates a new message sender with a channel for outgoing packets.
 func CreateMessageSender(outputPool *chan clients.ClientMessage) MessageSender {
 	return MessageSender{
 		outputChan: outputPool,
 	}
 }
 
+// ListenAndSend listens for outgoing packets, finds the appropriate client and sends them.
+// It waits for a ticket to be available before sending the packet to ensure messages.
+// are sent in the correct order
 func (MessageSender) ListenAndSend(server *Server) {
 	for {
 		clientMsg := <-(*server.outputChan)
@@ -40,6 +45,5 @@ func (MessageSender) ListenAndSend(server *Server) {
 		}()
 
 		continue
-
 	}
 }

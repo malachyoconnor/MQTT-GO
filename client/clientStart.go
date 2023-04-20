@@ -12,12 +12,10 @@ import (
 	"MQTT-GO/structures"
 )
 
-// We want to listen on the command line for inputs
-// E.g. Subscribe, publish, disconnect etc.
-// Then send values to the server
+// StartClient starts the client, and listens for inputs from the command line.
+// E.g. Subscribe, publish, disconnect etc, Then communicates with the broker.
 func StartClient(ip string, port int) {
 	flag.Parse()
-
 	client := CreateClient()
 	listenForExit(client)
 	err := client.SetClientConnection(ip, port)
@@ -47,7 +45,6 @@ func StartClient(ip string, port int) {
 		text = strings.ReplaceAll(text, "\r\n", "\n")
 		text = strings.ReplaceAll(text, "\n", "")
 		words := strings.Split(text, " ")
-
 		if len(words) == 1 {
 			continue
 		}
@@ -56,15 +53,14 @@ func StartClient(ip string, port int) {
 			words[i] = strings.ReplaceAll(word, "\r", "")
 		}
 
+		var err error
+
 		switch words[0] {
 		case "publish":
 			{
 				combinedWords := strings.Join(words[2:], " ")
 
-				err := client.SendPublish([]byte(combinedWords), words[1])
-				if err != nil {
-					log.Println("Error while sending subscribe", err)
-				}
+				err = client.SendPublish([]byte(combinedWords), words[1])
 			}
 		case "subscribe":
 			{
@@ -72,20 +68,17 @@ func StartClient(ip string, port int) {
 				for _, word := range words[1:] {
 					topics = append(topics, packets.TopicWithQoS{Topic: word})
 				}
-				err := client.SendSubscribe(topics...)
-				if err != nil {
-					log.Println("Error while sending subscribe", err)
-				}
+				err = client.SendSubscribe(topics...)
 			}
 		case "unsubscribe":
 			{
 				topicsToUnsub := words[1:]
-				err := client.SendUnsubscribe(topicsToUnsub...)
-				if err != nil {
-					log.Println("Error while sending unsubscribe", err)
-				}
+				err = client.SendUnsubscribe(topicsToUnsub...)
 			}
 		}
 
+		if err != nil {
+			log.Println("Error while sending", words[0], err)
+		}
 	}
 }
