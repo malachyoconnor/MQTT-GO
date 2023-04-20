@@ -5,10 +5,6 @@ import (
 	"MQTT-GO/structures"
 	"fmt"
 	"os"
-	"os/signal"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 // ManyClientsPublish starts a number of clients, and publishes a message from each of them
@@ -19,44 +15,11 @@ func ManyClientsPublish(numClients int, ip string, port int) {
 	os.Stdout = nil
 
 	go fmt.Fprintln(storedStdout, "\rNum clients:", numClients)
-	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
-		for range c {
-			fmt.Fprintln(storedStdout, "Interrupted")
-			os.Exit(1)
-		}
-	}()
+	listenAndExit(storedStdout)
 
 	clients := make([]client.Client, numClients)
 	go exitAll(clients)
-
-	queue := sync.WaitGroup{}
-	queue.Add(numClients)
-
-	var numPublished atomic.Int32
-
-	for i := 0; i < numClients; i++ {
-		go func(clientNum int) {
-			newClient, err := client.CreateAndConnectClient(ip, port)
-			if err != nil {
-				fmt.Fprintln(storedStdout, "Error while connecting:", err)
-				return
-			}
-
-			clients[clientNum] = *newClient
-			err = newClient.SendPublish([]byte("TEST"), "abc")
-			fmt.Fprint(storedStdout, "\rClients created and published:", numPublished.Add(1))
-			if err != nil {
-				fmt.Fprintln(storedStdout, "Error during publish", err)
-			}
-			queue.Done()
-		}(i)
-
-		time.Sleep(time.Millisecond * 5)
-	}
-	queue.Wait()
-	fmt.Fprintln(storedStdout, "\nCONNECTED ALL CLIENTS")
+	connectAllClients(clients, ip, port, storedStdout)
 
 	for _, openClient := range clients {
 		go func(c client.Client) {
@@ -71,18 +34,5 @@ func ManyClientsPublish(numClients int, ip string, port int) {
 
 	fmt.Fprintln(storedStdout, "PUBLISHED FROM ALL CLIENTS")
 
-	for _, client := range clients {
-		err := client.SendDisconnect()
-		if err != nil {
-			fmt.Fprintln(storedStdout, "Error while disconnecting", err)
-		}
-		time.Sleep(time.Millisecond)
-		err = client.BrokerConnection.Close()
-		if err != nil {
-			fmt.Fprintln(storedStdout, "ERROR WHILE DISCONNECTING", err)
-		}
-	}
-
-	fmt.Fprintln(storedStdout, "DISCONNECTED ALL THE CLIENTS")
-
+	disconnectAllClients(clients, storedStdout)
 }
