@@ -179,6 +179,15 @@ func (topicMap *TopicToSubscribers) GetMatchingClients(topicName string) (*struc
 		}
 	}
 
+	if topicSections[0] == "+" {
+		result := structures.CreateLinkedList[ClientID]()
+		for _, topLevelTopic := range topicMap.topLevelMap.Values() {
+			result = structures.Concatenate(result, topLevelTopic.getMatchingClients(topicSections[1:]))
+		}
+		result.RemoveDuplicates()
+		return result, nil
+	}
+
 	topLevelMap := topicMap.topLevelMap
 	topLevelTopic := topLevelMap.Get(topicSections[0])
 	if topLevelTopic == nil {
@@ -189,7 +198,7 @@ func (topicMap *TopicToSubscribers) GetMatchingClients(topicName string) (*struc
 		return topLevelTopic.connectedClients, nil
 	}
 	result := topLevelTopic.getMatchingClients(topicSections[1:])
-	if result == nil {
+	if result.Size == 0 {
 		return nil, ErrTopicDoesntExist
 	}
 	// We don't want to send a client the same message twice
@@ -223,7 +232,7 @@ func (t *topic) PrintTopics() {
 	for _, child := range t.children {
 		ServerPrintf("%v ", child.name)
 	}
-	ServerPrintln()
+	structures.Println()
 
 	for _, child := range t.children {
 		child.PrintTopics()
@@ -254,8 +263,7 @@ func (t *topic) DeleteTopic(topicSections []string) error {
 			if child.name == topicSections[0] {
 				child.deleteSelf()
 				// Remove that child from your children
-				t.children[i] = t.children[len(t.children)-1]
-				t.children = t.children[:len(t.children)-1]
+				t.children = append(t.children[:i], t.children[i+1:]...)
 				return nil
 			}
 		}
@@ -329,7 +337,18 @@ func (t *topic) getMatchingClients(topicSections []string) *structures.LinkedLis
 		return t.getAllLowerLevelClients()
 	}
 
-	var result *structures.LinkedList[ClientID]
+	result := structures.CreateLinkedList[ClientID]()
+
+	if len(topicSections) == 1 && (t.name == topicSections[0]) {
+		return t.connectedClients
+	}
+
+	if topicSections[0] == "+" {
+		for _, child := range t.children {
+			result = structures.Concatenate(result, child.getMatchingClients(topicSections[1:]))
+		}
+		return result
+	}
 
 	for _, child := range t.children {
 		// If we're not at the bottom level topic

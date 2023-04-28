@@ -19,6 +19,7 @@ func CreateLinkedList[T comparable]() *LinkedList[T] {
 	result := LinkedList[T]{
 		head: nil,
 		tail: nil,
+		lock: sync.RWMutex{},
 		Size: 0,
 	}
 	return &result
@@ -26,6 +27,9 @@ func CreateLinkedList[T comparable]() *LinkedList[T] {
 
 // GetItems returns a slice of the items in the linked list.
 func (ll *LinkedList[T]) GetItems() []T {
+	ll.lock.RLock()
+	defer ll.lock.RUnlock()
+
 	result := make([]T, 0, ll.Size)
 
 	node := ll.head
@@ -42,6 +46,10 @@ func (ll *LinkedList[T]) DeleteLinkedList() {
 	if ll == nil {
 		return
 	}
+
+	ll.lock.Lock()
+	defer ll.lock.Unlock()
+
 	node := ll.head
 	for node != nil {
 		nextNode := node.next
@@ -90,6 +98,9 @@ func Concatenate[T comparable](llA *LinkedList[T], llB *LinkedList[T]) *LinkedLi
 
 // DeepCopy returns a deep copy of the linked list.
 func (ll *LinkedList[T]) DeepCopy() *LinkedList[T] {
+	ll.lock.RLock()
+	defer ll.lock.RUnlock()
+
 	result := CreateLinkedList[T]()
 	node := ll.head
 	for node != nil {
@@ -103,15 +114,17 @@ func (ll *LinkedList[T]) DeepCopy() *LinkedList[T] {
 // the lists.
 func CombineLinkedLists[T comparable](lists ...*LinkedList[T]) *LinkedList[T] {
 	result := CreateLinkedList[T]()
-
 	for _, list := range lists {
 		list.lock.RLock()
+		defer list.lock.RUnlock()
+	}
+
+	for _, list := range lists {
 		node := list.Head()
 		for node != nil {
 			result.Append(node.val)
 			node = node.next
 		}
-		list.lock.RUnlock()
 	}
 
 	return result
@@ -141,6 +154,8 @@ func (ll *LinkedList[T]) Contains(val T) bool {
 
 // RemoveDuplicates removes all duplicates from the linked list.
 func (ll *LinkedList[T]) RemoveDuplicates() {
+	ll.lock.Lock()
+	defer ll.lock.Unlock()
 	existingItems := make(map[T]bool, ll.Size)
 
 	node := ll.head
@@ -245,6 +260,16 @@ func (ll *LinkedList[T]) Delete(val T) error {
 	}
 
 	return errValDoesntExist
+}
+
+// ReadLock locks the linked list for reading.
+func (ll *LinkedList[T]) ReadLock() {
+	ll.lock.RLock()
+}
+
+// ReadLock unlocks the linked list for reading.
+func (ll *LinkedList[T]) ReadUnlock() {
+	ll.lock.RUnlock()
 }
 
 // Filter returns a new linked list that contains only the items that match the filter.

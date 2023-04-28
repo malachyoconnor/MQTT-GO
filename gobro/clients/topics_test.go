@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"fmt"
 	"testing"
 
 	"golang.org/x/exp/slices"
@@ -21,7 +22,8 @@ func TestInitialization(t *testing.T) {
 
 func TestPuttingLowerLevel(t *testing.T) {
 	topicStore := CreateTopicMap()
-	testErr(t, topicStore.AddTopic("x/y"))
+	testErr(t, topicStore.Put("x", "test1"))
+	testErr(t, topicStore.Put("x/y", "test2"))
 
 	_, err1 := topicStore.GetMatchingClients("x")
 	_, err2 := topicStore.GetMatchingClients("x/y")
@@ -59,9 +61,9 @@ func TestDuplicatingLowerLevel(t *testing.T) {
 
 func TestAddingMultipleChildren(t *testing.T) {
 	topicStore := CreateTopicMap()
-	testErr(t, topicStore.AddTopic("x/y/z"))
-	testErr(t, topicStore.AddTopic("x/y/a"))
-	testErr(t, topicStore.AddTopic("x/y/b"))
+	testErr(t, topicStore.Put("x/y/z", "test1"))
+	testErr(t, topicStore.Put("x/y/a", "test2"))
+	testErr(t, topicStore.Put("x/y/b", "test3"))
 
 	_, err1 := topicStore.GetMatchingClients("x/y/z")
 	_, err2 := topicStore.GetMatchingClients("x/y/a")
@@ -101,25 +103,28 @@ func TestDeletingLowerLevel(t *testing.T) {
 func TestDeletingOneChild(t *testing.T) {
 	topicStore := CreateTopicMap()
 	testErr(t, topicStore.AddTopic("x/y/z"))
-	testErr(t, topicStore.AddTopic("x/y/a"))
-	testErr(t, topicStore.AddTopic("x/y/b"))
+
+	testErr(t, topicStore.Put("x/y/z", "abc"))
+	testErr(t, topicStore.Put("x/y/z", "def"))
+	testErr(t, topicStore.Put("x/y/a", "test1"))
+	testErr(t, topicStore.Put("x/y/b", "test2"))
+
 	testErr(t, topicStore.Delete("x/y/z"))
 
-	_, err1 := topicStore.GetMatchingClients("x/y/z")
-	_, err2 := topicStore.GetMatchingClients("x/y/a")
-	_, err3 := topicStore.GetMatchingClients("x/y/b")
+	a, err1 := topicStore.GetMatchingClients("x/y/z")
+	b, err2 := topicStore.GetMatchingClients("x/y/a")
+	c, err3 := topicStore.GetMatchingClients("x/y/b")
 
-	if err1 != ErrTopicDoesntExist {
+	if err1 != ErrTopicDoesntExist || a != nil {
 		t.Error("Could access deleted element")
 	}
-	if err2 != nil {
+	if err2 != nil || !b.Contains("test1") {
 		t.Error(err2)
 	}
-	if err3 != nil {
+	if err3 != nil || !c.Contains("test2") {
 		t.Error(err2)
 	}
 
-	topicStore.PrintTopics()
 }
 
 func TestAddingClientIDs(t *testing.T) {
@@ -173,6 +178,22 @@ func TestPlusWildcard(t *testing.T) {
 	cLL, _ := topicStore.GetMatchingClients("x/a/m")
 
 	if cLL.Size != 1 || cLL.Head().Value() != "xyz" {
+		t.Error("+ didn't work correctly.")
+	}
+}
+
+func TestPlusWildcardFurther(t *testing.T) {
+	topicStore := CreateTopicMap()
+	testErr(t, topicStore.Put("x/y/z", "1"))
+	testErr(t, topicStore.Put("x/a/z", "2"))
+	testErr(t, topicStore.Put("x/y/z", "3"))
+
+	cLL, err := topicStore.GetMatchingClients("+/+/z")
+
+	testErr(t, err)
+	fmt.Println(cLL.GetItems())
+
+	if cLL.Size != 3 {
 		t.Error("+ didn't work correctly.")
 	}
 }
