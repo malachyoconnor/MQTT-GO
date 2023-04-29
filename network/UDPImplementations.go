@@ -1,18 +1,20 @@
 package network
 
 import (
+	"MQTT-GO/packets"
 	"MQTT-GO/structures"
 	"errors"
 	"fmt"
 	"log"
 	"net"
+	"sync/atomic"
 	"time"
 )
 
 // Connect implements the Connect function for UDP connections.
 // We first dial the address and port, and create a channel for the packet buffer.
 // We then start a goroutine that reads from the connection and puts the packets in the buffer.
-func (conn *UDPCon) Connect(ip string, port int) error {
+func (conn *UDPConn) Connect(ip string, port int) error {
 	if conn.connected {
 		return errors.New("error: Tried to re-open connection")
 	}
@@ -67,7 +69,7 @@ func (conn *UDPCon) Connect(ip string, port int) error {
 	return nil
 }
 
-func (conn *UDPCon) Write(toWrite []byte) (n int, err error) {
+func (conn *UDPConn) Write(toWrite []byte) (n int, err error) {
 	// If we're a client, we've created a singly connected connection.
 	// If we're a server, we've got a general purpose connection with which we can
 	// send to multiple addresses.
@@ -77,7 +79,7 @@ func (conn *UDPCon) Write(toWrite []byte) (n int, err error) {
 	return conn.connection.Write(toWrite)
 }
 
-func (conn *UDPCon) Read(buffer []byte) (n int, err error) {
+func (conn *UDPConn) Read(buffer []byte) (n int, err error) {
 	readData, channelOpen := <-conn.packetBuffer
 
 	if !channelOpen {
@@ -88,10 +90,13 @@ func (conn *UDPCon) Read(buffer []byte) (n int, err error) {
 
 // Close closes the connection.
 // If we're a client, we stop listening and close the packet buffer.
-func (conn *UDPCon) Close() error {
+func (conn *UDPConn) Close() error {
 	// We don't want to close the connection on the other end
 	// So we just send a disconnect and stop listening.
 	if conn.connectionType == UDPClientConnection {
+		for len(conn.packetBuffer) > 0 {
+			<-conn.packetBuffer
+		}
 		close(conn.packetBuffer)
 		structures.Println("Closing a connection from:", conn.localAddr, "to", conn.remoteAddr)
 		return conn.connection.Close()
@@ -106,7 +111,7 @@ func (conn *UDPCon) Close() error {
 }
 
 // RemoteAddr returns the remote address of the connection.
-func (conn *UDPCon) RemoteAddr() net.Addr {
+func (conn *UDPConn) RemoteAddr() net.Addr {
 	remoteAddr, err := net.ResolveUDPAddr("udp", conn.remoteAddr)
 	if err != nil {
 		structures.Println("Error while resolving UDP address:", err)
@@ -116,22 +121,22 @@ func (conn *UDPCon) RemoteAddr() net.Addr {
 }
 
 // LocalAddr returns the local address of the connection.
-func (conn *UDPCon) LocalAddr() net.Addr {
+func (conn *UDPConn) LocalAddr() net.Addr {
 	return conn.connection.LocalAddr()
 }
 
 // SetDeadline sets the deadline associated with the connection.
-func (conn *UDPCon) SetDeadline(t time.Time) error {
+func (conn *UDPConn) SetDeadline(t time.Time) error {
 	return conn.connection.SetDeadline(t)
 }
 
 // SetReadDeadline sets the deadline for future Read calls.
-func (conn *UDPCon) SetReadDeadline(t time.Time) error {
+func (conn *UDPConn) SetReadDeadline(t time.Time) error {
 	return conn.connection.SetReadDeadline(t)
 }
 
 // SetWriteDeadline sets the deadline for future Write calls.
-func (conn *UDPCon) SetWriteDeadline(t time.Time) error {
+func (conn *UDPConn) SetWriteDeadline(t time.Time) error {
 	return conn.connection.SetWriteDeadline(t)
 }
 
@@ -147,7 +152,7 @@ func (udpListener *UDPListener) Listen(ip string, port int) error {
 
 	udpListener.openConnections = make(map[string]chan []byte)
 	// We can buffer 100 new clients before having to clear them
-	udpListener.newClientBuffer = make(chan string, 100)
+	udpListener.newClientBuffer = make(chan string, 200)
 	laddr := net.UDPAddr{
 		IP:   net.ParseIP(ip),
 		Port: port,
@@ -174,7 +179,7 @@ func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPCon
 	go handleReadMessage(readMessageBufferOdd, udpListener)
 
 	for {
-		buffer := make([]byte, 1024)
+		buffer := make([]byte, 2048)
 		bytesRead, receivedAddr, err := connection.ReadFromUDP(buffer)
 		if errors.Is(err, net.ErrClosed) {
 			structures.Println("Connection closed, ceasing to listen")
@@ -192,11 +197,19 @@ func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPCon
 	}
 }
 
+var (
+	numDisc = atomic.Int32{}
+)
+
 func handleReadMessage(readMessageBuffer chan *udpMessage, udpListener *UDPListener) {
 	for {
 		udpMsg := <-readMessageBuffer
 		buffer := udpMsg.buffer
 		receivedAddr := udpMsg.addr
+
+		if (packets.PacketTypeName(packets.GetPacketType(buffer))) == "DISCONNECT" {
+			fmt.Println("Received disconnect packet, ", numDisc.Add(1))
+		}
 
 		address := fmt.Sprint(receivedAddr.IP.String(), ":", receivedAddr.Port)
 		udpListener.openConnectionsLock.Lock()
@@ -207,6 +220,8 @@ func handleReadMessage(readMessageBuffer chan *udpMessage, udpListener *UDPListe
 		}
 		udpListener.openConnections[address] <- buffer
 		udpListener.openConnectionsLock.Unlock()
+		buffer = nil
+		udpMsg = nil
 	}
 }
 
@@ -219,12 +234,12 @@ func (udpListener *UDPListener) Close() error {
 // and pushing them down the correct connection.
 
 // Accept waits connections from the newClientBuffer from the background listener, and returns a new connection.
-func (udpListener *UDPListener) Accept() (net.Conn, error) {
+func (udpListener *UDPListener) Accept() (Conn, error) {
 	newClientAddress := <-udpListener.newClientBuffer
 
 	udpListener.openConnectionsLock.RLock()
 
-	newConnection := UDPCon{
+	newConnection := UDPConn{
 		packetBuffer:   udpListener.openConnections[newClientAddress],
 		remoteAddr:     newClientAddress,
 		localAddr:      udpListener.listener.LocalAddr().String(),

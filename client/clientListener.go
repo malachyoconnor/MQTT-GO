@@ -18,8 +18,8 @@ func (client *Client) ListenForPackets() {
 			if strings.HasSuffix(err.Error(), "use of closed network connection") {
 				structures.PrintCentrally("Connection closed")
 				return
-				// Quic returns bye message on closing
 			}
+			// Quic returns bye message on closing
 			if strings.HasSuffix(err.Error(), "bye") {
 				return
 			}
@@ -40,7 +40,7 @@ func (client *Client) ListenForPackets() {
 					Packet:   packet,
 					PacketID: packetID,
 				}
-				client.waitingAckStruct.AddItem(&toStore)
+				client.WaitingAckStruct.AddItem(&toStore)
 			}
 
 		case packets.PUBLISH:
@@ -50,8 +50,9 @@ func (client *Client) ListenForPackets() {
 				// If we fill the buffer - form a queue
 				if len(client.ReceivedPackets) == waitingPacketBufferSize {
 					go func() { client.ReceivedPackets <- result }()
+				} else {
+					client.ReceivedPackets <- result
 				}
-				client.ReceivedPackets <- result
 				go structures.Println("Received request to publish", string(result.Payload.RawApplicationMessage))
 			}
 

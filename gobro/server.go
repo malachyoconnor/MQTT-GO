@@ -22,7 +22,7 @@ var (
 	scheduledShutdown = flag.Float64("shutdown", 0.0, "Schedule a shutdown after a certain number of hours")
 	// ConnectionType is the type of transport protocol that is used
 	// It is set by main.go, and can be either TCP, UDP or QUIC
-	ConnectionType = network.QUIC
+	ConnectionType = network.TCP
 )
 
 // Server is the main struct that is used to create a broker and listen for clients.
@@ -103,7 +103,7 @@ func (server *Server) StartServer(ip string, port int) {
 }
 
 var (
-	connectedClients      = make([]string, 100)
+	connectedClients      = make([]string, 100, 500)
 	connectedClientsMutex = sync.Mutex{}
 )
 
@@ -160,7 +160,7 @@ func AcceptConnections(listener network.Listener, server *Server) {
 			waitingToPrint.Unlock()
 		}()
 
-		go clients.ClientHandler(&connection, *server.inputChan, server.clientTable,
+		go clients.ClientHandler(connection, *server.inputChan, server.clientTable,
 			server.topicClientMap, newArrayPos, &connectedClientsMutex)
 	}
 }

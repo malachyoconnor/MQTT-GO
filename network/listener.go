@@ -14,7 +14,7 @@ import (
 // I.e. implement Listen, Accept and Close
 type Listener interface {
 	Listen(ip string, port int) error
-	Accept() (net.Conn, error)
+	Accept() (Conn, error)
 	Close() error
 }
 

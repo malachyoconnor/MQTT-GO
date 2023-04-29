@@ -3,3 +3,4 @@ logs.txt
 *.crt
 *.key
 *.exe
+*.puml

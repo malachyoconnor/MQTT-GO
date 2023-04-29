@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/quic-go/quic-go"
 )
@@ -20,32 +21,35 @@ const (
 // We want to be able to switch easily between sending via TCP, UDP and QUIC.
 // We want to be able to use the same functions for all three.
 
-// Con is an interface that allows us to switch between TCP, UDP and QUIC
+// Conn is an interface that allows us to switch between TCP, UDP and QUIC
 // connections easily. For any type of transport protocol we want to support,
 // we just need to implement this interface.
-type Con interface {
+type Conn interface {
 	Connect(ip string, port int) error
 	Write(toWrite []byte) (n int, err error)
 	Read(buffer []byte) (n int, err error)
 	Close() error
 	RemoteAddr() net.Addr
 	LocalAddr() net.Addr
+	SetDeadline(t time.Time) error
+	SetReadDeadline(t time.Time) error
+	SetWriteDeadline(t time.Time) error
 }
 
-// NewCon returns a new connection of the type specified by the networkID.
-func NewCon(networkID byte) (Con, error) {
+// NewConn returns a new connection of the type specified by the networkID.
+func NewConn(networkID byte) (Conn, error) {
 	switch networkID {
 	case TCP:
 		{
-			return &TCPCon{}, nil
+			return &TCPConn{}, nil
 		}
 	case UDP:
 		{
-			return &UDPCon{}, nil
+			return &UDPConn{}, nil
 		}
 	case QUIC:
 		{
-			return &QUICCon{
+			return &QUICConn{
 				streamReadLock:  &sync.Mutex{},
 				streamWriteLock: &sync.Mutex{},
 			}, nil
@@ -54,8 +58,8 @@ func NewCon(networkID byte) (Con, error) {
 	return nil, fmt.Errorf("error: Supplied networkID %v is not defined", networkID)
 }
 
-// TCPCon is a struct that implements the Con interface for TCP connections.
-type TCPCon struct {
+// TCPConn is a struct that implements the Conn interface for TCP connections.
+type TCPConn struct {
 	connection *net.Conn
 }
 
@@ -66,8 +70,8 @@ const (
 	UDPClientConnection byte = 2
 )
 
-// UDPCon is a struct that implements the Con interface for UDP connections.
-type UDPCon struct {
+// UDPConn is a struct that implements the Conn interface for UDP connections.
+type UDPConn struct {
 	connection     *net.UDPConn
 	packetBuffer   chan []byte
 	localAddr      string
@@ -78,8 +82,8 @@ type UDPCon struct {
 	serverConnectionDeleter func()
 }
 
-// QUICCon is a struct that implements the Con interface for QUIC connections.
-type QUICCon struct {
+// QUICConn is a struct that implements the Conn interface for QUIC connections.
+type QUICConn struct {
 	connection      *quic.Connection
 	stream          *quic.Stream
 	streamReadLock  *sync.Mutex
