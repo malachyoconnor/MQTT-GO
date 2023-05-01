@@ -1,7 +1,10 @@
 package gobro
 
 import (
+	"fmt"
 	"log"
+	"sync"
+	"sync/atomic"
 
 	"MQTT-GO/gobro/clients"
 	"MQTT-GO/packets"
@@ -65,6 +68,10 @@ func (msgH *MessageHandler) Listen(server *Server) {
 	}
 }
 
+var (
+	numSent = atomic.Int64{}
+)
+
 // HandleMessage handles the incoming packets by checking the packet type and then
 // running the appropriate function.
 // It also encodes the outgoing packets and sends them to the MessageSender.
@@ -72,19 +79,27 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 	clientMessage clients.ClientMessage, ticket structures.Ticket) {
 	clientTable := server.clientTable
 	clientID := *clientMessage.ClientID
-	clientConnection := *clientMessage.ClientConnection
+	clientConnection := clientMessage.ClientConnection
 	packetsToSend := make([]*clients.ClientMessage, 0, 10)
-	topicClientMap := server.topicClientMap
+	topicTrie := server.topicTrie
+
+	defer ticket.Complete()
 
 	switch packetType {
 	case packets.CONNECT:
 		// Check if the reserved flag is zero, if not disconnect them
 		// Finally send out a CONACK [X]
+
 		connack := packets.CreateConnACK(false, 0)
-		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, connack)
+		clientMsg := clients.CreateClientMessage(clientID, clientConnection, connack)
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.PUBLISH:
+
+		// TODO: REMOVE THESE LINES
+		sendingClient := server.clientTable.Get(*clientMessage.ClientID)
+		fmt.Println("SENDING PUBLISH TO", sendingClient.ClientIdentifier, "Number", numSent.Add(1))
+
 		varHeader, ok := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
 		if !ok {
 			log.Printf("Error during publish, from client '%v'\n", clientID)
@@ -94,15 +109,14 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 			TopicFilter: varHeader.TopicFilter,
 			Qos:         packet.ControlHeader.Flags & 6,
 		}
-		msgToPublish := string(packet.Payload.RawApplicationMessage)
-		go structures.Println("Received request to publish:", msgToPublish, "to topic:", topic.TopicFilter)
+		go structures.Println("Received request to publish:", string(packet.Payload.RawApplicationMessage), "to topic:", topic.TopicFilter)
 
 		// Adds to the packets to send
-		handlePublish(topicClientMap, topic, clientMessage, server.clientTable, &packetsToSend)
+		handlePublish(topicTrie, topic, clientMessage, server.clientTable, &packetsToSend)
 
 	case packets.SUBSCRIBE:
 		// Add the client to the topic in the subscription table
-		topics, err := handleSubscribe(topicClientMap, client, *packet.Payload)
+		topics, err := handleSubscribe(topicTrie, client, *packet.Payload)
 		if err != nil {
 			log.Printf("Error during subscribe: %v, from client '%v'\n", err, clientID)
 			return
@@ -116,7 +130,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 
 		packetID := packet.VariableLengthHeader.(*packets.SubscribeVariableHeader).PacketIdentifier
 		subackPacket := packets.CreateSubACK(packetID, returnCodes)
-		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, subackPacket)
+		clientMsg := clients.CreateClientMessage(clientID, clientConnection, subackPacket)
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.UNSUBSCRIBE:
@@ -126,29 +140,33 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		for _, topic := range packet.Payload.TopicList {
 			topics = append(topics, topic.Topic)
 		}
-		handleUnsubscribe(topics, topicClientMap, *client)
+		handleUnsubscribe(topics, topicTrie, *client)
 		unsubackPacket := packets.CreateUnSuback(packetID)
-		clientMsg := clients.CreateClientMessage(clientID, &clientConnection, unsubackPacket)
+		clientMsg := clients.CreateClientMessage(clientID, clientConnection, unsubackPacket)
 		packetsToSend = append(packetsToSend, &clientMsg)
 
 	case packets.DISCONNECT:
 		// Close the client connection.
 		// Remove the packet from the client list
-		ticket.WaitOnTicket()
-		go client.Disconnect(topicClientMap, clientTable)
-		ticket.TicketCompleted()
-		return
+		go client.Disconnect(topicTrie, clientTable)
 	}
 
-	ticket.WaitOnTicket()
-	for _, packet := range packetsToSend {
-		(*server.outputChan) <- *packet
+	// If we have packets to send - we have to wait
+	// for all packets to be sent before we can continue
+	ticket.Wait()
+	if len(packetsToSend) > 0 {
+		waitGroup := sync.WaitGroup{}
+		waitGroup.Add(len(packetsToSend))
+		for _, packet := range packetsToSend {
+			packet.OutputWaitGroup = &waitGroup
+			(*server.outputChan) <- *packet
+		}
+		waitGroup.Wait()
 	}
-	ticket.TicketCompleted()
 }
 
 // Decode topics and store them in subscription table.
-func handleSubscribe(topicClientMap *clients.TopicToSubscribers,
+func handleSubscribe(topicTrie *clients.TopicTrie,
 	client *clients.Client, packetPayload packets.PacketPayload) ([]clients.Topic, error) {
 	newTopics := make([]clients.Topic, 0)
 	payload := packetPayload.RawApplicationMessage
@@ -173,8 +191,8 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers,
 		topicNumber++
 		offset += utfStringLen + 1
 
-		if !topicClientMap.Contains(topic.TopicFilter) {
-			err = topicClientMap.AddTopic(topic.TopicFilter)
+		if !topicTrie.Contains(topic.TopicFilter) {
+			err = topicTrie.AddTopic(topic.TopicFilter)
 			if err != nil {
 				log.Printf("- Error while adding new topic %v, the topic name was '%v'\n", err, topicFilter)
 				return nil, err
@@ -185,11 +203,9 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers,
 		client.Topics = structures.CreateLinkedList[clients.Topic]()
 	}
 
-	topicClientMap.PrintTopics()
-
 	for _, newTopic := range newTopics {
 		client.AddTopic(newTopic)
-		err := topicClientMap.Put(newTopic.TopicFilter, client.ClientIdentifier)
+		err := topicTrie.Put(newTopic.TopicFilter, client.ClientIdentifier)
 		if err != nil {
 			log.Printf("- Error while adding new topic %v, the topic name was '%v'\n", err, newTopic.TopicFilter)
 			return nil, err
@@ -200,7 +216,7 @@ func handleSubscribe(topicClientMap *clients.TopicToSubscribers,
 	return newTopics, nil
 }
 
-func handleUnsubscribe(topics []string, topicToSubscribers *clients.TopicToSubscribers, client clients.Client) {
+func handleUnsubscribe(topics []string, topicToSubscribers *clients.TopicTrie, client clients.Client) {
 	topicToSubscribers.Unsubscribe(client.ClientIdentifier, topics...)
 	for _, topic := range topics {
 		err := client.RemoveTopic(clients.Topic{TopicFilter: topic})
@@ -208,7 +224,8 @@ func handleUnsubscribe(topics []string, topicToSubscribers *clients.TopicToSubsc
 	}
 }
 
-func handlePublish(tCMap *clients.TopicToSubscribers, topic clients.Topic, msgToForward clients.ClientMessage,
+// Augments the toSend array in place
+func handlePublish(tCMap *clients.TopicTrie, topic clients.Topic, msgToForward clients.ClientMessage,
 	clientTable *structures.SafeMap[clients.ClientID, *clients.Client], toSend *[]*clients.ClientMessage) {
 	clientList, err := tCMap.GetMatchingClients(topic.TopicFilter)
 
@@ -217,15 +234,17 @@ func handlePublish(tCMap *clients.TopicToSubscribers, topic clients.Topic, msgTo
 			topic.TopicFilter, *msgToForward.ClientID, err)
 		return
 	}
+
 	clientNode := clientList.Head()
 
+	// For every client that is subscribed to the topic, create a new message to send to them
 	for clientNode != nil {
 		clientID := clientNode.Value()
 		alteredMsg := msgToForward
 		alteredMsg.ClientID = &clientID
 
 		if client := clientTable.Get(clientID); client != nil {
-			alteredMsg.ClientConnection = &(client.NetworkConnection)
+			alteredMsg.ClientConnection = client.NetworkConnection
 		} else {
 			log.Printf("- Error: Can't find subscribed client '%v' in clientTable\n", clientID)
 			clientNode = clientNode.Next()

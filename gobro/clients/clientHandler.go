@@ -24,6 +24,7 @@ type ClientMessage struct {
 	ClientID         *ClientID
 	ClientConnection network.Conn
 	Packet           []byte
+	OutputWaitGroup  *sync.WaitGroup
 }
 
 // CreateClientMessage creates a new ClientMessage with the given ID, connection, and packet
@@ -40,7 +41,7 @@ func CreateClientMessage(clientID ClientID, clientConnection network.Conn, packe
 // It handles the initial connect, and then listens for all packets from that client,
 // and passes them to the message handler.
 func ClientHandler(connection network.Conn, packetPool chan<- ClientMessage,
-	clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicToSubscribers,
+	clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicTrie,
 	connectedClient *string, connectedClientMutex *sync.Mutex) {
 	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
 	if err != nil {
@@ -148,7 +149,7 @@ func handleInitialConnect(connection network.Conn, clientTable *structures.SafeM
 }
 
 func handleDisconnect(client Client, clientTable *structures.SafeMap[ClientID, *Client],
-	topicToClient *TopicToSubscribers, connectedClient *string) {
+	topicToClient *TopicTrie, connectedClient *string) {
 	*connectedClient = ""
 
 	// If the client has already been disconnected elsewhere

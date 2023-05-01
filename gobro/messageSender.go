@@ -2,6 +2,7 @@ package gobro
 
 import (
 	"MQTT-GO/gobro/clients"
+	"sync"
 )
 
 // MessageSender is a struct that handles outgoing packets from the broker.
@@ -20,30 +21,37 @@ func CreateMessageSender(outputPool *chan clients.ClientMessage) MessageSender {
 // It waits for a ticket to be available before sending the packet to ensure messages.
 // are sent in the correct order
 func (MessageSender) ListenAndSend(server *Server) {
+	const maxMessageSenders = 100
+	queue := make(chan struct{}, maxMessageSenders)
+
+	for i := 0; i < maxMessageSenders; i++ {
+		queue <- struct{}{}
+	}
+
 	for {
 		clientMsg := <-(*server.outputChan)
 		clientID := *clientMsg.ClientID
-
 		client := server.clientTable.Get(clientID)
 		if client == nil {
 			continue
 		}
-
-		ticket := client.Tickets.GetTicket()
-		packet := clientMsg.Packet
-
+		// Wait for there to be space in the queue (when a thread has finished and added to it)
+		<-queue
+		go waitAndSend(&clientMsg, clientMsg.OutputWaitGroup, queue)
 		// We look up the client rather than using the connection directly
 		// This is to ensure we get an error if the client doesn't exist
-
-		go func() {
-			ticket.WaitOnTicket()
-			_, err := (*clientMsg.ClientConnection).Write(packet)
-			ticket.TicketCompleted()
-			if err != nil {
-				clients.ServerPrintln("Failed to send packet to", client, "- Error:", err)
-			}
-		}()
-
 		continue
 	}
+}
+
+func waitAndSend(clientMsg *clients.ClientMessage, waitGroup *sync.WaitGroup, queue chan struct{}) {
+
+	defer waitGroup.Done()
+	_, err := clientMsg.ClientConnection.Write(clientMsg.Packet)
+
+	if err != nil {
+		clients.ServerPrintln("Failed to send packet to", clientMsg.ClientID, "- Error:", err)
+	}
+	queue <- struct{}{}
+
 }

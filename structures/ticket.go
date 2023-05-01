@@ -1,7 +1,8 @@
 package structures
 
 import (
-	"sync"
+	"fmt"
+	"sync/atomic"
 )
 
 // TicketStand is a thread safe implementation of a ticket stand.
@@ -9,33 +10,55 @@ import (
 // It uses a sync.Cond so threads can wait on tickets, and wake up when
 // the ticket is completed.
 type TicketStand struct {
-	currentTicket   int64
-	nextTicket      int64
-	holderLock      sync.Mutex
-	ticketCompleted *sync.Cond
+	currentTicket  atomic.Int64
+	nextTicket     atomic.Int64
+	waitingTickets *SafeMap[int64, chan struct{}]
+	closed         chan struct{}
+	tStandClosed   atomic.Bool
 }
 
 // CreateTicketStand creates a new TicketStand.
 func CreateTicketStand() *TicketStand {
-	conditionMutex := sync.Mutex{}
 
 	tStand := TicketStand{
-		currentTicket:   0,
-		nextTicket:      0,
-		holderLock:      sync.Mutex{},
-		ticketCompleted: sync.NewCond(&conditionMutex),
+		currentTicket:  atomic.Int64{},
+		nextTicket:     atomic.Int64{},
+		waitingTickets: CreateSafeMap[int64, chan struct{}](),
+		tStandClosed:   atomic.Bool{},
+		closed:         make(chan struct{}, 1),
 	}
 
 	return &tStand
 }
 
+func (tHolder *TicketStand) CloseTicketStand() error {
+	if tHolder.tStandClosed.Load() {
+		return nil
+	}
+	tHolder.tStandClosed.Store(true)
+	close(tHolder.closed)
+
+	defer func() {
+		recover()
+	}()
+
+	queueList := tHolder.waitingTickets.Values()
+	for _, queue := range queueList {
+		close(queue)
+	}
+	return nil
+}
+
 // GetTicket returns a new ticket. The ticket number is the next ticket number.
 func (tHolder *TicketStand) GetTicket() Ticket {
-	tHolder.holderLock.Lock()
-	ticketNumber := tHolder.nextTicket
-	tHolder.nextTicket++
-	tHolder.holderLock.Unlock()
+	ticketNumber := tHolder.nextTicket.Add(1) - 1
 
+	queue := make(chan struct{}, 1)
+	if ticketNumber == tHolder.currentTicket.Load() {
+		queue <- struct{}{}
+	}
+
+	tHolder.waitingTickets.Put(ticketNumber, queue)
 	return Ticket{
 		ticketNumber: ticketNumber,
 		ticketStand:  tHolder,
@@ -48,21 +71,40 @@ type Ticket struct {
 	ticketStand  *TicketStand
 }
 
-// WaitOnTicket waits on the ticket stand until the ticket is completed.
-func (ticket *Ticket) WaitOnTicket() {
-	ticket.ticketStand.ticketCompleted.L.Lock()
-	for ticket.ticketNumber != ticket.ticketStand.currentTicket {
-		ticket.ticketStand.ticketCompleted.Wait()
+// Wait waits on the ticket stand until the ticket can be
+// safely completed
+func (ticket *Ticket) Wait() {
+	if ticket.ticketStand.tStandClosed.Load() {
+		return
 	}
-	ticket.ticketStand.ticketCompleted.L.Unlock()
+	select {
+	case <-ticket.ticketStand.closed:
+		{
+			return
+		}
+	// Wait until the previous ticket completes and
+	// sends a signal on the channel
+	case <-ticket.ticketStand.waitingTickets.Get(ticket.ticketNumber):
+		{
+			break
+		}
+	}
 }
 
-// TicketCompleted completes the ticket. It increments the current ticket number
-func (ticket *Ticket) TicketCompleted() {
-	ticket.ticketStand.ticketCompleted.L.Lock()
-	ticket.ticketStand.holderLock.Lock()
-	ticket.ticketStand.currentTicket++
-	ticket.ticketStand.holderLock.Unlock()
-	ticket.ticketStand.ticketCompleted.Broadcast()
-	ticket.ticketStand.ticketCompleted.L.Unlock()
+// Complete completes the ticket. It increments the current ticket number
+func (ticket *Ticket) Complete() {
+	if ticket.ticketStand.tStandClosed.Load() {
+		return
+	}
+	defer func() {
+		recover()
+	}()
+	if ticket.ticketNumber != ticket.ticketStand.currentTicket.Load() {
+		fmt.Println("Tried to complete ticket at the wrong time")
+		return
+	}
+	newTicket := ticket.ticketStand.currentTicket.Add(1)
+	waitingChannel := ticket.ticketStand.waitingTickets.Get(newTicket)
+	waitingChannel <- struct{}{}
+
 }
