@@ -29,32 +29,33 @@ var (
 // It stores a map of clients, a map of topics to subscribers, a channel for incoming packets,
 // a channel for outgoing packets, and a log file.
 type Server struct {
-	clientTable    *structures.SafeMap[clients.ClientID, *clients.Client]
-	topicClientMap *clients.TopicToSubscribers
-	inputChan      *chan clients.ClientMessage
-	outputChan     *chan clients.ClientMessage
-	logFile        *os.File
+	clientTable *structures.SafeMap[clients.ClientID, *clients.Client]
+	topicTrie   *clients.TopicTrie
+	inputChan   *chan clients.ClientMessage
+	outputChan  *chan clients.ClientMessage
+	logFile     *os.File
+	listener    *network.Listener
 }
 
 // NewServer creates a new server with a new client table, topic map, and channels for incoming and outgoing packets.
 func NewServer() Server {
 	clientTable := structures.CreateSafeMap[clients.ClientID, *clients.Client]()
-	topicClientMap := clients.CreateTopicMap()
-	// TODO: Should this be larger?
-	inputChan := make(chan clients.ClientMessage)
-	outputChan := make(chan clients.ClientMessage)
+	topicTrie := clients.CreateTopicTrie()
+
+	inputChan := make(chan clients.ClientMessage, 10000)
+	outputChan := make(chan clients.ClientMessage, 10000)
 
 	return Server{
-		clientTable:    clientTable,
-		topicClientMap: topicClientMap,
-		inputChan:      &inputChan,
-		outputChan:     &outputChan,
+		clientTable: clientTable,
+		topicTrie:   topicTrie,
+		inputChan:   &inputChan,
+		outputChan:  &outputChan,
 	}
 }
 
 // StopServer stops the server by closing the log file and exiting the program.
-func (server *Server) StopServer() {
-	cleanupAndExit(server)
+func (server *Server) StopServer(shutdownProgram bool) {
+	cleanupAndExit(server, shutdownProgram)
 }
 
 // StartServer starts the server by listening for connections, and then listening for packets.
@@ -71,7 +72,7 @@ func (server *Server) StartServer(ip string, port int) {
 	defer file.Close()
 	go scheduleShutdown(server)
 
-	listenForExit(server)
+	listenForExit(server, true)
 	log.SetOutput(file)
 	// Sets the log to storefile & line numbers
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
@@ -86,6 +87,7 @@ func (server *Server) StartServer(ip string, port int) {
 		clients.ServerPrintln("FATAL:", err)
 		return
 	}
+	server.listener = &listener
 	err = listener.Listen(ip, port)
 
 	if err != nil {
@@ -97,8 +99,8 @@ func (server *Server) StartServer(ip string, port int) {
 
 	msgSender := CreateMessageSender(server.outputChan)
 	go msgSender.ListenAndSend(server)
-	msgListener := CreateMessageHandler(server.inputChan, server.outputChan)
-	go msgListener.Listen(server)
+	msgHandler := CreateMessageHandler(server.inputChan, server.outputChan)
+	go msgHandler.Listen(server)
 	AcceptConnections(listener, server)
 }
 
@@ -122,7 +124,7 @@ func AcceptConnections(listener network.Listener, server *Server) {
 	for {
 		connection, err := (listener).Accept()
 		if err != nil {
-			log.Printf("Error while accepting a connection from '%v': %v\n", connection.RemoteAddr(), err)
+			log.Printf("Error while accepting a connection")
 			return
 		}
 
@@ -161,7 +163,7 @@ func AcceptConnections(listener network.Listener, server *Server) {
 		}()
 
 		go clients.ClientHandler(connection, *server.inputChan, server.clientTable,
-			server.topicClientMap, newArrayPos, &connectedClientsMutex)
+			server.topicTrie, newArrayPos, &connectedClientsMutex)
 	}
 }
 
@@ -170,31 +172,35 @@ func scheduleShutdown(server *Server) {
 		// Convert from microseconds to seconds to hours
 		const hourInNano = 1000000000 * 3600
 		time.Sleep(time.Duration(*scheduledShutdown * float64(hourInNano)))
-		server.StopServer()
+		server.StopServer(true)
 	}
 }
 
-func listenForExit(server *Server) {
+func listenForExit(server *Server, exit bool) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-
 	go func() {
 		for range c {
-			cleanupAndExit(server)
+			fmt.Println("CLOSING")
+			cleanupAndExit(server, exit)
 		}
 	}()
 }
 
-func cleanupAndExit(server *Server) {
+func cleanupAndExit(server *Server, exit bool) {
 	for _, client := range server.clientTable.Values() {
-		client.Disconnect(server.topicClientMap, server.clientTable)
+		client.Disconnect(server.topicTrie, server.clientTable)
 	}
-	server.topicClientMap.DeleteAll()
+	(*server.listener).Close()
+	server.topicTrie.DeleteAll()
 	log.Print("--Server exiting--\n\n")
 	if server.logFile != nil {
 		server.logFile.Close()
 	}
-	os.Exit(0)
+	if exit {
+		os.Exit(0)
+
+	}
 }
 
 // DisableStdOutput disables the output to stdout.

@@ -6,9 +6,9 @@ package clients
 import (
 	"errors"
 	"fmt"
-	"net"
 	"sync"
 
+	"MQTT-GO/network"
 	"MQTT-GO/structures"
 )
 
@@ -20,15 +20,15 @@ type ClientID string
 type Client struct {
 	ClientIdentifier  ClientID
 	Topics            *structures.LinkedList[Topic]
-	NetworkConnection net.Conn
+	NetworkConnection network.Conn
 	Tickets           *structures.TicketStand
 }
 
 // CreateClient creates a new client with the given ID and connection
-func CreateClient(clientID ClientID, conn *net.Conn) *Client {
+func CreateClient(clientID ClientID, conn network.Conn) *Client {
 	client := Client{}
 	client.ClientIdentifier = clientID
-	client.NetworkConnection = *conn
+	client.NetworkConnection = conn
 	client.Tickets = structures.CreateTicketStand()
 
 	return &client
@@ -60,14 +60,15 @@ func (client *Client) RemoveTopic(newTopic Topic) error {
 
 // Disconnect removes the client from the client table and removes the client from
 // the topic to client map for each topic the client is subscribed to.
-func (client *Client) Disconnect(topicClientMap *TopicToSubscribers,
-	clientTable *structures.SafeMap[ClientID, *Client]) {
+func (client *Client) Disconnect(topicTrie *TopicTrie, clientTable *structures.SafeMap[ClientID, *Client]) {
 	if client == nil {
 		return
 	}
+	client.Tickets.CloseTicketStand()
+
 	// If the client has subscribed to something we need to remove that client
 	// from the topic to client lists for each topic
-	topicClientMap.DeleteClientSubscriptions(client)
+	topicTrie.DeleteClientSubscriptions(client)
 	clientTable.Delete(client.ClientIdentifier)
 	client.Topics.DeleteLinkedList()
 	client.NetworkConnection.Close()

@@ -19,4 +19,5 @@ func TestServerStarts(t *testing.T) {
 	go server.StartServer("localhost", 8000)
 
 	time.Sleep(time.Millisecond * 200)
+	server.StopServer(false)
 }

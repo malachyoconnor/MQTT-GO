@@ -40,10 +40,10 @@ func CreateClientMessage(clientID ClientID, clientConnection network.Conn, packe
 // ClientHandler is a function that handles a client's connection.
 // It handles the initial connect, and then listens for all packets from that client,
 // and passes them to the message handler.
-func ClientHandler(connection network.Conn, packetPool chan<- ClientMessage,
+func ClientHandler(connection network.Conn, packetHandleChan chan<- ClientMessage,
 	clientTable *structures.SafeMap[ClientID, *Client], topicToClient *TopicTrie,
 	connectedClient *string, connectedClientMutex *sync.Mutex) {
-	newClient, err := handleInitialConnect(connection, clientTable, packetPool)
+	newClient, err := handleInitialConnect(connection, clientTable, packetHandleChan)
 	if err != nil {
 		if newClient.NetworkConnection == nil {
 			fmt.Println("Connection Closed before finishing connection")
@@ -57,7 +57,7 @@ func ClientHandler(connection network.Conn, packetPool chan<- ClientMessage,
 			_, err = connection.Write(connack)
 			if err != nil {
 				connection.Close()
-				structures.Println("Error while writing", err)
+				fmt.Println("Error while writing", err)
 			} else {
 				// Sleep for 50 millisconds while they digest this news that they're
 				// being disconnected before closing the connection
@@ -96,16 +96,16 @@ func ClientHandler(connection network.Conn, packetPool chan<- ClientMessage,
 		}
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), "reset_stream") {
-				structures.Println("Error while reading", err)
+				fmt.Println("Error while reading", err)
 			} else {
-				structures.Println("Stream closed")
+				fmt.Println("Stream closed")
 			}
 			break
 		}
 
-		structures.PrintCentrally(fmt.Sprintln("RECEIVED", packets.PacketTypeName(packets.GetPacketType(packet))))
+		go fmt.Println(fmt.Sprintln("RECEIVED", packets.PacketTypeName(packets.GetPacketType(packet))))
 		toSend := ClientMessage{ClientID: &clientID, Packet: packet, ClientConnection: connection}
-		packetPool <- toSend
+		packetHandleChan <- toSend
 	}
 
 }
@@ -114,17 +114,15 @@ func ClientHandler(connection network.Conn, packetPool chan<- ClientMessage,
 // we create one and then push the connect to be handled by message Handler
 func handleInitialConnect(connection network.Conn, clientTable *structures.SafeMap[ClientID, *Client],
 	packetPool chan<- ClientMessage) (*Client, error) {
-	buffer := make([]byte, 300)
-	packetLen, err := connection.Read(buffer)
-
-	packet := make([]byte, packetLen)
-	copy(packet, buffer[:packetLen])
+	firstPacket := make([]byte, 300)
+	packetLen, err := connection.Read(firstPacket)
+	firstPacket = firstPacket[:packetLen]
 
 	if err != nil {
 		return &Client{}, err
 	}
 
-	connectPacket, err := packets.DecodeConnect(packet)
+	connectPacket, err := packets.DecodeConnect(firstPacket)
 	if err != nil {
 		ServerPrintln("Error during initial connect", err)
 		return &Client{}, err
@@ -142,7 +140,7 @@ func handleInitialConnect(connection network.Conn, clientTable *structures.SafeM
 	}
 	clientTable.Put(clientID, newClient)
 
-	clientMsg := CreateClientMessage(clientID, connection, packet)
+	clientMsg := CreateClientMessage(clientID, connection, firstPacket)
 	packetPool <- clientMsg
 
 	return newClient, nil

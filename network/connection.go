@@ -60,7 +60,7 @@ func NewConn(networkID byte) (Conn, error) {
 
 // TCPConn is a struct that implements the Conn interface for TCP connections.
 type TCPConn struct {
-	connection *net.Conn
+	connection *net.TCPConn
 }
 
 // UDPServerConnection is a constant that represents that the connection is the server.
@@ -74,8 +74,8 @@ const (
 type UDPConn struct {
 	connection     *net.UDPConn
 	packetBuffer   chan []byte
-	localAddr      string
-	remoteAddr     string
+	localAddr      net.Addr
+	remoteAddr     net.Addr
 	connected      bool
 	connectionType byte
 
