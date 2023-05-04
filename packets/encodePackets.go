@@ -126,7 +126,7 @@ func EncodePublish(packet *Packet) ([]byte, error) {
 // EncodeSubscribe encodes a subscribe packet into a byte array
 func EncodeSubscribe(packet *Packet) ([]byte, error) {
 	if packet.ControlHeader.Type != SUBSCRIBE {
-		panic("Error create publish passed non-publish packet")
+		panic("Error create subscribe passed non-subscribe packet")
 	}
 	packetIdentifier := packet.VariableLengthHeader.(*SubscribeVariableHeader).PacketIdentifier
 	resultVarHeader := make([]byte, 2)
@@ -154,6 +154,20 @@ func EncodeUnsubscribe(packet *Packet) ([]byte, error) {
 		}
 		resultPayload = append(resultPayload, encodedTopic...)
 	}
+	packet.ControlHeader.RemainingLength = len(resultVarHeader) + len(resultPayload)
+	resultControlHeader := EncodeFixedHeader(*packet.ControlHeader)
+
+	return CombineEncodedPacketSections(resultControlHeader, resultVarHeader, resultPayload), nil
+}
+
+func EncodeSuback(packet *Packet) ([]byte, error) {
+	if packet.ControlHeader.Type != SUBACK {
+		panic("Error create subscribe passed non-subscribe packet")
+	}
+	packetIdentifier := packet.VariableLengthHeader.(*SubackVariableHeader).PacketIdentifier
+	resultVarHeader := make([]byte, 2)
+	resultVarHeader[0], resultVarHeader[1] = getMSBandLSB(packetIdentifier)
+	resultPayload := packet.Payload.RawApplicationMessage
 	packet.ControlHeader.RemainingLength = len(resultVarHeader) + len(resultPayload)
 	resultControlHeader := EncodeFixedHeader(*packet.ControlHeader)
 

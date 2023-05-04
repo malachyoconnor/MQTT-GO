@@ -72,6 +72,9 @@ func (*ConnackVariableHeader) SafetyFunc() {
 func (*SubackVariableHeader) SafetyFunc() {
 	// Safety func to ensure passing pointers to variable headers - remove once finished development
 }
+func (*PubackVariableHeader) SafetyFunc() {
+	// Safety func to ensure passing pointers to variable headers - remove once finished development
+}
 func (*UnsubscribeVariableHeader) SafetyFunc() {
 	// Safety func to ensure passing pointers to variable headers - remove once finished development
 }
@@ -112,6 +115,10 @@ type ConnackVariableHeader struct {
 }
 
 type SubackVariableHeader struct {
+	PacketIdentifier int
+}
+
+type PubackVariableHeader struct {
 	PacketIdentifier int
 }
 

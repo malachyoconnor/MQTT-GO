@@ -14,18 +14,14 @@ import (
 // First we implement the connection methods for QUIC
 
 // Connect implements the Connect function for QUIC connections.
-// We first load a certificate and key, and create a tls.Config with the certificate.
-// We then create a quic.Config with a MaxIdleTimeout of 1 hour.
+// We first create a tls.Config, then we create a quic.Config with a MaxIdleTimeout of 1 hour.
 // Finally, we dial the address and port, and open a stream.
 func (conn *QUICConn) Connect(ip string, port int) error {
-	cert, err := tls.LoadX509KeyPair("network/client.crt", "network/client.key")
-	if err != nil {
-		return err
-	}
+	// The certificate is not needed in the client - only the server needs to
+	// prove it's identity.
 	config := &tls.Config{MinVersion: tls.VersionTLS12}
 	config.NextProtos = []string{"UDP"}
 	config.InsecureSkipVerify = true
-	config.Certificates = []tls.Certificate{cert}
 
 	quicConfig := &quic.Config{}
 	quicConfig.MaxIdleTimeout = time.Hour

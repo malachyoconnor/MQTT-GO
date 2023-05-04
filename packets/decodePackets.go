@@ -4,6 +4,7 @@ import (
 	"MQTT-GO/structures"
 	"errors"
 	"fmt"
+	"os"
 )
 
 var (
@@ -30,11 +31,10 @@ func DecodeFixedHeader(packet []byte) (*ControlHeader, int, error) {
 
 	// Mask out the LSF of the header to get the flags
 	resultHeader.Flags = packet[0] & 15
-
 	fixedLength, varLengthLen, err := DecodeVarLengthInt(packet[1:])
 	resultHeader.RemainingLength = fixedLength
 	if err != nil {
-		return &ControlHeader{}, 0, err
+		return nil, 0, err
 	}
 
 	if fixedLength != (len(packet)-1)-(varLengthLen) {
@@ -131,32 +131,34 @@ func DecodePacket(packet []byte) (*Packet, byte, error) {
 		result, err = DecodeConnect(packet)
 
 	case CONNACK:
-		result, err = decodeCONNACK(packet)
+		result, err = DecodeCONNACK(packet)
 
 	case SUBSCRIBE:
-		result, err = decodeSubscribe(packet)
+		result, err = DecodeSubscribe(packet)
 
 	case PUBLISH:
-		result, err = decodePublish(packet)
+		result, err = DecodePublish(packet)
 
 	case PINGREQ:
 		structures.Println("Ping")
-		result, err = decodePing(packet)
+		result, err = DecodePingreq(packet)
 
 	case DISCONNECT:
-		result, err = decodeDisconnect(packet)
+		result, err = DecodeDisconnect(packet)
 
 	case SUBACK:
-		result, err = decodeSuback(packet)
+		result, err = DecodeSuback(packet)
 
 	case UNSUBACK:
-		result, err = decodeUnsuback(packet)
+		result, err = DecodeUnsuback(packet)
 
 	case UNSUBSCRIBE:
-		result, err = decodeUnsubscribe(packet)
+		result, err = DecodeUnsubscribe(packet)
 
 	default:
-		structures.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
+		fmt.Println("Packet type not defined: ", packetType, " (", PacketTypeName(packetType), ")")
+		fmt.Println(packet)
+		os.Exit(1)
 		return nil, 0, errPacketNotDefined
 	}
 
@@ -207,10 +209,6 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	usernameFlag := (flags>>7)&1 == 1
 	passwordFlag := (flags>>6)&1 == 1
 	willFlag := (flags>>2)&1 == 1
-	// TODO: Think about these 3 flags
-	// WillRetainFlag := (flags>>5)&1 == 1
-	// WillQoS := (flags >> 3) & 3
-	// CleanSession := (flags>>1)&1 == 1
 
 	keepAlive := CombineMsbLsb(varHeaderDecode[offset], varHeaderDecode[offset+1])
 	varHeader.KeepAlive = keepAlive
@@ -218,7 +216,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 
 	resultPacket.VariableLengthHeader = &varHeader
 
-	// Now we've to decode the payload
+	// PAYLOAD DECODE
 	resultPayload := PacketPayload{}
 	payloadDecode := varHeaderDecode[offset:]
 
@@ -267,7 +265,7 @@ func DecodeConnect(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
-func decodeCONNACK(packet []byte) (*Packet, error) {
+func DecodeCONNACK(packet []byte) (*Packet, error) {
 	header, offset, err := DecodeFixedHeader(packet)
 	if err != nil {
 		return nil, err
@@ -280,7 +278,7 @@ func decodeCONNACK(packet []byte) (*Packet, error) {
 	return CombinePacketSections(header, &varHeader, nil), nil
 }
 
-func decodeUnsubscribe(packet []byte) (*Packet, error) {
+func DecodeUnsubscribe(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
 	resultPacket.ControlHeader = fixedHeader
@@ -311,10 +309,11 @@ func decodeUnsubscribe(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
-func decodeSubscribe(packet []byte) (*Packet, error) {
+func DecodeSubscribe(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
+	resultPacket.ControlHeader = fixedHeader
 	if err != nil {
 		return nil, err
 	}
@@ -340,7 +339,7 @@ func decodeSubscribe(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
-func decodeDisconnect(packet []byte) (*Packet, error) {
+func DecodeDisconnect(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	resultPacket.ControlHeader = &ControlHeader{
 		Type:            DISCONNECT,
@@ -348,7 +347,7 @@ func decodeDisconnect(packet []byte) (*Packet, error) {
 		Flags:           0,
 	}
 
-	if packet[0]>>4 != 14 || packet[0]-14<<4 != 0 || packet[1] != 0 {
+	if packet[0]>>4 != 14 || packet[1] != 0 {
 		return nil, errors.New("error: Incorrectly formed DISCONNECT packet")
 	}
 
@@ -388,7 +387,7 @@ func DecodeVarLengthInt(toDecode []byte) (value int, length int, err error) {
 	return value, length, nil
 }
 
-func decodePublish(packet []byte) (*Packet, error) {
+func DecodePublish(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
@@ -400,6 +399,10 @@ func decodePublish(packet []byte) (*Packet, error) {
 	// Handle the variable length header
 	varHeader := PublishVariableHeader{}
 	topicName, topicLen, err := DecodeUTFString(packet[offset:])
+	if err != nil {
+		return nil, err
+	}
+
 	varHeaderLen := topicLen
 
 	// The qos is the second 2 bits of the flags
@@ -409,10 +412,6 @@ func decodePublish(packet []byte) (*Packet, error) {
 		packetIdentifier := CombineMsbLsb(packet[offset+topicLen], packet[offset+topicLen+1])
 		varHeader.PacketIdentifier = packetIdentifier
 		varHeaderLen += 2
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	varHeader.TopicFilter = topicName
@@ -429,7 +428,7 @@ func decodePublish(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
-func decodePing(packet []byte) (*Packet, error) {
+func DecodePingreq(packet []byte) (*Packet, error) {
 	resultPacket := &Packet{}
 	// Handle the fixed length header
 	fixedHeader, offset, err := DecodeFixedHeader(packet)
@@ -444,7 +443,7 @@ func decodePing(packet []byte) (*Packet, error) {
 	return resultPacket, nil
 }
 
-func decodeSuback(packetArr []byte) (*Packet, error) {
+func DecodeSuback(packetArr []byte) (*Packet, error) {
 	fixedHeader, offset, err := DecodeFixedHeader(packetArr)
 	if err != nil {
 		return nil, err
@@ -464,7 +463,7 @@ func decodeSuback(packetArr []byte) (*Packet, error) {
 	return &resultPacket, nil
 }
 
-func decodeUnsuback(packetArr []byte) (*Packet, error) {
+func DecodeUnsuback(packetArr []byte) (*Packet, error) {
 	fixedHeader, offset, err := DecodeFixedHeader(packetArr)
 	if err != nil {
 		return nil, err

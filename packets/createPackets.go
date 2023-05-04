@@ -71,3 +71,15 @@ func CreateUnSuback(packetIdentifier int) []byte {
 	result[3] = idLSB
 	return result
 }
+
+// CreatePubAck creates an PubAck packet
+func CreatePubAck(packetIdentifier int) []byte {
+	result := make([]byte, 4)
+	result[0] = PUBACK << 4
+	result[1] = 2
+
+	idMSB, idLSB := getMSBandLSB(packetIdentifier)
+	result[2] = idMSB
+	result[3] = idLSB
+	return result
+}
