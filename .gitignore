@@ -4,4 +4,4 @@ logs.txt
 *.key
 *.exe
 *.puml
-data/*
+*.csv
