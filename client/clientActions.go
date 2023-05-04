@@ -3,6 +3,8 @@ package client
 import (
 	"bufio"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"MQTT-GO/packets"
@@ -56,7 +58,7 @@ func (client *Client) SendConnect(ip string, port int) error {
 		client.ClientID = generateRandomClientID()
 		err := client.SetClientConnection(ip, port)
 		if err != nil {
-			structures.Println("Error while setting client connection")
+			fmt.Println("Error while setting client connection")
 			return err
 		}
 		return client.SendConnect(ip, port)
@@ -70,6 +72,11 @@ func (client *Client) SendConnect(ip string, port int) error {
 
 // SendPublish encodes a publish packet and sends it to the broker.
 func (client *Client) SendPublish(applicationMessage []byte, topic string) error {
+	// If the topic contains wildcards and we don't want to publish to wildcards then return an error
+	if !PublishToWildcards && (strings.Contains(topic, "+") || strings.Contains(topic, "#")) {
+		return errors.New("error: Cannot publish to topics with wildcards + or #")
+	}
+
 	controlHeader := packets.ControlHeader{Type: packets.PUBLISH, Flags: 0}
 	varHeader := packets.PublishVariableHeader{}
 	varHeader.TopicFilter = topic
@@ -86,17 +93,20 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	if client.BrokerConnection == nil {
 		return errConnectionClosed
 	}
-	_, err = (client.BrokerConnection).Write(publishPacketArr)
+	n, err := (client.BrokerConnection).Write(publishPacketArr)
 
 	if err != nil {
 		return err
+	}
+	if n == 0 {
+		return errors.New("error: Wrote 0 bytes to connection")
 	}
 
 	if controlHeader.Flags&6 == 0 {
 		return nil
 	}
 
-	pubackArr := client.waitingAckStruct.GetOrWait(packetID)
+	pubackArr := client.WaitingAckStruct.GetOrWait(packetID)
 	packet, _, _ := packets.DecodePacket(*pubackArr)
 
 	if packet.ControlHeader.Type != packets.PUBACK {
@@ -121,6 +131,7 @@ func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 		if topicWQos.QoS > 2 {
 			return errors.New("error: impossible QoS level provided")
 		}
+
 		encodedTopic, _, err := packets.EncodeUTFString(topicWQos.Topic)
 		if err != nil {
 			return err
@@ -141,7 +152,7 @@ func (client *Client) SendSubscribe(topics ...packets.TopicWithQoS) error {
 	if err != nil {
 		return err
 	}
-	subackArr := client.waitingAckStruct.GetOrWait(packetID)
+	subackArr := client.WaitingAckStruct.GetOrWait(packetID)
 	suback, _, _ := packets.DecodePacket(*subackArr)
 
 	if suback.ControlHeader.Type != packets.SUBACK {
@@ -171,7 +182,7 @@ func (client *Client) SendUnsubscribe(topics ...string) error {
 	if err != nil {
 		return err
 	}
-	unsubackArr := client.waitingAckStruct.GetOrWait(packetID)
+	unsubackArr := client.WaitingAckStruct.GetOrWait(packetID)
 	suback, _, _ := packets.DecodePacket(*unsubackArr)
 
 	if suback.ControlHeader.Type != packets.UNSUBACK {
@@ -187,16 +198,58 @@ func (client *Client) SendDisconnect() error {
 	controlHeader.Flags = 0
 	controlHeader.Type = packets.DISCONNECT
 	controlHeader.RemainingLength = 0
-
 	disconnectArr := packets.EncodeFixedHeader(controlHeader)
 
 	if client.BrokerConnection == nil {
 		return errConnectionClosed
 	}
 
-	_, err := client.BrokerConnection.Write(disconnectArr)
+	n, err := client.BrokerConnection.Write(disconnectArr)
 	if err != nil {
 		return err
+	}
+	if n == 0 {
+		return errors.New("error: No bytes written")
+	}
+	return nil
+}
+
+// SendDisconnect encodes a SUBACK packet and sends it to the broker.
+func (client *Client) SendSUBACK() error {
+	controlHeader := packets.ControlHeader{}
+	controlHeader.Flags = 0
+	controlHeader.Type = packets.SUBACK
+	controlHeader.RemainingLength = 0
+	subackArr := packets.EncodeFixedHeader(controlHeader)
+
+	if client.BrokerConnection == nil {
+		return errConnectionClosed
+	}
+
+	structures.Println("Sending SubAck")
+	n, err := client.BrokerConnection.Write(subackArr)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("error: No bytes written")
+	}
+	return nil
+}
+
+func (client *Client) SendPuback(packetID int) error {
+	if client.BrokerConnection == nil {
+		return errConnectionClosed
+	}
+
+	toSend := packets.CreatePubAck(packetID)
+
+	n, err := client.BrokerConnection.Write(toSend)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("error: No bytes written")
 	}
 	return nil
 }

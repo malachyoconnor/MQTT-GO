@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"MQTT-GO/packets"
-	"MQTT-GO/structures"
 )
 
 // StartClient starts the client, and listens for inputs from the command line.
@@ -18,16 +17,17 @@ func StartClient(ip string, port int) {
 	flag.Parse()
 	client := CreateClient()
 	listenForExit(client)
+	fmt.Println("Connecting to", ip, ":", port)
 	err := client.SetClientConnection(ip, port)
 
 	if err != nil {
-		structures.Println(err)
+		fmt.Println(err)
 		return
 	}
 
 	err = client.SendConnect(ip, port)
 	if err != nil {
-		structures.Println(err)
+		fmt.Println(err)
 		return
 	}
 
@@ -35,7 +35,7 @@ func StartClient(ip string, port int) {
 	// a packet identifier to listen on.
 	go client.ListenForPackets()
 
-	structures.Println("Connected to broker on port", port)
+	fmt.Println("Connected to broker on port", port)
 
 	reader := bufio.NewReader(os.Stdin)
 	for {

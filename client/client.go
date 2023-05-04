@@ -7,6 +7,7 @@ import (
 	"MQTT-GO/network"
 	"MQTT-GO/packets"
 	"MQTT-GO/structures"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -14,10 +15,10 @@ import (
 )
 
 var (
-	waitingPacketBufferSize = 100
 	// ConnectionType is the type of transport protocol that is used
 	// It is set by main.go, and can be either TCP, UDP or QUIC
-	ConnectionType = network.QUIC
+	ConnectionType     = network.TCP
+	PublishToWildcards = false
 )
 
 // Client is the main struct that is used to create a client and connect to a broker.
@@ -25,19 +26,18 @@ var (
 // and a list of packets that are waiting for an ACK.
 type Client struct {
 	ClientID         string
-	BrokerConnection network.Con
-	ReceivedPackets  chan *packets.Packet
-	waitingAckStruct *WaitingAcks
+	BrokerConnection network.Conn
+	ReceivedPackets  structures.LinkedList[*packets.Packet]
+	WaitingAckStruct *WaitingAcks
 }
 
 // CreateClient creates a new client with a random ClientID, and a buffer for incoming packets.
 func CreateClient() *Client {
-	messageChannel := make(chan *packets.Packet, waitingPacketBufferSize)
-	waitingPackets := CreateWaitingPacketList()
+	waitingPackets := CreateWaitingAckList()
 	return &Client{
-		ReceivedPackets:  messageChannel,
+		ReceivedPackets:  *structures.CreateLinkedList[*packets.Packet](),
 		ClientID:         generateRandomClientID(),
-		waitingAckStruct: waitingPackets,
+		WaitingAckStruct: waitingPackets,
 	}
 }
 
@@ -45,20 +45,21 @@ func CreateClient() *Client {
 func CreateAndConnectClient(ip string, port int) (*Client, error) {
 	client := CreateClient()
 	err := client.SetClientConnection(ip, port)
+
 	if err != nil {
 		return nil, err
 	}
 	err = client.SendConnect(ip, port)
+	go client.ListenForPackets()
 	if err != nil {
 		return nil, err
 	}
-	go client.ListenForPackets()
 	return client, nil
 }
 
 // SetClientConnection sets the connection to the broker.
 func (client *Client) SetClientConnection(ip string, port int) error {
-	connection, err := network.NewCon(ConnectionType)
+	connection, err := network.NewConn(ConnectionType)
 	if err != nil {
 		return err
 	}
@@ -88,17 +89,17 @@ func cleanupAndExit(client *Client) {
 		os.Exit(0)
 	}
 
-	structures.Println("Sending DISCONNECT")
+	fmt.Println("Sending DISCONNECT")
 	err := client.SendDisconnect()
 	if err != nil {
-		structures.Println("Error while disconnecting:", err)
+		fmt.Println("Error while disconnecting:", err)
 	}
 
 	if client.BrokerConnection != nil {
 		time.Sleep(time.Millisecond * 500)
 		err = client.BrokerConnection.Close()
 		if err != nil {
-			structures.Println("Error while closing connection:", err)
+			fmt.Println("Error while closing connection:", err)
 		}
 		log.Println("\nConnection closed, goodbye")
 	}

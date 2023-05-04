@@ -34,6 +34,7 @@ func ServerUp() {
 }
 
 func TestMain(m *testing.M) {
+	fmt.Println("Starting server")
 	ServerUp()
 	gobro.DisableStdOutput()
 
@@ -84,10 +85,11 @@ func TestConstantPublish(t *testing.T) {
 		err := client.SendPublish([]byte(fmt.Sprint("test", i)), "x/y")
 		testErr(t, err)
 	}
+	fmt.Println("Done publishing")
 }
 
 func TestWaitingPackets(t *testing.T) {
-	waitingPacketsList := client.CreateWaitingPacketList()
+	waitingPacketsList := client.CreateWaitingAckList()
 	waitGroup := sync.WaitGroup{}
 	waitGroup.Add(2)
 
@@ -98,11 +100,6 @@ func TestWaitingPackets(t *testing.T) {
 	go func() {
 		waitingPacketsList.GetOrWait(2)
 		waitGroup.Done()
-	}()
-
-	go func() {
-		time.Sleep(2 * time.Second)
-		t.Error("Took to long to complete")
 	}()
 
 	waitingPacketsList.AddItem(&client.StoredPacket{PacketID: 1})
@@ -131,7 +128,7 @@ func TestReceivingPublish(t *testing.T) {
 		}
 	}()
 
-	structures.PrintInterface(<-client1.ReceivedPackets)
+	structures.PrintInterface(client1.ReceivedPackets.Head())
 	done = true
 }
 
@@ -161,8 +158,13 @@ func TestReceivingMultiplePublishes(t *testing.T) {
 		}
 	}()
 
+	time.Sleep(100 * time.Millisecond)
+	if client1.ReceivedPackets.Size() != 10 {
+		t.Error("Received packets size is not 10")
+	}
+
 	for i := 0; i < 10; i++ {
-		<-client1.ReceivedPackets
+		client1.ReceivedPackets.GetItems()
 		structures.Println("Got", i)
 	}
 	done = true

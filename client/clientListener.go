@@ -2,6 +2,9 @@ package client
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
+	"io"
 	"strings"
 
 	"MQTT-GO/packets"
@@ -12,8 +15,10 @@ import (
 // For packets that require an ACK, it adds them to the waitingAckStruct.
 func (client *Client) ListenForPackets() {
 	reader := bufio.NewReader(client.BrokerConnection)
+
 	for {
 		packet, err := packets.ReadPacketFromConnection(reader)
+
 		if err != nil {
 			if strings.HasSuffix(err.Error(), "use of closed network connection") {
 				structures.PrintCentrally("Connection closed")
@@ -23,12 +28,17 @@ func (client *Client) ListenForPackets() {
 			if strings.HasSuffix(err.Error(), "bye") {
 				return
 			}
-			structures.Println("Error during reading:", err)
+			if errors.Is(err, io.EOF) {
+				return
+			}
+			fmt.Println("Error during reading:", err)
 			return
 		}
 
 		packetType := packets.GetPacketType(packet)
-		structures.Println("Received", packets.PacketTypeName(packetType))
+
+		decoded, _, _ := packets.DecodePacket(packet)
+		client.ReceivedPackets.Append(decoded)
 
 		switch packetType {
 		case packets.SUBACK, packets.CONNACK, packets.PUBACK, packets.UNSUBACK:
@@ -45,15 +55,10 @@ func (client *Client) ListenForPackets() {
 
 		case packets.PUBLISH:
 			{
-				structures.Println("READ A PUBLISH")
 				result, _, _ := packets.DecodePacket(packet)
 				// If we fill the buffer - form a queue
-				if len(client.ReceivedPackets) == waitingPacketBufferSize {
-					go func() { client.ReceivedPackets <- result }()
-				} else {
-					client.ReceivedPackets <- result
-				}
-				go structures.Println("Received request to publish", string(result.Payload.RawApplicationMessage))
+				messageToPrint := result.Payload.RawApplicationMessage[:structures.Min(len(result.Payload.RawApplicationMessage), 20)]
+				go fmt.Println("Received request to publish", string(messageToPrint))
 			}
 
 		default:
