@@ -1,6 +1,7 @@
 package network
 
 import (
+	"MQTT-GO/structures"
 	"fmt"
 	"net"
 	"sync"
@@ -20,7 +21,7 @@ type Listener interface {
 
 // TCPListener is a struct that implements the Listener interface for TCP listeners.
 type TCPListener struct {
-	listener *net.Listener
+	listener *net.TCPListener
 }
 
 // NewListener returns a new listener of the type specified by the networkID.
@@ -46,12 +47,12 @@ func NewListener(networkID byte) (Listener, error) {
 type UDPListener struct {
 	listener *net.UDPConn
 	// The string is the address:port as you would expect
-	openConnections     map[string]chan []byte
+	openConnections     *structures.SafeMap[string, chan []byte]
 	openConnectionsLock sync.RWMutex
 	listening           bool
 	// If Accept() is called, then the listener pushes the new clients to a newClientBuffer
 	// these then get picked up by Accept.
-	newClientBuffer chan string
+	newClientBuffer chan net.Addr
 	localAddr       *net.UDPAddr
 }
 

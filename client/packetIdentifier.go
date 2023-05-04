@@ -38,8 +38,8 @@ type StoredPacket struct {
 	PacketID int
 }
 
-// CreateWaitingPacketList creates a new waitingAcks struct
-func CreateWaitingPacketList() *WaitingAcks {
+// CreateWaitingAckList creates a new waitingAcks struct
+func CreateWaitingAckList() *WaitingAcks {
 	conditionMutex := sync.Mutex{}
 	waitingPacketStruct := WaitingAcks{
 		waitCondition: sync.NewCond(&conditionMutex),
@@ -69,13 +69,13 @@ func (wp *WaitingAcks) getItem(packetIdentifier int) *[]byte {
 // If the packet is not in the list, it waits for a broadcast from the AddItem function.
 func (wp *WaitingAcks) GetOrWait(packetIdentifier int) *[]byte {
 	wp.waitCondition.L.Lock()
+	defer wp.waitCondition.L.Unlock()
 	for {
 		storedPacket := wp.getItem(packetIdentifier)
 		if storedPacket == nil {
 			structures.Println()
 			wp.waitCondition.Wait()
 		} else {
-			wp.waitCondition.L.Unlock()
 			return storedPacket
 		}
 	}

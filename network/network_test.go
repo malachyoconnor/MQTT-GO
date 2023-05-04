@@ -1,6 +1,7 @@
-package network
+package network_test
 
 import (
+	"MQTT-GO/network"
 	"MQTT-GO/structures"
 	"net"
 	"sync"
@@ -10,7 +11,7 @@ import (
 
 func TestUDPnetwork(t *testing.T) {
 
-	listener, _ := NewListener(UDP)
+	listener, _ := network.NewListener(network.UDP)
 	err := listener.Listen("localhost", 8000)
 	if err != nil {
 		t.Error(err)
@@ -28,13 +29,13 @@ func TestUDPnetwork(t *testing.T) {
 		waitGroup.Done()
 	}()
 
-	connection, _ := NewCon(UDP)
+	connection, _ := network.NewConn(network.UDP)
 	connection.Connect("localhost", 8000)
 	connection.Write([]byte("djskaljda"))
 
 	time.Sleep(time.Millisecond * 100)
 
-	connection2, _ := NewCon(UDP)
+	connection2, _ := network.NewConn(network.UDP)
 	connection2.Connect("localhost", 8000)
 	connection2.Write([]byte("1111"))
 	waitGroup.Wait()
