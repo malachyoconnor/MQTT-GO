@@ -31,10 +31,13 @@ func getTerminalWidth() uint {
 // PrintCentrally prints a string in the center of the terminal.
 // It uses the Println function so it is thread safe.
 func PrintCentrally(toPrint ...any) {
+	return
+	output := fmt.Sprint(toPrint...)
+	padding := (int(terminalWidth) - len(output)) / 2
+	fmt.Println(strings.Repeat(" ", padding) + output)
+	return
+	Println(strings.Repeat(" ", padding) + output)
 	go func() {
-		output := fmt.Sprint(toPrint...)
-		padding := (int(terminalWidth) - len(output)) / 2
-		Println(strings.Repeat(" ", padding) + output)
 	}()
 }
 
@@ -44,7 +47,7 @@ func (ll *LinkedList[T]) PrintItems() {
 	defer ll.lock.RUnlock()
 	fmt.Print("[ ")
 	node := ll.head
-	for i := 0; i < ll.Size; i++ {
+	for i := 0; i < ll.Size(); i++ {
 		fmt.Print(node.val, " ")
 		node = node.next
 	}
@@ -70,8 +73,9 @@ var (
 
 // Println is a thread safe version of fmt.Println.
 func Println(a ...any) (int, error) {
-	printingMutex.Lock()
-	defer printingMutex.Unlock()
+	return 0, nil
+	// printingMutex.Lock()
+	// defer printingMutex.Unlock()
 	return fmt.Println(a...)
 }
 

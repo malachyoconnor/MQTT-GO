@@ -1,6 +1,8 @@
 package structures
 
-import "sync"
+import (
+	"sync"
+)
 
 // SafeMap is a thread safe map implementation.
 // It is a wrapper around a map that contains a RWMutex.

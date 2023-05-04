@@ -2,7 +2,9 @@ package structures
 
 import (
 	"fmt"
+	"os"
 	"sync/atomic"
+	"time"
 )
 
 // TicketStand is a thread safe implementation of a ticket stand.
@@ -10,9 +12,10 @@ import (
 // It uses a sync.Cond so threads can wait on tickets, and wake up when
 // the ticket is completed.
 type TicketStand struct {
-	currentTicket  atomic.Int64
-	nextTicket     atomic.Int64
+	earliestTicket atomic.Int64
+	latestTicket   atomic.Int64
 	waitingTickets *SafeMap[int64, chan struct{}]
+	startTimes     *SafeMap[int64, int64]
 	closed         chan struct{}
 	tStandClosed   atomic.Bool
 }
@@ -21,9 +24,10 @@ type TicketStand struct {
 func CreateTicketStand() *TicketStand {
 
 	tStand := TicketStand{
-		currentTicket:  atomic.Int64{},
-		nextTicket:     atomic.Int64{},
+		earliestTicket: atomic.Int64{},
+		latestTicket:   atomic.Int64{},
 		waitingTickets: CreateSafeMap[int64, chan struct{}](),
+		startTimes:     CreateSafeMap[int64, int64](),
 		tStandClosed:   atomic.Bool{},
 		closed:         make(chan struct{}, 1),
 	}
@@ -51,10 +55,12 @@ func (tHolder *TicketStand) CloseTicketStand() error {
 
 // GetTicket returns a new ticket. The ticket number is the next ticket number.
 func (tHolder *TicketStand) GetTicket() Ticket {
-	ticketNumber := tHolder.nextTicket.Add(1) - 1
+	ticketNumber := tHolder.latestTicket.Add(1) - 1
 
-	queue := make(chan struct{}, 1)
-	if ticketNumber == tHolder.currentTicket.Load() {
+	tHolder.startTimes.Put(ticketNumber, time.Now().UnixNano())
+
+	queue := make(chan struct{}, 2)
+	if ticketNumber == tHolder.earliestTicket.Load() {
 		queue <- struct{}{}
 	}
 
@@ -86,9 +92,48 @@ func (ticket *Ticket) Wait() {
 	// sends a signal on the channel
 	case <-ticket.ticketStand.waitingTickets.Get(ticket.ticketNumber):
 		{
-			break
+			return
 		}
 	}
+}
+
+func (ticket *Ticket) StopTiming() int64 {
+	startTime := ticket.ticketStand.startTimes.Get(ticket.ticketNumber)
+	timeToCompleteTicket := time.Now().UnixNano() - startTime
+	if len(toWriteNanos) < 10000 {
+		toWriteNanos <- timeToCompleteTicket
+	}
+	return timeToCompleteTicket
+}
+
+var finishedWriting = make(chan struct{}, 1)
+var toWriteNanos = make(chan int64, 10000)
+
+func WriteToCsv(filename string) {
+
+	csvFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer csvFile.Close()
+	for {
+		select {
+		case <-finishedWriting:
+			return
+		case duration := <-toWriteNanos:
+			{
+				_, err := csvFile.Write([]byte(fmt.Sprint(duration, ",")))
+				if err != nil {
+					panic(err)
+				}
+			}
+		}
+	}
+
+}
+
+func StopWriting() {
+	finishedWriting <- struct{}{}
 }
 
 // Complete completes the ticket. It increments the current ticket number
@@ -96,14 +141,13 @@ func (ticket *Ticket) Complete() {
 	if ticket.ticketStand.tStandClosed.Load() {
 		return
 	}
-	defer func() {
-		recover()
-	}()
-	if ticket.ticketNumber != ticket.ticketStand.currentTicket.Load() {
+
+	if ticket.ticketNumber != ticket.ticketStand.earliestTicket.Load() {
 		fmt.Println("Tried to complete ticket at the wrong time")
-		return
+		panic("??")
 	}
-	newTicket := ticket.ticketStand.currentTicket.Add(1)
+
+	newTicket := ticket.ticketStand.earliestTicket.Add(1)
 	waitingChannel := ticket.ticketStand.waitingTickets.Get(newTicket)
 	waitingChannel <- struct{}{}
 

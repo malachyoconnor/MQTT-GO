@@ -10,7 +10,7 @@ import (
 type LinkedList[T comparable] struct {
 	head *Node[T]
 	tail *Node[T]
-	Size int
+	size int
 	lock sync.RWMutex
 }
 
@@ -20,7 +20,7 @@ func CreateLinkedList[T comparable]() *LinkedList[T] {
 		head: nil,
 		tail: nil,
 		lock: sync.RWMutex{},
-		Size: 0,
+		size: 0,
 	}
 	return &result
 }
@@ -30,13 +30,14 @@ func (ll *LinkedList[T]) GetItems() []T {
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
 
-	result := make([]T, 0, ll.Size)
+	result := make([]T, 0, ll.size)
 
 	node := ll.head
-	for node != nil {
+	for i := 0; i < ll.size; i++ {
 		result = append(result, node.val)
 		node = node.next
 	}
+
 	return result
 }
 
@@ -46,7 +47,6 @@ func (ll *LinkedList[T]) DeleteLinkedList() {
 	if ll == nil {
 		return
 	}
-
 	ll.lock.Lock()
 	defer ll.lock.Unlock()
 
@@ -79,7 +79,7 @@ func Concatenate[T comparable](llA *LinkedList[T], llB *LinkedList[T]) *LinkedLi
 	llA.lock.RLock()
 
 	nodeA := llA.head
-	for nodeA != nil {
+	for i := 0; i < llA.size; i++ {
 		result.Append(nodeA.val)
 		nodeA = nodeA.next
 	}
@@ -87,7 +87,7 @@ func Concatenate[T comparable](llA *LinkedList[T], llB *LinkedList[T]) *LinkedLi
 
 	llB.lock.RLock()
 	nodeB := llB.head
-	for nodeB != nil {
+	for i := 0; i < llB.size; i++ {
 		result.Append(nodeB.val)
 		nodeB = nodeB.next
 	}
@@ -102,11 +102,24 @@ func (ll *LinkedList[T]) DeepCopy() *LinkedList[T] {
 	defer ll.lock.RUnlock()
 
 	result := CreateLinkedList[T]()
-	node := ll.head
-	for node != nil {
-		result.Append(node.val)
-		node = node.next
+
+	if ll.size == 0 {
+		return result
 	}
+
+	result.size = ll.size
+	node := ll.head
+	result.head = &Node[T]{val: node.val}
+	resultNode := result.head
+
+	for i := 0; i < ll.size-1; i++ {
+		node = node.next
+		resultNode.next = &Node[T]{val: node.val, prev: resultNode}
+		resultNode = resultNode.next
+	}
+
+	result.tail = resultNode
+
 	return result
 }
 
@@ -121,7 +134,7 @@ func CombineLinkedLists[T comparable](lists ...*LinkedList[T]) *LinkedList[T] {
 
 	for _, list := range lists {
 		node := list.Head()
-		for node != nil {
+		for i := 0; i < list.size; i++ {
 			result.Append(node.val)
 			node = node.next
 		}
@@ -143,7 +156,7 @@ func (ll *LinkedList[T]) Contains(val T) bool {
 	defer ll.lock.RUnlock()
 
 	node := ll.head
-	for i := 0; i < ll.Size; i++ {
+	for i := 0; i < ll.size; i++ {
 		if node.val == val {
 			return true
 		}
@@ -156,7 +169,7 @@ func (ll *LinkedList[T]) Contains(val T) bool {
 func (ll *LinkedList[T]) RemoveDuplicates() {
 	ll.lock.Lock()
 	defer ll.lock.Unlock()
-	existingItems := make(map[T]bool, ll.Size)
+	existingItems := make(map[T]bool, ll.size)
 
 	node := ll.head
 	for node != nil {
@@ -176,7 +189,7 @@ func (ll *LinkedList[T]) RemoveDuplicates() {
 			default:
 				node.deleteNode()
 			}
-			ll.Size--
+			ll.size--
 		}
 		node = node.next
 	}
@@ -188,7 +201,7 @@ func (ll *LinkedList[T]) Append(val T) {
 	defer ll.lock.Unlock()
 	// If the list is empty
 	newNode := &Node[T]{val: val}
-	ll.Size++
+	ll.size++
 
 	switch {
 	case ll.head == nil:
@@ -218,12 +231,13 @@ func (ll *LinkedList[T]) Delete(val T) error {
 
 	// If we've removed an item and left one item in the list - we need to ensure that
 	// we don't get infinite loops when we go to search our list.
-	defer func() {
-		if ll.Size == 1 {
+	defer func(linkedList *LinkedList[T]) {
+		if linkedList.size == 1 {
 			ll.head.next = nil
 			ll.tail.prev = nil
+			ll.tail = nil
 		}
-	}()
+	}(ll)
 
 	// If the value we're deleting is the head or the tail
 	// then we need to adjust the linked list's head/tail
@@ -235,24 +249,24 @@ func (ll *LinkedList[T]) Delete(val T) error {
 	// If we've only got one item in the list
 	if ll.tail == ll.head && ll.head.val == val {
 		ll.head, ll.tail = nil, nil
-		ll.Size--
+		ll.size--
 		return nil
 	}
 
 	if ll.head.val == val {
 		ll.head = ll.head.next
-		ll.Size--
+		ll.size--
 		return nil
 	} else if ll.tail.val == val {
 		ll.tail = ll.tail.prev
-		ll.Size--
+		ll.size--
 		return nil
 	}
 
 	node := ll.head
-	for i := 0; i < ll.Size; i++ {
+	for i := 0; i < ll.size; i++ {
 		if node.val == val {
-			ll.Size--
+			ll.size--
 			node.deleteNode()
 			return nil
 		}
@@ -263,13 +277,10 @@ func (ll *LinkedList[T]) Delete(val T) error {
 }
 
 // ReadLock locks the linked list for reading.
-func (ll *LinkedList[T]) ReadLock() {
+func (ll *LinkedList[T]) Size() int {
 	ll.lock.RLock()
-}
-
-// ReadLock unlocks the linked list for reading.
-func (ll *LinkedList[T]) ReadUnlock() {
-	ll.lock.RUnlock()
+	defer ll.lock.RUnlock()
+	return ll.size
 }
 
 // Filter returns a new linked list that contains only the items that match the filter.
@@ -278,7 +289,7 @@ func (ll *LinkedList[T]) Filter(filter func(T) bool) *LinkedList[T] {
 	defer ll.lock.RUnlock()
 	result := CreateLinkedList[T]()
 	node := ll.head
-	for node != nil {
+	for i := 0; i < ll.size; i++ {
 		if filter(node.val) {
 			result.Append(node.val)
 		}
@@ -294,7 +305,7 @@ func (ll *LinkedList[T]) FilterSingleItem(filter func(T) bool) *T {
 	defer ll.lock.RUnlock()
 
 	node := ll.head
-	for node != nil {
+	for i := 0; i < ll.size; i++ {
 		if filter(node.val) {
 			return &node.val
 		}
