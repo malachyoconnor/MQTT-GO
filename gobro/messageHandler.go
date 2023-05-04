@@ -1,10 +1,8 @@
 package gobro
 
 import (
-	"fmt"
 	"log"
 	"sync"
-	"sync/atomic"
 
 	"MQTT-GO/gobro/clients"
 	"MQTT-GO/packets"
@@ -46,11 +44,7 @@ func (msgH *MessageHandler) Listen(server *Server) {
 
 		ticket := client.Tickets.GetTicket()
 		packetArray := clientMessage.Packet
-		packet, packetType, err := packets.DecodePacket(packetArray)
-		if err != nil {
-			log.Printf("- Error during decoding '%v', from '%v': %v\n", packets.PacketTypeName(packetType), clientID, err)
-			continue
-		}
+		packetType := packets.GetPacketType(packetArray)
 		// General case for if the client doesn't exist if NOT a connect packet
 		if packetType != packets.CONNECT {
 			if !clientTable.Contains(clientID) {
@@ -64,21 +58,24 @@ func (msgH *MessageHandler) Listen(server *Server) {
 				continue
 			}
 		}
-		go HandleMessage(packetType, packet, client, server, clientMessage, ticket)
+		go HandleMessage(packetType, packetArray, client, server, clientMessage, ticket)
 	}
 }
-
-var (
-	numSent = atomic.Int64{}
-)
 
 // HandleMessage handles the incoming packets by checking the packet type and then
 // running the appropriate function.
 // It also encodes the outgoing packets and sends them to the MessageSender.
-func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Client, server *Server,
+func HandleMessage(packetType byte, packetArray []byte, client *clients.Client, server *Server,
 	clientMessage clients.ClientMessage, ticket structures.Ticket) {
+
 	clientTable := server.clientTable
 	clientID := *clientMessage.ClientID
+	packet, _, err := packets.DecodePacket(packetArray)
+	if err != nil {
+		log.Printf("- Error during decoding '%v', from '%v': %v\n", packets.PacketTypeName(packetType), clientID, err)
+		return
+	}
+
 	clientConnection := clientMessage.ClientConnection
 	packetsToSend := make([]*clients.ClientMessage, 0, 10)
 	topicTrie := server.topicTrie
@@ -96,10 +93,6 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 
 	case packets.PUBLISH:
 
-		// TODO: REMOVE THESE LINES
-		sendingClient := server.clientTable.Get(*clientMessage.ClientID)
-		fmt.Println("SENDING PUBLISH TO", sendingClient.ClientIdentifier, "Number", numSent.Add(1))
-
 		varHeader, ok := packet.VariableLengthHeader.(*packets.PublishVariableHeader)
 		if !ok {
 			log.Printf("Error during publish, from client '%v'\n", clientID)
@@ -109,7 +102,9 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 			TopicFilter: varHeader.TopicFilter,
 			Qos:         packet.ControlHeader.Flags & 6,
 		}
-		go structures.Println("Received request to publish:", string(packet.Payload.RawApplicationMessage), "to topic:", topic.TopicFilter)
+
+		messageToPrint := packet.Payload.RawApplicationMessage[:structures.Min(len(packet.Payload.RawApplicationMessage), 20)]
+		structures.Println("Received request to publish:", string(messageToPrint), "to topic:", topic.TopicFilter)
 
 		// Adds to the packets to send
 		handlePublish(topicTrie, topic, clientMessage, server.clientTable, &packetsToSend)
@@ -163,6 +158,7 @@ func HandleMessage(packetType byte, packet *packets.Packet, client *clients.Clie
 		}
 		waitGroup.Wait()
 	}
+	ticket.StopTiming()
 }
 
 // Decode topics and store them in subscription table.
