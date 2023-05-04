@@ -15,13 +15,13 @@ func testErr(t *testing.T, err error) {
 
 // Testing if creating a topic map works
 func TestInitialization(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.AddTopic("x"))
 	topicStore.PrintTopics()
 }
 
 func TestPuttingLowerLevel(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.Put("x", "test1"))
 	testErr(t, topicStore.Put("x/y", "test2"))
 
@@ -38,7 +38,7 @@ func TestPuttingLowerLevel(t *testing.T) {
 
 // Testing adding an already created top level topic works
 func TestDuplicating(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.AddTopic("x"))
 	err := topicStore.AddTopic("x")
 	if err != ErrTopicAlreadyExists {
@@ -48,7 +48,7 @@ func TestDuplicating(t *testing.T) {
 }
 
 func TestDuplicatingLowerLevel(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.AddTopic("x/y/z"))
 	err := topicStore.AddTopic("x/y/z")
 
@@ -60,7 +60,7 @@ func TestDuplicatingLowerLevel(t *testing.T) {
 }
 
 func TestAddingMultipleChildren(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.Put("x/y/z", "test1"))
 	testErr(t, topicStore.Put("x/y/a", "test2"))
 	testErr(t, topicStore.Put("x/y/b", "test3"))
@@ -79,7 +79,7 @@ func TestAddingMultipleChildren(t *testing.T) {
 }
 
 func TestDeletingHigherLevel(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.AddTopic("x/y/z"))
 
 	testErr(t, topicStore.Delete("x"))
@@ -90,7 +90,7 @@ func TestDeletingHigherLevel(t *testing.T) {
 }
 
 func TestDeletingLowerLevel(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.AddTopic("x/y/z"))
 	testErr(t, topicStore.Delete("x/y"))
 	topicStore.PrintTopics()
@@ -101,7 +101,7 @@ func TestDeletingLowerLevel(t *testing.T) {
 }
 
 func TestDeletingOneChild(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.AddTopic("x/y/z"))
 
 	testErr(t, topicStore.Put("x/y/z", "abc"))
@@ -128,7 +128,7 @@ func TestDeletingOneChild(t *testing.T) {
 }
 
 func TestAddingClientIDs(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.AddTopic("x/y/z"))
 	testErr(t, topicStore.AddTopic("x/y/1"))
 
@@ -144,19 +144,19 @@ func TestAddingClientIDs(t *testing.T) {
 }
 
 func TestDuplicatesAreRemoved(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.Put("x/y/1", "abc"))
 	testErr(t, topicStore.Put("x/y/2", "abc"))
 	testErr(t, topicStore.Put("x/y/3", "abc"))
 
 	result, _ := topicStore.GetMatchingClients("x/y/#")
-	if result.Size != 1 || result.Head().Value() != "abc" {
+	if result.Size() != 1 || result.Head().Value() != "abc" {
 		t.Error("Duplicates are not being removed correctly")
 	}
 }
 
 func TestHashWildcard(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.Put("x/y/z", "abc"))
 	testErr(t, topicStore.Put("x/#", "xyz"))
 
@@ -170,30 +170,36 @@ func TestHashWildcard(t *testing.T) {
 }
 
 func TestPlusWildcard(t *testing.T) {
-	topicStore := CreateTopicMap()
-	testErr(t, topicStore.Put("x/y/z", "abc"))
-	testErr(t, topicStore.Put("x/+/m", "xyz"))
-	testErr(t, topicStore.Put("x/y/c", "xyz"))
+	topicStore := CreateTopicTrie()
+	testErr(t, topicStore.Put("x/y/z", "1"))
+	testErr(t, topicStore.Put("x/+/m", "2"))
+	testErr(t, topicStore.Put("x/y/c", "3"))
 
-	cLL, _ := topicStore.GetMatchingClients("x/a/m")
+	topicStore.PrintTopics()
 
-	if cLL.Size != 1 || cLL.Head().Value() != "xyz" {
+	cLL, err := topicStore.GetMatchingClients("x/a/m")
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	if cLL.Size() != 1 || cLL.Head().Value() != "2" {
 		t.Error("+ didn't work correctly.")
 	}
 }
 
 func TestPlusWildcardFurther(t *testing.T) {
-	topicStore := CreateTopicMap()
+	topicStore := CreateTopicTrie()
 	testErr(t, topicStore.Put("x/y/z", "1"))
-	testErr(t, topicStore.Put("x/a/z", "2"))
+	testErr(t, topicStore.Put("x/M/+", "2"))
 	testErr(t, topicStore.Put("x/y/z", "3"))
 
-	cLL, err := topicStore.GetMatchingClients("+/+/z")
+	cLL, err := topicStore.GetMatchingClients("x/M/z")
 
 	testErr(t, err)
 	fmt.Println(cLL.GetItems())
 
-	if cLL.Size != 3 {
+	if cLL.Size() != 1 {
 		t.Error("+ didn't work correctly.")
 	}
 }

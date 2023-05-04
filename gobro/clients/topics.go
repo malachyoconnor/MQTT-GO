@@ -2,6 +2,7 @@ package clients
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 
@@ -9,31 +10,32 @@ import (
 )
 
 // Rename to TopicToSubscriberStore
-type TopicToSubscribers struct {
-	topLevelMap *structures.SafeMap[string, *topic]
+type TopicTrie struct {
+	topLevelMap *structures.SafeMap[string, *topicNode]
 }
 
-func (topicMap TopicToSubscribers) DeleteAll() {
-	for _, topic := range topicMap.topLevelMap.Values() {
+func (topicTrie TopicTrie) DeleteAll() {
+	for _, topic := range topicTrie.topLevelMap.Values() {
+		fmt.Println("DELETING TOPIC", topic.name)
 		topic.deleteSelf()
 	}
 }
 
-func CreateTopicMap() *TopicToSubscribers {
-	topicMap := TopicToSubscribers{
-		topLevelMap: structures.CreateSafeMap[string, *topic](),
+func CreateTopicTrie() *TopicTrie {
+	topicTrie := TopicTrie{
+		topLevelMap: structures.CreateSafeMap[string, *topicNode](),
 	}
-	return &topicMap
+	return &topicTrie
 }
 
-func (topicMap *TopicToSubscribers) PrintTopics() {
-	for _, topic := range topicMap.topLevelMap.Values() {
+func (topicTrie *TopicTrie) PrintTopics() {
+	for _, topic := range topicTrie.topLevelMap.Values() {
 		topic.PrintTopics()
 		structures.Println()
 	}
 }
 
-func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
+func (topicTrie *TopicTrie) DeleteClientSubscriptions(client *Client) {
 	clientTopics := client.Topics
 	if clientTopics == nil {
 		return
@@ -41,7 +43,7 @@ func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
 	node := clientTopics.Head()
 	for node != nil {
 		topic := node.Value().TopicFilter
-		clientLL, err := topicMap.get(topic)
+		clientLL, err := topicTrie.get(topic)
 		// Race condition
 		if err != nil {
 			ServerPrintln("Tried to remove topic that had already been deleted")
@@ -53,8 +55,8 @@ func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
 		if err != nil {
 			ServerPrintln("Tried to delete client and got:", err)
 		}
-		if clientLL.Size == 0 {
-			err := topicMap.Delete(topic)
+		if clientLL.Size() == 0 {
+			err := topicTrie.Delete(topic)
 			if err != nil {
 				panic(err)
 			}
@@ -64,15 +66,15 @@ func (topicMap *TopicToSubscribers) DeleteClientSubscriptions(client *Client) {
 	}
 }
 
-func (topicMap *TopicToSubscribers) Put(topicName string, clientID ClientID) error {
-	clientLL, err := topicMap.get(topicName)
+func (topicTrie *TopicTrie) Put(topicName string, clientID ClientID) error {
+	clientLL, err := topicTrie.get(topicName)
 	if err != nil {
 		if errors.Is(err, ErrTopicDoesntExist) {
-			err = topicMap.AddTopic(topicName)
+			err = topicTrie.AddTopic(topicName)
 			if err != nil {
 				return err
 			}
-			clientLL, _ = topicMap.get(topicName)
+			clientLL, _ = topicTrie.get(topicName)
 		} else {
 			return err
 		}
@@ -81,8 +83,8 @@ func (topicMap *TopicToSubscribers) Put(topicName string, clientID ClientID) err
 	return nil
 }
 
-func (topicMap *TopicToSubscribers) PutClients(topicName string, clientIDs []ClientID) error {
-	clientLL, err := topicMap.get(topicName)
+func (topicTrie *TopicTrie) PutClients(topicName string, clientIDs []ClientID) error {
+	clientLL, err := topicTrie.get(topicName)
 	if err != nil {
 		return err
 	}
@@ -92,14 +94,14 @@ func (topicMap *TopicToSubscribers) PutClients(topicName string, clientIDs []Cli
 	return nil
 }
 
-func (topicMap *TopicToSubscribers) Contains(topicName string) bool {
-	_, err := topicMap.get(topicName)
+func (topicTrie *TopicTrie) Contains(topicName string) bool {
+	_, err := topicTrie.get(topicName)
 	return err == nil
 }
 
-func (topicMap *TopicToSubscribers) Unsubscribe(clientID ClientID, topicNames ...string) {
+func (topicTrie *TopicTrie) Unsubscribe(clientID ClientID, topicNames ...string) {
 	for _, topic := range topicNames {
-		subscribedClients, err := topicMap.get(topic)
+		subscribedClients, err := topicTrie.get(topic)
 		if err != nil {
 			ServerPrintln("Error while unsubscribing:", err)
 			continue
@@ -111,11 +113,11 @@ func (topicMap *TopicToSubscribers) Unsubscribe(clientID ClientID, topicNames ..
 		}
 		// If no one is left subscribed to the topic, remove it.
 		// This is to avoid memory leaks
-		if subscribedClients.Size == 0 {
-			err := topicMap.Delete(topic)
+		if subscribedClients.Size() == 0 {
+			err := topicTrie.Delete(topic)
 			if err != nil {
-				log.Println("- error while removing topic from topicMap", err)
-				ServerPrintln("error while removing topic from topicMap", err)
+				log.Println("- error while removing topic from topicTrie", err)
+				ServerPrintln("error while removing topic from topicTrie", err)
 			}
 		}
 	}
@@ -123,45 +125,45 @@ func (topicMap *TopicToSubscribers) Unsubscribe(clientID ClientID, topicNames ..
 
 // Delete() deletes a topic from the topic map - it can return an ErrTopicDoesntExist error
 // or nil
-func (topicMap *TopicToSubscribers) Delete(topicName string) error {
+func (topicTrie *TopicTrie) Delete(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 
-	if !topicMap.topLevelMap.Contains(topicSections[0]) {
+	if !topicTrie.topLevelMap.Contains(topicSections[0]) {
 		return ErrTopicDoesntExist
 	}
 
 	if len(topicSections) == 1 {
-		topicMap.topLevelMap.Delete(topicSections[0])
+		topicTrie.topLevelMap.Delete(topicSections[0])
 		return nil
 	}
 
-	val := topicMap.topLevelMap.Get(topicSections[0])
+	val := topicTrie.topLevelMap.Get(topicSections[0])
 	return val.DeleteTopic(topicSections[1:])
 }
 
 var ErrTopicAlreadyExists = errors.New("error: Trying to add client that already exists")
 
-func (topicMap *TopicToSubscribers) AddTopic(topicName string) error {
+func (topicTrie *TopicTrie) AddTopic(topicName string) error {
 	topicSections := strings.Split(topicName, "/")
 	// If this is just a top level topic like sensors/ as opposed to sensors/c02sensors/...
 	if len(topicSections) == 1 {
-		if topicMap.topLevelMap.Contains(topicSections[0]) {
+		if topicTrie.topLevelMap.Contains(topicSections[0]) {
 			return ErrTopicAlreadyExists
 		}
-		topicMap.topLevelMap.Put(topicSections[0], makeBaseTopic(topicSections[0]))
+		topicTrie.topLevelMap.Put(topicSections[0], makeBaseTopic(topicSections[0]))
 		return nil
 	}
 
-	if topicMap.topLevelMap.Contains(topicSections[0]) {
-		topLevelTopic := topicMap.topLevelMap.Get(topicSections[0])
+	if topicTrie.topLevelMap.Contains(topicSections[0]) {
+		topLevelTopic := topicTrie.topLevelMap.Get(topicSections[0])
 		return topLevelTopic.AddTopic(topicSections[1:])
 	}
 	baseTopic := makeBaseTopic(topicSections[0])
-	topicMap.topLevelMap.Put(topicSections[0], baseTopic)
+	topicTrie.topLevelMap.Put(topicSections[0], baseTopic)
 	return baseTopic.AddTopic(topicSections[1:])
 }
 
-func (topicMap *TopicToSubscribers) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {
+func (topicTrie *TopicTrie) GetMatchingClients(topicName string) (*structures.LinkedList[ClientID], error) {
 	if topicName == "" {
 		return nil, errors.New("error: Cannot search for empty topic")
 	}
@@ -181,24 +183,24 @@ func (topicMap *TopicToSubscribers) GetMatchingClients(topicName string) (*struc
 
 	if topicSections[0] == "+" {
 		result := structures.CreateLinkedList[ClientID]()
-		for _, topLevelTopic := range topicMap.topLevelMap.Values() {
+		for _, topLevelTopic := range topicTrie.topLevelMap.Values() {
 			result = structures.Concatenate(result, topLevelTopic.getMatchingClients(topicSections[1:]))
 		}
 		result.RemoveDuplicates()
 		return result, nil
 	}
 
-	topLevelMap := topicMap.topLevelMap
+	topLevelMap := topicTrie.topLevelMap
 	topLevelTopic := topLevelMap.Get(topicSections[0])
 	if topLevelTopic == nil {
 		return nil, ErrTopicDoesntExist
 	}
 
 	if len(topicSections) == 1 {
-		return topLevelTopic.connectedClients, nil
+		return topLevelTopic.subscribedClients.DeepCopy(), nil
 	}
 	result := topLevelTopic.getMatchingClients(topicSections[1:])
-	if result.Size == 0 {
+	if result.Size() == 0 {
 		return nil, ErrTopicDoesntExist
 	}
 	// We don't want to send a client the same message twice
@@ -208,16 +210,16 @@ func (topicMap *TopicToSubscribers) GetMatchingClients(topicName string) (*struc
 }
 
 // err can be ErrTopicDoesntExist or nil
-func (topicMap *TopicToSubscribers) get(topicName string) (*structures.LinkedList[ClientID], error) {
+func (topicTrie *TopicTrie) get(topicName string) (*structures.LinkedList[ClientID], error) {
 	topicSections := strings.Split(topicName, "/")
 
-	topLevelTopic := topicMap.topLevelMap.Get(topicSections[0])
+	topLevelTopic := topicTrie.topLevelMap.Get(topicSections[0])
 	if topLevelTopic == nil {
 		return nil, ErrTopicDoesntExist
 	}
 
 	if len(topicSections) == 1 {
-		return topLevelTopic.connectedClients, nil
+		return topLevelTopic.subscribedClients, nil
 	}
 
 	result := topLevelTopic.get(topicSections[1:])
@@ -227,8 +229,8 @@ func (topicMap *TopicToSubscribers) get(topicName string) (*structures.LinkedLis
 	return result, nil
 }
 
-func (t *topic) PrintTopics() {
-	ServerPrintf("%v (%v):  ", t.name, t.connectedClients.GetItems())
+func (t *topicNode) PrintTopics() {
+	ServerPrintf("%v (%v):  ", t.name, t.subscribedClients.GetItems())
 	for _, child := range t.children {
 		ServerPrintf("%v ", child.name)
 	}
@@ -239,25 +241,25 @@ func (t *topic) PrintTopics() {
 	}
 }
 
-type topic struct {
-	name             string
-	children         []*topic
-	connectedClients *structures.LinkedList[ClientID]
+type topicNode struct {
+	name              string
+	children          []*topicNode
+	subscribedClients *structures.LinkedList[ClientID]
 }
 
-func makeBaseTopic(topicName string) *topic {
+func makeBaseTopic(topicName string) *topicNode {
 	connectedClients := structures.CreateLinkedList[ClientID]()
-	newTopic := topic{
-		name:             topicName,
-		children:         make([]*topic, 0, 5),
-		connectedClients: connectedClients,
+	newTopic := topicNode{
+		name:              topicName,
+		children:          make([]*topicNode, 0, 5),
+		subscribedClients: connectedClients,
 	}
 	return &newTopic
 }
 
 var ErrTopicDoesntExist = errors.New("error: Topic doesn't exist")
 
-func (t *topic) DeleteTopic(topicSections []string) error {
+func (t *topicNode) DeleteTopic(topicSections []string) error {
 	if len(topicSections) == 1 {
 		for i, child := range t.children {
 			if child.name == topicSections[0] {
@@ -279,18 +281,19 @@ func (t *topic) DeleteTopic(topicSections []string) error {
 	return ErrTopicDoesntExist
 }
 
-func (t *topic) deleteSelf() {
+func (t *topicNode) deleteSelf() {
 	if t == nil {
 		return
 	}
 	for _, child := range t.children {
 		child.deleteSelf()
 	}
-	t.connectedClients.DeleteLinkedList()
-	t.connectedClients = nil
+	fmt.Println("DELETING LINKED LIST")
+	t.subscribedClients.DeleteLinkedList()
+	t.subscribedClients = nil
 }
 
-func (t *topic) AddTopic(topicSections []string) error {
+func (t *topicNode) AddTopic(topicSections []string) error {
 	// If the length of topicSections is one we just add it to our children
 	if len(topicSections) == 1 {
 		for _, child := range t.children {
@@ -319,18 +322,18 @@ func (t *topic) AddTopic(topicSections []string) error {
 	return nil
 }
 
-func (t *topic) getAllLowerLevelClients() *structures.LinkedList[ClientID] {
-	result := t.connectedClients
+func (t *topicNode) getAllLowerLevelClients() *structures.LinkedList[ClientID] {
+	result := t.subscribedClients
 	for _, child := range t.children {
 		result = structures.Concatenate(result, child.getAllLowerLevelClients())
 	}
 	return result
 }
 
-func (t *topic) getMatchingClients(topicSections []string) *structures.LinkedList[ClientID] {
+func (t *topicNode) getMatchingClients(topicSections []string) *structures.LinkedList[ClientID] {
 	// If we've gotten to the end of the topic list
 	if len(topicSections) == 0 {
-		return t.connectedClients
+		return t.subscribedClients
 	}
 
 	if topicSections[0] == "#" {
@@ -339,8 +342,9 @@ func (t *topic) getMatchingClients(topicSections []string) *structures.LinkedLis
 
 	result := structures.CreateLinkedList[ClientID]()
 
-	if len(topicSections) == 1 && (t.name == topicSections[0]) {
-		return t.connectedClients
+	// These two if statements allow for publishing to a wildcard!
+	if len(topicSections) == 1 && t.name == topicSections[0] {
+		return t.subscribedClients
 	}
 
 	if topicSections[0] == "+" {
@@ -362,9 +366,9 @@ func (t *topic) getMatchingClients(topicSections []string) *structures.LinkedLis
 }
 
 // Can return a client list of nil (if the topic doesn't exist)
-func (t *topic) get(topicSections []string) *structures.LinkedList[ClientID] {
+func (t *topicNode) get(topicSections []string) *structures.LinkedList[ClientID] {
 	if len(topicSections) == 0 {
-		return t.connectedClients
+		return t.subscribedClients
 	}
 	for _, child := range t.children {
 		if child.name == topicSections[0] {
