@@ -3,7 +3,6 @@ package stresstests
 
 import (
 	"MQTT-GO/client"
-	"MQTT-GO/structures"
 	"fmt"
 	"os"
 	"sync"
@@ -11,28 +10,26 @@ import (
 
 // ManyClientsConnect creates a large number of clients and connects them to the broker.
 // It then sends a publish message from each client, and disconnects them.
-func ManyClientsConnect(numClients int, ip string, port int) {
-	if numClients <= 0 {
-		numClients = 100
-	}
+func ManyClientsConnect(ip string, port int) {
+	numberOfClients := *numClients
 	// Stop the clients from printing to stdout
 	storedStdout := os.Stdout
-	os.Stdout = nil
+	// os.Stdout = nil
 	listenAndExit(storedStdout)
 
-	go fmt.Fprintln(storedStdout, "\rNum clients:", numClients)
-	clients := make([]client.Client, numClients)
+	go fmt.Fprintln(storedStdout, "\rNum clients:", numberOfClients)
+	clients := make([]*client.Client, numberOfClients)
 	go exitAll(clients)
 
 	queue := sync.WaitGroup{}
-	queue.Add(numClients)
+	queue.Add(numberOfClients)
 
 	connectAllClients(clients, ip, port, storedStdout)
 
 	for _, client := range clients {
 		err := client.SendPublish([]byte("TEST"), "abc")
 		if err != nil {
-			structures.Println("Error while publishing", err)
+			fmt.Println("Error while publishing", err)
 		}
 	}
 	fmt.Fprintln(storedStdout, "PUBLISHED FROM ALL CLIENTS")
