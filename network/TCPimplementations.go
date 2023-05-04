@@ -10,9 +10,10 @@ import (
 
 // Connect implements the Connect function for TCP connections.
 func (conn *TCPConn) Connect(ip string, port int) error {
+
 	connection, err := net.Dial("tcp", fmt.Sprint(ip, ":", port))
 	if err == nil {
-		conn.connection = &connection
+		conn.connection = connection.(*net.TCPConn)
 	}
 	return err
 }
@@ -58,9 +59,13 @@ func (conn *TCPConn) SetWriteDeadline(t time.Time) error {
 
 // Listen implements the Listen function for TCP connections.
 func (tcpListener *TCPListener) Listen(ip string, port int) error {
-	listener, err := net.Listen("tcp", fmt.Sprint(ip, ":", port))
+	tcpAddr := &net.TCPAddr{
+		IP:   net.ParseIP(ip),
+		Port: port,
+	}
+	listener, err := net.ListenTCP("tcp4", tcpAddr)
 	if err == nil {
-		tcpListener.listener = &listener
+		tcpListener.listener = listener
 	}
 	return err
 }
@@ -72,8 +77,11 @@ func (tcpListener *TCPListener) Close() error {
 
 // Accept accepts a TCP connection from the TCP listener.
 func (tcpListener *TCPListener) Accept() (Conn, error) {
-	conn, err := (*tcpListener.listener).Accept()
+	connection, err := (*tcpListener.listener).AcceptTCP()
+	if err != nil {
+		return nil, err
+	}
 	return &TCPConn{
-		connection: &conn,
+		connection: connection,
 	}, err
 }
