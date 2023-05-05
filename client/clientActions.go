@@ -95,6 +95,8 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	}
 	n, err := (client.BrokerConnection).Write(publishPacketArr)
 
+	fmt.Println("Wrote", n, "bytes to connection")
+
 	if err != nil {
 		return err
 	}

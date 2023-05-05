@@ -10,8 +10,7 @@ import (
 
 // ManyClientsConnect creates a large number of clients and connects them to the broker.
 // It then sends a publish message from each client, and disconnects them.
-func ManyClientsConnect(ip string, port int) {
-	numberOfClients := *numClients
+func ManyClientsConnect(ip string, port int, numberOfClients int) {
 	// Stop the clients from printing to stdout
 	storedStdout := os.Stdout
 	// os.Stdout = nil

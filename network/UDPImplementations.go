@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -51,7 +52,7 @@ func (conn *UDPConn) Connect(ip string, port int) error {
 
 func clientBackgroundReader(conn *UDPConn) {
 	for {
-		buffer := make([]byte, 1024*20)
+		buffer := make([]byte, 1024*10)
 		bytesRead, receivedAddr, err := conn.connection.ReadFromUDP(buffer)
 		buffer = buffer[:bytesRead]
 
@@ -79,6 +80,8 @@ func (conn *UDPConn) Write(toWrite []byte) (n int, err error) {
 	// If we're a client, we've created a singly connected connection.
 	// If we're a server, we've got a general purpose connection with which we can
 	// send to multiple addresses.
+	conn.writeLock.Lock()
+	defer conn.writeLock.Unlock()
 	if conn.connectionType == UDPServerConnection {
 		return conn.connection.WriteToUDP(toWrite, conn.remoteAddr.(*net.UDPAddr))
 	}
@@ -191,8 +194,8 @@ func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPCon
 	go handleMessageForwarding(readMessageBufferEven, udpListener)
 	go handleMessageForwarding(readMessageBufferOdd, udpListener)
 
-	_ = connection.SetReadBuffer(udpBufferSize)
-	_ = connection.SetWriteBuffer(udpBufferSize)
+	_ = connection.SetWriteBuffer(1024 * 1024 * 50)
+	connection.SetReadBuffer(1024 * 1024 * 50)
 
 	for {
 		buffer := make([]byte, 1024*20)
@@ -254,6 +257,7 @@ func (udpListener *UDPListener) Accept() (Conn, error) {
 		connection:     udpListener.listener,
 		connected:      true,
 		connectionType: UDPServerConnection,
+		writeLock:      &sync.Mutex{},
 		// We pass a function which can DELETE an open connection upon a disconnect.
 		serverConnectionDeleter: func() {
 			udpListener.openConnections.Delete(stringAddress)

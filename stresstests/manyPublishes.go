@@ -15,15 +15,11 @@ const (
 
 // ManyClientsPublish starts a number of clients, and publishes a message from each of them
 // This is used to test the performance of the server
-func ManyClientsPublish(ip string, port int, messageSize int) {
+func ManyClientsPublish(ip string, port int, messageSize int, numberOfClients int) {
 	// Stop the clients from printing to stdout
 	storedStdout := os.Stdout
 	// os.Stdout = nil
-
-	numberOfClients := 100
-	if numClients != nil {
-		numberOfClients = *numClients
-	}
+	fmt.Print("Contacting", ip, ":", port, "\n")
 
 	go fmt.Fprintln(storedStdout, "\rNum clients:", numberOfClients)
 	listenAndExit(storedStdout)

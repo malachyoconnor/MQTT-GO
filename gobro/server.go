@@ -191,6 +191,7 @@ func cleanupAndExit(server *Server, exit bool) {
 	for _, client := range server.clientTable.Values() {
 		client.Disconnect(server.topicTrie, server.clientTable)
 	}
+	structures.StopWriting()
 	(*server.listener).Close()
 	server.topicTrie.DeleteAll()
 	log.Print("--Server exiting--\n\n")

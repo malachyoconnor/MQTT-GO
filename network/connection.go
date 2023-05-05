@@ -45,7 +45,9 @@ func NewConn(networkID byte) (Conn, error) {
 		}
 	case UDP:
 		{
-			return &UDPConn{}, nil
+			return &UDPConn{
+				writeLock: &sync.Mutex{},
+			}, nil
 		}
 	case QUIC:
 		{
@@ -78,6 +80,7 @@ type UDPConn struct {
 	remoteAddr     net.Addr
 	connected      bool
 	connectionType byte
+	writeLock      *sync.Mutex
 
 	serverConnectionDeleter func()
 }

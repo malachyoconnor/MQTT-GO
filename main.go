@@ -27,6 +27,8 @@ var (
 	heapprofile = flag.String("heapprofile", "", "Profile code, and write that profile to a file")
 	newTrace    = flag.String("trace", "", "Profile code, and write a trace fileto a file")
 	protocol    = flag.String("protocol", "TCP", "Select the transport protocol to use")
+	numClients  = flag.Int("clients", 100, "Profile code, and write that profile to a file")
+
 	// PORT is the port to listen on for the server, or to connect to for the client
 	PORT = flag.Int("port", 8000, "Select the port to use")
 	// IP is the ip to listen on for the server, or to connect to for the client
@@ -77,11 +79,18 @@ func main() {
 	case "stresstest":
 		{
 			// stresstests.ManyClientsConnect(*IP, *PORT)
-			stresstests.ManyClientsPublish(*IP, *PORT, 1024*3)
+			stresstests.ManyClientsPublish(*IP, *PORT, 300, *numClients)
 		}
 	case "test":
 		{
-			stresstests.TestManyClients()
+			location := fmt.Sprint("data/messageSize/", *protocol, "/")
+			go structures.WriteToCsv(fmt.Sprint(location, *numClients, "_clients.csv"))
+			server := gobro.NewServer()
+			server.StartServer(*IP, *PORT)
+		}
+	case "testLocalhost":
+		{
+			stresstests.TestManyClients(*numClients, *IP, *PORT)
 		}
 	default:
 		{

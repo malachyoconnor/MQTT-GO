@@ -110,7 +110,7 @@ var finishedWriting = make(chan struct{}, 1)
 var toWriteNanos = make(chan int64, 10000)
 
 func WriteToCsv(filename string) {
-
+	fmt.Println("Writing to csv", filename)
 	csvFile, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)

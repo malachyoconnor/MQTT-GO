@@ -2,7 +2,6 @@ package stresstests
 
 import (
 	"MQTT-GO/client"
-	"MQTT-GO/gobro"
 	"MQTT-GO/packets"
 	"MQTT-GO/structures"
 	"flag"
@@ -13,29 +12,15 @@ import (
 var (
 	doSubscribes = flag.Bool("continualSubscribe", false, "Continually subscribe")
 	runServer    = flag.Bool("runServer", false, "Start a server")
-	ip           = flag.String("testip", "127.0.0.1", "Ip")
-	port         = flag.Int("testport", 8000, "Port")
 )
-
-func main() {
-	structures.Println("Starting")
-	flag.Parse()
-	switch {
-	case *doSubscribes:
-		continualSubscribe()
-	case *runServer:
-		server := gobro.NewServer()
-		server.StartServer("localhost", 8000)
-	}
-}
 
 const (
 	hoursToTest = 3
 )
 
-func continualSubscribe() {
+func continualSubscribe(ip string, port int) {
 	client := client.CreateClient()
-	err := client.SetClientConnection(*ip, *port)
+	err := client.SetClientConnection(ip, port)
 	if err != nil {
 		structures.Println(err)
 		return
