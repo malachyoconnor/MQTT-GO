@@ -23,6 +23,7 @@ var (
 	// ConnectionType is the type of transport protocol that is used
 	// It is set by main.go, and can be either TCP, UDP or QUIC
 	ConnectionType = network.TCP
+	PrintOutput    = false
 )
 
 // Server is the main struct that is used to create a broker and listen for clients.

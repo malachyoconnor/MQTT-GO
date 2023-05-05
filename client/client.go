@@ -19,6 +19,7 @@ var (
 	// It is set by main.go, and can be either TCP, UDP or QUIC
 	ConnectionType     = network.TCP
 	PublishToWildcards = false
+	PrintOutput        = false
 )
 
 // Client is the main struct that is used to create a client and connect to a broker.
@@ -51,6 +52,7 @@ func CreateAndConnectClient(ip string, port int) (*Client, error) {
 	}
 	err = client.SendConnect(ip, port)
 	go client.ListenForPackets()
+
 	if err != nil {
 		return nil, err
 	}

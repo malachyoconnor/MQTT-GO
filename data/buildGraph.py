@@ -29,7 +29,7 @@ def get_average_from_csv(location):
 xpoints = [x for x in client_range]
 
 average_times_TCP = get_average_from_csv(dir_path + "\\messageSize\\TCP\\")
-# average_times_QUIC = get_average_from_csv(dir_path + "\\messageSize\\QUIC\\")
+average_times_QUIC = get_average_from_csv(dir_path + "\\messageSize\\QUIC\\")
 average_times_UDP = get_average_from_csv(dir_path + "\\messageSize\\UDP\\")
 
 

@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"strings"
@@ -41,8 +40,31 @@ func (client *Client) SendConnect(ip string, port int) error {
 	if err != nil {
 		return err
 	}
-	reader := bufio.NewReader(client.BrokerConnection)
-	result, err := packets.ReadPacketFromConnection(reader)
+
+	var result []byte
+
+	readPacketChannel := make(chan []byte, 1)
+	go func() {
+		buffer := make([]byte, 1024*3)
+		n, _ := client.BrokerConnection.Read(buffer)
+		readPacketChannel <- buffer[:n]
+	}()
+
+	for {
+		select {
+		case result = <-readPacketChannel:
+			{
+				break
+			}
+		case <-getTimeoutChannel(1 * time.Second):
+			{
+				_, err = client.BrokerConnection.Write(connectPacketArr)
+				continue
+			}
+		}
+		break
+	}
+
 	structures.Println(result, "Read connack")
 	if err != nil {
 		return err
@@ -52,7 +74,9 @@ func (client *Client) SendConnect(ip string, port int) error {
 	if packet.ControlHeader.Type != packets.CONNACK {
 		structures.PrintInterface(packet)
 		return errors.New("error: Received packet other than CONNACK from server")
+
 	} else if packet.VariableLengthHeader.(*packets.ConnackVariableHeader).ConnectReturnCode == 2 {
+		fmt.Println("      ClientID already exists, generating new one...")
 		// If the clientID already exists then we wait
 		time.Sleep(time.Millisecond)
 		client.ClientID = generateRandomClientID()
@@ -65,6 +89,15 @@ func (client *Client) SendConnect(ip string, port int) error {
 	}
 
 	return nil
+}
+
+func getTimeoutChannel(timeout time.Duration) chan struct{} {
+	timeoutChannel := make(chan struct{}, 1)
+	go func() {
+		time.Sleep(timeout)
+		timeoutChannel <- struct{}{}
+	}()
+	return timeoutChannel
 }
 
 // TODO: Handle readPacketFromConnection error properly
@@ -94,8 +127,6 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 		return errConnectionClosed
 	}
 	n, err := (client.BrokerConnection).Write(publishPacketArr)
-
-	fmt.Println("Wrote", n, "bytes to connection")
 
 	if err != nil {
 		return err

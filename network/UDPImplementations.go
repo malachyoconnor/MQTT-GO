@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 	"time"
 )
 
 const (
-	udpBufferSize = 1024 * 1024 * 100
+	UdpConnectionBufferSize = 1024 * 1024
+	UdpServerBufferSize     = 1024 * 1024
 )
 
 // Connect implements the Connect function for UDP connections.
@@ -31,7 +31,7 @@ func (conn *UDPConn) Connect(ip string, port int) error {
 	conn.connection = connection
 
 	// 10000 is a magic number
-	conn.packetBuffer = make(chan []byte, 10000)
+	conn.packetBuffer = make(chan []byte, 50000)
 
 	if err == nil {
 		conn.localAddr = connection.LocalAddr()
@@ -40,8 +40,8 @@ func (conn *UDPConn) Connect(ip string, port int) error {
 		return err
 	}
 
-	_ = connection.SetReadBuffer(udpBufferSize)
-	_ = connection.SetWriteBuffer(udpBufferSize)
+	_ = connection.SetReadBuffer(UdpConnectionBufferSize)
+	_ = connection.SetWriteBuffer(UdpConnectionBufferSize)
 	conn.connectionType = UDPClientConnection
 
 	go clientBackgroundReader(conn)
@@ -51,14 +51,20 @@ func (conn *UDPConn) Connect(ip string, port int) error {
 }
 
 func clientBackgroundReader(conn *UDPConn) {
+	defer func() { recover() }()
 	for {
-		buffer := make([]byte, 1024*10)
+		buffer := make([]byte, 1024*2)
 		bytesRead, receivedAddr, err := conn.connection.ReadFromUDP(buffer)
 		buffer = buffer[:bytesRead]
 
 		if errors.Is(err, net.ErrClosed) {
 			fmt.Println("Connection closed, disconnecting")
 			return
+		}
+		if err != nil {
+			fmt.Println("ERROR WHILE READING UDP:", err)
+			log.Println("ERROR WHILE READING UDP:", err)
+			continue
 		}
 
 		remoteAddr := *conn.remoteAddr.(*net.UDPAddr)
@@ -68,10 +74,6 @@ func clientBackgroundReader(conn *UDPConn) {
 			log.Println("Received a UDP message from someone else", buffer, receivedAddr.IP, receivedAddr.Port)
 			continue
 		}
-		if err != nil {
-			fmt.Println("ERROR WHILE READING UDP:", err)
-			log.Println("ERROR WHILE READING UDP:", err)
-		}
 		conn.packetBuffer <- buffer
 	}
 }
@@ -80,8 +82,6 @@ func (conn *UDPConn) Write(toWrite []byte) (n int, err error) {
 	// If we're a client, we've created a singly connected connection.
 	// If we're a server, we've got a general purpose connection with which we can
 	// send to multiple addresses.
-	conn.writeLock.Lock()
-	defer conn.writeLock.Unlock()
 	if conn.connectionType == UDPServerConnection {
 		return conn.connection.WriteToUDP(toWrite, conn.remoteAddr.(*net.UDPAddr))
 	}
@@ -107,7 +107,6 @@ func (conn *UDPConn) Close() error {
 			<-conn.packetBuffer
 		}
 		close(conn.packetBuffer)
-		fmt.Println("Closing a connection from:", conn.localAddr, "to", conn.remoteAddr)
 		return conn.connection.Close()
 	}
 
@@ -167,11 +166,11 @@ func (udpListener *UDPListener) Listen(ip string, port int) error {
 		return err
 	}
 
-	err = connection.SetReadBuffer(udpBufferSize)
+	err = connection.SetReadBuffer(UdpConnectionBufferSize)
 	if err != nil {
 		return err
 	}
-	err = connection.SetWriteBuffer(udpBufferSize)
+	err = connection.SetWriteBuffer(UdpConnectionBufferSize)
 	if err != nil {
 		return err
 	}
@@ -194,11 +193,11 @@ func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPCon
 	go handleMessageForwarding(readMessageBufferEven, udpListener)
 	go handleMessageForwarding(readMessageBufferOdd, udpListener)
 
-	_ = connection.SetWriteBuffer(1024 * 1024 * 50)
-	connection.SetReadBuffer(1024 * 1024 * 50)
+	connection.SetWriteBuffer(UdpServerBufferSize)
+	connection.SetReadBuffer(UdpServerBufferSize)
 
 	for {
-		buffer := make([]byte, 1024*20)
+		buffer := make([]byte, 1024*2)
 		bytesRead, receivedAddr, err := connection.ReadFromUDP(buffer)
 		buffer = buffer[:bytesRead]
 		if errors.Is(err, net.ErrClosed) {
@@ -257,7 +256,6 @@ func (udpListener *UDPListener) Accept() (Conn, error) {
 		connection:     udpListener.listener,
 		connected:      true,
 		connectionType: UDPServerConnection,
-		writeLock:      &sync.Mutex{},
 		// We pass a function which can DELETE an open connection upon a disconnect.
 		serverConnectionDeleter: func() {
 			udpListener.openConnections.Delete(stringAddress)

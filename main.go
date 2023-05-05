@@ -29,6 +29,9 @@ var (
 	protocol    = flag.String("protocol", "TCP", "Select the transport protocol to use")
 	numClients  = flag.Int("clients", 100, "Profile code, and write that profile to a file")
 
+	packetSize = flag.Int("packetSize", 100, "Get the packet size for tests")
+	packetNum  = flag.Int("packetNum", 100, "Get the number of packets for tests")
+
 	// PORT is the port to listen on for the server, or to connect to for the client
 	PORT = flag.Int("port", 8000, "Select the port to use")
 	// IP is the ip to listen on for the server, or to connect to for the client
@@ -69,6 +72,7 @@ func main() {
 	switch args[len(args)-1] {
 	case "gobro":
 		{
+			gobro.PrintOutput = true
 			server := gobro.NewServer()
 			server.StartServer(*IP, *PORT)
 		}
@@ -90,7 +94,11 @@ func main() {
 		}
 	case "testLocalhost":
 		{
-			stresstests.TestManyClients(*numClients, *IP, *PORT)
+			stresstests.TestManyClients(*numClients, *IP, *PORT, *packetSize)
+		}
+	case "test1":
+		{
+			stresstests.TestUDPLoss(*packetNum, *IP, *PORT, *packetSize, *numClients)
 		}
 	default:
 		{

@@ -58,7 +58,9 @@ func (client *Client) ListenForPackets() {
 				result, _, _ := packets.DecodePacket(packet)
 				// If we fill the buffer - form a queue
 				messageToPrint := result.Payload.RawApplicationMessage[:structures.Min(len(result.Payload.RawApplicationMessage), 20)]
-				go fmt.Println("Received request to publish", string(messageToPrint))
+				if PrintOutput {
+					fmt.Println("Received request to publish", string(messageToPrint))
+				}
 			}
 
 		default:

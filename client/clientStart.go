@@ -19,6 +19,7 @@ func StartClient(ip string, port int) {
 	listenForExit(client)
 	fmt.Println("Connecting to", ip, ":", port)
 	err := client.SetClientConnection(ip, port)
+	PrintOutput = true
 
 	if err != nil {
 		fmt.Println(err)

@@ -1,6 +1,7 @@
 package gobro
 
 import (
+	"fmt"
 	"log"
 	"sync"
 
@@ -45,6 +46,10 @@ func (msgH *MessageHandler) Listen(server *Server) {
 		ticket := client.Tickets.GetTicket()
 		packetArray := clientMessage.Packet
 		packetType := packets.GetPacketType(packetArray)
+		if PrintOutput {
+			fmt.Println(fmt.Sprintln("RECEIVED", packets.PacketTypeName(packetType)))
+		}
+
 		// General case for if the client doesn't exist if NOT a connect packet
 		if packetType != packets.CONNECT {
 			if !clientTable.Contains(clientID) {

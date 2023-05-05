@@ -15,7 +15,7 @@ const (
 
 // ManyClientsPublish starts a number of clients, and publishes a message from each of them
 // This is used to test the performance of the server
-func ManyClientsPublish(ip string, port int, messageSize int, numberOfClients int) {
+func ManyClientsPublish(ip string, port int, messageSize int, numberOfClients int) (packetsReceived int, expectedPackets int) {
 	// Stop the clients from printing to stdout
 	storedStdout := os.Stdout
 	// os.Stdout = nil
@@ -57,12 +57,18 @@ func ManyClientsPublish(ip string, port int, messageSize int, numberOfClients in
 	}
 	queue.Wait()
 
-	for firstSubscriber.ReceivedPackets.Size() < (numberOfClients-1-1)*numberOfPublishes {
+	counter := 0
+	for firstSubscriber.ReceivedPackets.Size() < (numberOfClients-1)*numberOfPublishes {
 		time.Sleep(100 * time.Millisecond)
+		counter++
+		if counter > 50 {
+			break
+		}
 		fmt.Println("Waiting for all packets to be received", firstSubscriber.ReceivedPackets.Size(), (numberOfClients-1)*numberOfPublishes)
 	}
 
 	fmt.Println("PUBLISHED FROM ALL CLIENTS")
 
 	disconnectAllClients(clients, storedStdout)
+	return firstSubscriber.ReceivedPackets.Size(), (numberOfClients - 1) * numberOfPublishes
 }

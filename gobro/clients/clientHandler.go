@@ -102,8 +102,6 @@ func ClientHandler(connection network.Conn, packetHandleChan chan<- ClientMessag
 			}
 			break
 		}
-
-		go fmt.Println(fmt.Sprintln("RECEIVED", packets.PacketTypeName(packets.GetPacketType(packet))))
 		toSend := ClientMessage{ClientID: &clientID, Packet: packet, ClientConnection: connection}
 		packetHandleChan <- toSend
 	}
