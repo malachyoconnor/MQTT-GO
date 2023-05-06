@@ -76,3 +76,10 @@ func (clientTable *SafeMap[Key, Value]) Values() []Value {
 	}
 	return values
 }
+
+// Size returns the number of clients stored in the clientTable
+func (clientTable *SafeMap[Key, Value]) Size() int {
+	clientTable.tableLock.RLock()
+	defer clientTable.tableLock.RUnlock()
+	return len(clientTable.clientTable)
+}

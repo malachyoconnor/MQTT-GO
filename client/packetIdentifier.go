@@ -2,25 +2,21 @@ package client
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"MQTT-GO/structures"
 )
 
 type packetIDStore struct {
-	packetIdentifier int
-	packetIDLock     sync.Mutex
+	packetIdentifier atomic.Int64
 }
 
 var packetIdentifier = packetIDStore{
-	packetIdentifier: 0,
-	packetIDLock:     sync.Mutex{},
+	packetIdentifier: atomic.Int64{},
 }
 
 func getAndIncrementPacketID() int {
-	packetIdentifier.packetIDLock.Lock()
-	defer packetIdentifier.packetIDLock.Unlock()
-	packetIdentifier.packetIdentifier++
-	return packetIdentifier.packetIdentifier - 1
+	return int(packetIdentifier.packetIdentifier.Add(1))
 }
 
 // WaitingAcks is a struct that stores a list of packets that are waiting for an ACK.

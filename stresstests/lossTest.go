@@ -3,7 +3,6 @@ package stresstests
 import (
 	"MQTT-GO/client"
 	"MQTT-GO/gobro"
-	"MQTT-GO/network"
 	"MQTT-GO/packets"
 	"fmt"
 	"os"
@@ -39,22 +38,25 @@ func TestUDPLoss(numPackets int, ip string, port int, packetSize int, numberOfCl
 			c.SendPublish(msgToSend, "abc")
 		}
 
-		time.Sleep(time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 
 	counter := 0
 	for newClient.ReceivedPackets.Size() < numPackets {
 		time.Sleep(100 * time.Millisecond)
 		counter++
-		if counter > 10 {
+		// UDP will be more lossy, so we don't need to wait as long
+		if transportProtocol == "UDP" {
+			counter += 9
+		}
+		if counter > 100 {
 			break
 		}
 		fmt.Println("Waiting for all packets to be received", newClient.ReceivedPackets.Size(), numPackets)
 	}
 
 	// Write num clients, packets received, expected packets to csv
-	bufferSize := network.UdpServerBufferSize / 1024
-	location := fmt.Sprint("data/lossTests/", transportProtocol, "/buffer", bufferSize, "KB/")
+	location := fmt.Sprint("data/lossTests/", transportProtocol, "/packet_", packetSize, "B/")
 	filename := fmt.Sprint(location, numberOfClients, "_clients.csv")
 
 	err = os.MkdirAll(location, os.ModePerm)

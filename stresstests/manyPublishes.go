@@ -2,6 +2,7 @@ package stresstests
 
 import (
 	"MQTT-GO/client"
+	"MQTT-GO/network"
 	"MQTT-GO/packets"
 	"fmt"
 	"os"
@@ -61,7 +62,10 @@ func ManyClientsPublish(ip string, port int, messageSize int, numberOfClients in
 	for firstSubscriber.ReceivedPackets.Size() < (numberOfClients-1)*numberOfPublishes {
 		time.Sleep(100 * time.Millisecond)
 		counter++
-		if counter > 50 {
+		if ConnectionType == network.UDP {
+			counter += 9
+		}
+		if counter > 100 {
 			break
 		}
 		fmt.Println("Waiting for all packets to be received", firstSubscriber.ReceivedPackets.Size(), (numberOfClients-1)*numberOfPublishes)

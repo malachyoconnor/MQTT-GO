@@ -129,7 +129,7 @@ func AcceptConnections(listener network.Listener, server *Server) {
 			return
 		}
 
-		clients.ServerPrintln("Accepted a connection")
+		fmt.Print("\rAccepted a connection", server.clientTable.Size())
 		var newArrayPos *string
 		connectedClientsMutex.Lock()
 		for i, val := range connectedClients {

@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	UdpConnectionBufferSize = 1024 * 1024
-	UdpServerBufferSize     = 1024 * 1024
+	UDPConnectionBufferSize = 1024 * 1024
+	UDPServerBufferSize     = 1024 * 1024
 )
 
 // Connect implements the Connect function for UDP connections.
@@ -40,8 +40,8 @@ func (conn *UDPConn) Connect(ip string, port int) error {
 		return err
 	}
 
-	_ = connection.SetReadBuffer(UdpConnectionBufferSize)
-	_ = connection.SetWriteBuffer(UdpConnectionBufferSize)
+	_ = connection.SetReadBuffer(UDPConnectionBufferSize)
+	_ = connection.SetWriteBuffer(UDPConnectionBufferSize)
 	conn.connectionType = UDPClientConnection
 
 	go clientBackgroundReader(conn)
@@ -58,7 +58,6 @@ func clientBackgroundReader(conn *UDPConn) {
 		buffer = buffer[:bytesRead]
 
 		if errors.Is(err, net.ErrClosed) {
-			fmt.Println("Connection closed, disconnecting")
 			return
 		}
 		if err != nil {
@@ -166,11 +165,11 @@ func (udpListener *UDPListener) Listen(ip string, port int) error {
 		return err
 	}
 
-	err = connection.SetReadBuffer(UdpConnectionBufferSize)
+	err = connection.SetReadBuffer(UDPConnectionBufferSize)
 	if err != nil {
 		return err
 	}
-	err = connection.SetWriteBuffer(UdpConnectionBufferSize)
+	err = connection.SetWriteBuffer(UDPConnectionBufferSize)
 	if err != nil {
 		return err
 	}
@@ -193,8 +192,8 @@ func startUDPbackgroundListener(udpListener *UDPListener, connection *net.UDPCon
 	go handleMessageForwarding(readMessageBufferEven, udpListener)
 	go handleMessageForwarding(readMessageBufferOdd, udpListener)
 
-	connection.SetWriteBuffer(UdpServerBufferSize)
-	connection.SetReadBuffer(UdpServerBufferSize)
+	connection.SetWriteBuffer(UDPServerBufferSize)
+	connection.SetReadBuffer(UDPServerBufferSize)
 
 	for {
 		buffer := make([]byte, 1024*2)

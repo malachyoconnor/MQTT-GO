@@ -2,8 +2,11 @@ package gobro
 
 import (
 	"MQTT-GO/gobro/clients"
+	"MQTT-GO/network"
+	"MQTT-GO/packets"
 	"fmt"
 	"sync"
+	"time"
 )
 
 // MessageSender is a struct that handles outgoing packets from the broker.
@@ -51,8 +54,20 @@ func waitAndSend(clientMsg *clients.ClientMessage, waitGroup *sync.WaitGroup, qu
 	defer waitGroup.Done()
 	_, err := clientMsg.ClientConnection.Write(clientMsg.Packet)
 
+	go logSend(clientMsg.Packet)
+
 	if err != nil {
 		clients.ServerPrintln("Failed to send packet to", clientMsg.ClientID, "- Error:", err)
 	}
 	queue <- struct{}{}
+}
+
+func logSend(packet []byte) {
+	if clients.LogLatency {
+		decodedPacket, packetType, err := packets.DecodePacket(packet)
+		if err == nil && packetType == packets.PUBLISH {
+			packetID := decodedPacket.VariableLengthHeader.(*packets.PublishVariableHeader).PacketIdentifier
+			clients.SendingLatencyChannel <- &network.LatencyStruct{T: time.Now(), PacketID: packetID}
+		}
+	}
 }

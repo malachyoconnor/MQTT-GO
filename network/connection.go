@@ -89,3 +89,8 @@ type QUICConn struct {
 	streamReadLock  *sync.Mutex
 	streamWriteLock *sync.Mutex
 }
+
+type LatencyStruct struct {
+	T        time.Time
+	PacketID int
+}

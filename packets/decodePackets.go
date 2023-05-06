@@ -112,7 +112,7 @@ func GetPacketType(packet []byte) byte {
 	return packet[0] >> 4
 }
 
-var errZeroLengthPacketError = errors.New("error: Zero length packet read from byte pool")
+var errZeroLengthPacketError = errors.New("error: Zero length packet read")
 
 // DecodePacket takes a byte array encoding a packet and returns
 // (*Packet, PacketType, error)
@@ -406,13 +406,11 @@ func DecodePublish(packet []byte) (*Packet, error) {
 	varHeaderLen := topicLen
 
 	// The qos is the second 2 bits of the flags
-	qos := (fixedHeader.Flags&2 + fixedHeader.Flags&4) >> 1
+	// qos := (fixedHeader.Flags&2 + fixedHeader.Flags&4) >> 1
 
-	if qos == 1 || qos == 2 {
-		packetIdentifier := CombineMsbLsb(packet[offset+topicLen], packet[offset+topicLen+1])
-		varHeader.PacketIdentifier = packetIdentifier
-		varHeaderLen += 2
-	}
+	packetIdentifier := CombineMsbLsb(packet[offset+topicLen], packet[offset+topicLen+1])
+	varHeader.PacketIdentifier = packetIdentifier
+	varHeaderLen += 2
 
 	varHeader.TopicFilter = topicName
 	payloadLength := fixedHeader.RemainingLength - varHeaderLen

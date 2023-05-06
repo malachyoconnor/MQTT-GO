@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
+	"MQTT-GO/network"
 	"MQTT-GO/packets"
 	"MQTT-GO/structures"
 )
@@ -55,9 +57,16 @@ func (client *Client) ListenForPackets() {
 
 		case packets.PUBLISH:
 			{
-				result, _, _ := packets.DecodePacket(packet)
+
+				if LogLatency {
+					if err == nil && packetType == packets.PUBLISH {
+						packetID := decoded.VariableLengthHeader.(*packets.PublishVariableHeader).PacketIdentifier
+						ReceivingLatencyChannel <- &network.LatencyStruct{T: time.Now(), PacketID: packetID}
+					}
+				}
+
 				// If we fill the buffer - form a queue
-				messageToPrint := result.Payload.RawApplicationMessage[:structures.Min(len(result.Payload.RawApplicationMessage), 20)]
+				messageToPrint := decoded.Payload.RawApplicationMessage[:structures.Min(len(decoded.Payload.RawApplicationMessage), 20)]
 				if PrintOutput {
 					fmt.Println("Received request to publish", string(messageToPrint))
 				}

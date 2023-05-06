@@ -153,7 +153,9 @@ func HandleMessage(packetType byte, packetArray []byte, client *clients.Client, 
 
 	// If we have packets to send - we have to wait
 	// for all packets to be sent before we can continue
+	ticket.StopTiming()
 	ticket.Wait()
+
 	if len(packetsToSend) > 0 {
 		waitGroup := sync.WaitGroup{}
 		waitGroup.Add(len(packetsToSend))
@@ -163,7 +165,6 @@ func HandleMessage(packetType byte, packetArray []byte, client *clients.Client, 
 		}
 		waitGroup.Wait()
 	}
-	ticket.StopTiming()
 }
 
 // Decode topics and store them in subscription table.

@@ -100,6 +100,14 @@ func main() {
 		{
 			stresstests.TestUDPLoss(*packetNum, *IP, *PORT, *packetSize, *numClients)
 		}
+	case "test2":
+		{
+			stresstests.TestLatency(*packetNum, *IP, *PORT, *packetSize, *numClients)
+		}
+	case "test3":
+		{
+			stresstests.TestHandleTime(*packetNum, *IP, *PORT, *packetSize, *numClients)
+		}
 	default:
 		{
 			fmt.Println("Malformed input, exiting")

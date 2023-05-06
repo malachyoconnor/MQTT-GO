@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"MQTT-GO/network"
 	"MQTT-GO/packets"
 	"MQTT-GO/structures"
 )
@@ -80,6 +81,7 @@ func (client *Client) SendConnect(ip string, port int) error {
 		// If the clientID already exists then we wait
 		time.Sleep(time.Millisecond)
 		client.ClientID = generateRandomClientID()
+		client.BrokerConnection.Close()
 		err := client.SetClientConnection(ip, port)
 		if err != nil {
 			fmt.Println("Error while setting client connection")
@@ -126,7 +128,12 @@ func (client *Client) SendPublish(applicationMessage []byte, topic string) error
 	if client.BrokerConnection == nil {
 		return errConnectionClosed
 	}
+
 	n, err := (client.BrokerConnection).Write(publishPacketArr)
+
+	if LogLatency {
+		SendingLatencyChannel <- &network.LatencyStruct{T: time.Now(), PacketID: packetID}
+	}
 
 	if err != nil {
 		return err

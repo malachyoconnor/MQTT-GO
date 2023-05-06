@@ -11,6 +11,11 @@ import (
 	quic "github.com/quic-go/quic-go"
 )
 
+const (
+	QUICConnectionBufferSize = 1024 * 1024
+	QUICServerBufferSize     = 1024 * 1024
+)
+
 // First we implement the connection methods for QUIC
 
 // Connect implements the Connect function for QUIC connections.

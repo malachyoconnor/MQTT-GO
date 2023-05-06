@@ -33,7 +33,7 @@ func connectAllClients(clientList []*client.Client, ip string, port int, storedS
 			queue.Done()
 		}(i)
 
-		time.Sleep(time.Millisecond * 5)
+		time.Sleep(time.Millisecond * 20)
 	}
 	queue.Wait()
 	fmt.Fprintln(storedStdout, "CONNECTED ALL CLIENTS")

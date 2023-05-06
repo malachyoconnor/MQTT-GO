@@ -16,6 +16,12 @@ import (
 	"MQTT-GO/structures"
 )
 
+var (
+	LogLatency              = false
+	ReceivingLatencyChannel = make(chan *network.LatencyStruct, 1000000)
+	SendingLatencyChannel   = make(chan *network.LatencyStruct, 1000000)
+)
+
 // ClientMessage is a struct that stores a client's ID, a connection to the client,
 // and the packet to handle.
 // This is used to pass information from the server to the message handler.
@@ -90,6 +96,14 @@ func ClientHandler(connection network.Conn, packetHandleChan chan<- ClientMessag
 	reader := bufio.NewReader(connection)
 	for {
 		packet, err := packets.ReadPacketFromConnection(reader)
+
+		if LogLatency {
+			decodedPacket, packetType, err := packets.DecodePacket(packet)
+			if err == nil && packetType == packets.PUBLISH {
+				packetID := decodedPacket.VariableLengthHeader.(*packets.PublishVariableHeader).PacketIdentifier
+				ReceivingLatencyChannel <- &network.LatencyStruct{T: time.Now(), PacketID: packetID}
+			}
+		}
 
 		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 			break

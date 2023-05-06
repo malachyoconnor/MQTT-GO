@@ -109,11 +109,9 @@ func EncodePublish(packet *Packet) ([]byte, error) {
 		return nil, err
 	}
 
-	qos := packet.ControlHeader.Flags & 6
-	if qos > 0 {
-		packetIDMSB, packetIDLSB := getMSBandLSB(varLenHeader.PacketIdentifier)
-		resultVarHeader = append(resultVarHeader, packetIDMSB, packetIDLSB)
-	}
+	// qos := packet.ControlHeader.Flags & 6
+	packetIDMSB, packetIDLSB := getMSBandLSB(varLenHeader.PacketIdentifier)
+	resultVarHeader = append(resultVarHeader, packetIDMSB, packetIDLSB)
 
 	resultPayload := packet.Payload.RawApplicationMessage
 

@@ -17,9 +17,12 @@ import (
 var (
 	// ConnectionType is the type of transport protocol that is used
 	// It is set by main.go, and can be either TCP, UDP or QUIC
-	ConnectionType     = network.TCP
-	PublishToWildcards = false
-	PrintOutput        = false
+	ConnectionType          = network.TCP
+	PublishToWildcards      = false
+	PrintOutput             = false
+	LogLatency              = true
+	SendingLatencyChannel   = make(chan *network.LatencyStruct, 1000000)
+	ReceivingLatencyChannel = make(chan *network.LatencyStruct, 1000000)
 )
 
 // Client is the main struct that is used to create a client and connect to a broker.
